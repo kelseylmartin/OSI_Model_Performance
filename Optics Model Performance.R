@@ -14,18 +14,214 @@ for (p in inst) {
 ### Important functions
 # to select multiple stations for min count @ multiple confidences
 #########################################################################
-# if all CSVs come from same source web or desktop use this read function
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#     Converting CSV to KWCOCO     #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# --- IN-MEMORY CONVERSION AND REVERSAL ---
+# The functions below are designed for in-memory data manipulation. You can
+# copy and paste this section into another script to convert a dataframe that
+# is already loaded in your R environment into the KWCOCO list format, and then
+# convert it back into a flat dataframe.
+
+#' Reads a raw tracking CSV, skipping headers and adding a filename column.
+#'
+#' @param flnm The file path of the CSV to read.
+#' @return A data frame with all columns as characters, or NULL on error.
 read_plus <- function(flnm) {
   tryCatch({
-    read_csv(flnm,skip=2,col_names = FALSE, col_select = c(1,2,3,4,5,6,7,8,9,10,11), show_col_types = FALSE) %>%  #Original run has 2 header rows
-      mutate(filename = flnm) %>% 
+    # Original run has 2 header rows
+    read_csv(flnm, skip = 2, col_names = FALSE, col_select = c(1:11), show_col_types = FALSE) %>%
+      mutate(filename = flnm) %>%
       mutate(across(everything(), as.character))
   }, error = function(e) {
-    print(paste("Error reading file: ", flnm)) # this has been happening when files don't have any observations. Saw it only in NGI files
-    return(NULL)  # If there's an error reading the file, return NULL
+    # this has been happening when files don't have any observations. Saw it only in NGI files
+    print(paste("Error reading file: ", flnm))
+    return(NULL) # If there's an error reading the file, return NULL
   })
 }
 
+#' Converts an R dataframe to an in-memory KWCOCO list object.
+#'
+#' This function does not read from or write to any files. It's useful for
+#' converting data that is already loaded in the R environment.
+#'
+#' @param df The input dataframe to convert.
+#' @param video_info A named list containing video metadata.
+#' @param col_mapping A named list mapping KWCOCO concepts to dataframe column names.
+#' @return A list object representing the data in KWCOCO format.
+convert_df_to_kwcoco_r <- function(df, video_info, col_mapping) {
+  
+  cat(sprintf("Converting dataframe for video: %s\n", video_info$name))
+  
+  # 1. Initialize the master KWCOCO list
+  kwcoco_data <- list(
+    info = INFO,
+    videos = list(video_info),
+    images = list(),
+    annotations = list(),
+    categories = list()
+  )
+  
+  if (is.null(df) || nrow(df) == 0) {
+    warning("Input dataframe is NULL or empty.")
+    return(kwcoco_data)
+  }
+  
+  # 2. Process data frame and populate KWCOCO structure
+  annotation_id_counter <- 1L
+  image_id_counter <- 0L
+  processed_frames <- list()
+  all_species <- c()
+  
+  for (i in 1:nrow(df)) {
+    row <- df[i, ]
+    frame_index <- as.integer(row[[col_mapping$frame]])
+    track_id <- as.integer(row[[col_mapping$track_id]])
+    
+    # Bounding box
+    tl_x <- as.numeric(row[[col_mapping$tl_x]])
+    tl_y <- as.numeric(row[[col_mapping$tl_y]])
+    br_x <- as.numeric(row[[col_mapping$br_x]])
+    br_y <- as.numeric(row[[col_mapping$br_y]])
+    bbox <- as.integer(floor(c(tl_x, tl_y, br_x - tl_x, br_y - tl_y)))
+    
+    # Category
+    species_name <- as.character(row[[col_mapping$species_name]])
+    all_species <- c(all_species, species_name)
+    
+    # Image entry
+    frame_key <- as.character(frame_index)
+    if (is.null(processed_frames[[frame_key]])) {
+      current_image_id <- image_id_counter
+      processed_frames[[frame_key]] <- current_image_id
+      kwcoco_data$images <- append(kwcoco_data$images, list(list(
+        id = current_image_id,
+        video_id = video_info$id,
+        file_name = sprintf("frame_%06d.jpg", frame_index),
+        frame_index = frame_index
+      )))
+      image_id_counter <- image_id_counter + 1
+    }
+    
+    # Annotation entry
+    annotation_entry <- list(
+      id = annotation_id_counter,
+      image_id = processed_frames[[frame_key]],
+      category_id = species_name, # Temporary name, will be replaced by int
+      track_id = track_id,
+      bbox = bbox,
+      iscrowd = 0L,
+      area = as.integer(bbox[3] * bbox[4])
+    )
+    if (!is.null(col_mapping$score) && col_mapping$score %in% names(row)) {
+      annotation_entry$score <- as.numeric(row[[col_mapping$score]])
+    }
+    kwcoco_data$annotations <- append(kwcoco_data$annotations, list(annotation_entry))
+    annotation_id_counter <- annotation_id_counter + 1
+  }
+  
+  # 3. Finalize categories and update annotations
+  unique_species <- unique(all_species)
+  species_to_int_map <- setNames(seq_along(unique_species), unique_species)
+  
+  kwcoco_data$categories <- lapply(names(species_to_int_map), function(s_name) {
+    list(id = species_to_int_map[[s_name]], name = s_name, keypoints = c("head", "tail"))
+  })
+  
+  kwcoco_data$annotations <- lapply(kwcoco_data$annotations, function(ann) {
+    ann$category_id <- species_to_int_map[[ann$category_id]]
+    return(ann)
+  })
+  
+  # 4. Sort images for compatibility
+  if (length(kwcoco_data$images) > 0) {
+    frame_indices <- sapply(kwcoco_data$images, function(img) img$frame_index)
+    kwcoco_data$images <- kwcoco_data$images[order(frame_indices)]
+  }
+  
+  cat("Dataframe converted to KWCOCO list object.\n")
+  return(kwcoco_data)
+}
+
+#' Converts an in-memory KWCOCO list object back to a flat R dataframe.
+#'
+#' This function reverses the conversion, turning a KWCOCO list into a
+#' dataframe that resembles the original CSV format.
+#'
+#' @param kwcoco_data The KWCOCO list object.
+#' @return A dataframe containing the flattened track and detection data.
+convert_kwcoco_to_df_r <- function(kwcoco_data) {
+  
+  cat("Converting KWCOCO list back to dataframe...\n")
+  
+  # 1. Create lookup maps for quick access
+  image_map <- setNames(
+    sapply(kwcoco_data$images, function(img) img$frame_index),
+    sapply(kwcoco_data$images, function(img) img$id)
+  )
+  category_map <- setNames(
+    sapply(kwcoco_data$categories, function(cat) cat$name),
+    sapply(kwcoco_data$categories, function(cat) cat$id)
+  )
+  
+  # 2. Process annotations and flatten them into a list of rows
+  rows_list <- lapply(kwcoco_data$annotations, function(ann) {
+    data.frame(
+      TrackID = ann$track_id,
+      UniqFrame = image_map[[as.character(ann$image_id)]],
+      TL_X = ann$bbox[1],
+      TL_Y = ann$bbox[2],
+      BR_X = ann$bbox[1] + ann$bbox[3],
+      BR_Y = ann$bbox[2] + ann$bbox[4],
+      DetLen_Conf = if (!is.null(ann$score)) ann$score else NA,
+      SP = category_map[[as.character(ann$category_id)]],
+      stringsAsFactors = FALSE
+    )
+  })
+  
+  # 3. Combine all rows into a single dataframe
+  result_df <- do.call(rbind, rows_list)
+  
+  cat("Conversion to dataframe complete.\n")
+  return(result_df)
+}
+
+# --- Example: In-Memory Round Trip ---
+#
+# # This example shows how to use the in-memory functions. It performs a
+# # "round-trip": File -> read_plus -> Dataframe -> KWCOCO List -> Dataframe
+#
+# # 1. Create a temporary dummy CSV file to read
+# temp_file_for_read_plus <- tempfile(fileext = ".csv")
+# demo_df_content <- data.frame(TrackID=c(1,2,1), VidIdent="v1", UniqFrame=c(0,0,1), TL_X=c(10,100,12), TL_Y=c(10,150,12), BR_X=c(30,150,32), BR_Y=c(50,230,52), DetLen_Conf=c(0.98,0.95,0.99), Tar_Len=10, SP="species_A", CP=1)
+# write(c("Junk Header Row 1", "Junk Header Row 2"), temp_file_for_read_plus)
+# write_csv(demo_df_content, temp_file_for_read_plus, append = TRUE, col_names = FALSE)
+#
+# # 2. Use read_plus to load the file into a dataframe
+# loaded_df <- read_plus(temp_file_for_read_plus)
+#
+# # 3. Assign the correct column names so the converter can find the data
+# # Note: read_plus returns 11 data columns + 1 'filename' column
+# names(loaded_df)[1:11] <- c("TrackID", "VidIdent", "UniqFrame", "TL_X", "TL_Y", "BR_X", "BR_Y", "DetLen_Conf", "Tar_Len", "SP", "CP")
+#
+# # 4. Define video info and the column map for the converter
+# video_meta <- list(id = 1, name = "in_memory_video", width = 1920, height = 1080)
+# col_map <- list(frame = "UniqFrame", track_id = "TrackID", tl_x = "TL_X", tl_y = "TL_Y", br_x = "BR_X", br_y = "BR_Y", score = "DetLen_Conf", species_name = "SP")
+#
+# # 5. Convert the loaded dataframe to a KWCOCO list
+# kwcoco_list <- convert_df_to_kwcoco_r(loaded_df, video_meta, col_map)
+#
+# # 6. Convert the KWCOCO list back to a dataframe
+# round_trip_df <- convert_kwcoco_to_df_r(kwcoco_list)
+#
+# # 7. Compare the results (note: column order and some types might differ slightly)
+# print("Dataframe after reading from file:")
+# print(loaded_df)
+# print("Round-trip Dataframe:")
+# print(round_trip_df)
+#
+# # 8. Clean up the temporary file
+# unlink(temp_file_for_read_plus)
 
 
 # if mixing online and desktop produced CSVs use the below section which removes time columns that are incompatible for joining. VIAME time format isn't great aanyway
@@ -85,6 +281,17 @@ for (t in 1:length(dts)) {
   tbl.raw <- list.files(dt, pattern = "*.csv", full.names = T) 
   tbl <- tbl.raw %>% 
     map_df(~read_plus(.))
+  # if all CSVs come from same source web or desktop use this read function
+  read_plus <- function(flnm) {
+    tryCatch({
+      read_csv(flnm,skip=2,col_names = FALSE, col_select = c(1,2,3,4,5,6,7,8,9,10,11), show_col_types = FALSE) %>%  #Original run has 2 header rows
+        mutate(filename = flnm) %>% 
+        mutate(across(everything(), as.character))
+    }, error = function(e) {
+      print(paste("Error reading file: ", flnm)) # this has been happening when files don't have any observations. Saw it only in NGI files
+      return(NULL)  # If there's an error reading the file, return NULL
+    })
+  }
   # note that the table will not be produced if all columns are not formatted correctly 
 
   # renaming and fixing columns and column headers
