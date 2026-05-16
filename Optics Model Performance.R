@@ -4,7 +4,7 @@
 
 
 # installing packages
-inst <- c("readr","dplyr","tidyverse","lubridate","data.table","microbenchmark","tidyr","knitr","ggplot2", "ggpubr", "gridExtra", "FSA", "FSAdata")
+inst <- c("readr","dplyr","tidyverse","lubridate","data.table","microbenchmark","tidyr","knitr","ggplot2", "ggpubr", "gridExtra", "FSA", "FSAdata", "jsonlite")
 for (p in inst) {
   if(!require(p,character.only = TRUE)) {
     install.packages(p)
@@ -116,6 +116,13 @@ convert_df_to_kwcoco_r <- function(df, video_info, col_mapping) {
     if (!is.null(col_mapping$score) && col_mapping$score %in% names(row)) {
       annotation_entry$score <- as.numeric(row[[col_mapping$score]])
     }
+    
+    # Preserve other columns by adding them to the annotation
+    other_cols <- setdiff(names(df), c(unlist(col_mapping), "filename"))
+    for (col in other_cols) {
+      annotation_entry[[col]] <- row[[col]]
+    }
+    
     kwcoco_data$annotations <- append(kwcoco_data$annotations, list(annotation_entry))
     annotation_id_counter <- annotation_id_counter + 1
   }
@@ -166,7 +173,7 @@ convert_kwcoco_to_df_r <- function(kwcoco_data) {
   
   # 2. Process annotations and flatten them into a list of rows
   rows_list <- lapply(kwcoco_data$annotations, function(ann) {
-    data.frame(
+    row_data <- list(
       TrackID = ann$track_id,
       UniqFrame = image_map[[as.character(ann$image_id)]],
       TL_X = ann$bbox[1],
@@ -174,9 +181,15 @@ convert_kwcoco_to_df_r <- function(kwcoco_data) {
       BR_X = ann$bbox[1] + ann$bbox[3],
       BR_Y = ann$bbox[2] + ann$bbox[4],
       DetLen_Conf = if (!is.null(ann$score)) ann$score else NA,
-      SP = category_map[[as.character(ann$category_id)]],
-      stringsAsFactors = FALSE
+      SP = category_map[[as.character(ann$category_id)]]
     )
+    
+    # Restore other columns that were preserved
+    extra_fields <- setdiff(names(ann), c("id", "image_id", "category_id", "track_id", "bbox", "iscrowd", "area", "score"))
+    for (field in extra_fields) {
+      row_data[[field]] <- ann[[field]]
+    }
+    as.data.frame(row_data, stringsAsFactors = FALSE)
   })
   
   # 3. Combine all rows into a single dataframe
@@ -278,9 +291,59 @@ for (t in 1:length(dts)) {
   print(paste0("Loading in track files for ", year, " v", model.run))
   
   # loading all CSVs into a table
-  tbl.raw <- list.files(dt, pattern = "*.csv", full.names = T) 
-  tbl <- tbl.raw %>% 
-    map_df(~read_plus(.))
+  tbl.raw <- list.files(dt, pattern = "\\.csv$|\\.json$", full.names = T, ignore.case = T)
+  
+  # Define column names and mapping for KWCOCO conversion
+  col.names.initial <- c("TrackID", "VidIdent", "UniqFrame", "TL_X", "TL_Y", "BR_X", "BR_Y", "DetLen_Conf", "Tar_Len", "SP", "CP")
+  col_map <- list(frame = "UniqFrame", track_id = "TrackID", tl_x = "TL_X", tl_y = "TL_Y", br_x = "BR_X", br_y = "BR_Y", score = "DetLen_Conf", species_name = "SP")
+  
+  tbl <- tbl.raw %>%
+    map_df(function(flnm) {
+      
+      final_df <- NULL # Initialize
+      
+      # --- Process based on file type ---
+      if (grepl("\\.csv$", flnm, ignore.case = TRUE)) {
+        cat(sprintf("Processing CSV file: %s\n", basename(flnm)))
+        df <- read_plus(flnm)
+        if (is.null(df) || nrow(df) == 0) return(NULL)
+        
+        names(df)[1:11] <- col.names.initial
+        video_meta <- list(id = 1, name = basename(flnm), width = 1920, height = 1080)
+        kwcoco_list <- convert_df_to_kwcoco_r(df, video_meta, col_map)
+        final_df <- convert_kwcoco_to_df_r(kwcoco_list)
+        
+      } else if (grepl("\\.json$", flnm, ignore.case = TRUE)) {
+        cat(sprintf("Processing KWCOCO JSON file: %s\n", basename(flnm)))
+        kwcoco_list <- tryCatch({
+          jsonlite::fromJSON(flnm, simplifyDataFrame = FALSE)
+        }, error = function(e) {
+          warning(paste("Error reading JSON file:", flnm, "-", e$message))
+          return(NULL)
+        })
+        
+        if (is.null(kwcoco_list) || length(kwcoco_list$annotations) == 0) return(NULL)
+        final_df <- convert_kwcoco_to_df_r(kwcoco_list)
+        
+      } else {
+        warning(paste("Skipping unsupported file type:", flnm))
+        return(NULL)
+      }
+      
+      # --- Common post-processing for both formats ---
+      if (is.null(final_df) || nrow(final_df) == 0) return(NULL)
+      
+      missing_cols <- setdiff(col.names.initial, names(final_df))
+      if (length(missing_cols) > 0) {
+        for (col in missing_cols) {
+          final_df[[col]] <- NA
+        }
+      }
+      
+      processed_df <- final_df[, col.names.initial]
+      processed_df$filename <- flnm
+      processed_df %>% mutate(across(everything(), as.character))
+    })
   # if all CSVs come from same source web or desktop use this read function
   read_plus <- function(flnm) {
     tryCatch({
@@ -293,7 +356,7 @@ for (t in 1:length(dts)) {
     })
   }
   # note that the table will not be produced if all columns are not formatted correctly 
-
+  
   # renaming and fixing columns and column headers
   tbl$filename <- basename(tbl$filename)
   tbl$filename <- gsub("\\.csv$", "", tbl$filename)
@@ -318,7 +381,7 @@ for (t in 1:length(dts)) {
   # had to import all columns as characters so now will reassign certain columns as numbers
   tbl[,c("TrackID", "UniqFrame", "TL_X", "TL_Y", "BR_X", "BR_Y", "DetLen_Conf", "Tar_Len", "CP")] <- tbl[,c("TrackID", "UniqFrame", "TL_X", "TL_Y", "BR_X", "BR_Y", "DetLen_Conf", "Tar_Len", "CP")] %>%  
     mutate(across(everything(), as.numeric))
-    
+  
   # separating out stations and number of distinct occurrences for each station
   stations <- dplyr::distinct(tbl,Deployment)
   
@@ -384,13 +447,13 @@ for (t in 1:length(dts)) {
     print(paste0(year, " v", model.run, " ", confidence))
     
     out <- vertrnk %>%
-    dplyr::group_by(Deployment,TrackID,UniqFrame) %>% 
-    dplyr::mutate(grpmax = max(Probs)) %>% 
-    ungroup() %>%
-    filter(Probs>confidence) %>%
-    arrange(Deployment,UniqFrame) %>%
-    mutate(count=1)
-   
+      dplyr::group_by(Deployment,TrackID,UniqFrame) %>% 
+      dplyr::mutate(grpmax = max(Probs)) %>% 
+      ungroup() %>%
+      filter(Probs>confidence) %>%
+      arrange(Deployment,UniqFrame) %>%
+      mutate(count=1)
+    
     #Pull first instances by species and calculate the time (S) based on VIAME processing at 5 frame per second
     #adjust the desired confidence by adjusting out0.X and rerun from here to the end for each confidence interval
     out <- out %>% dplyr::group_by(Deployment)
@@ -413,8 +476,8 @@ for (t in 1:length(dts)) {
     #Summarize mean and min counts
     #MinCount
     sta_trkmin <- suppressMessages(freqtable %>% 
-      dplyr::group_by(Deployment,Species) %>%
-      dplyr::summarise(max(Freq)))
+                                     dplyr::group_by(Deployment,Species) %>%
+                                     dplyr::summarise(max(Freq)))
     names(sta_trkmin)[2] <- "Spec_Viame_Dash"
     names(sta_trkmin)[3] <- "MaxNCount"
     sta_trkminw <- sta_trkmin %>% pivot_wider(names_from = Spec_Viame_Dash, values_from = MaxNCount)
@@ -425,8 +488,8 @@ for (t in 1:length(dts)) {
     
     #MeanCount
     sta_trkmean <- suppressMessages(freqtable %>% 
-      dplyr::group_by(Deployment,Species) %>%
-      dplyr::summarise(sum(Freq)))
+                                      dplyr::group_by(Deployment,Species) %>%
+                                      dplyr::summarise(sum(Freq)))
     names(sta_trkmean)[2] <- "Spec_Viame_Dash"
     names(sta_trkmean)[3] <- "Sums"
     sta_trkmean <- dplyr::mutate(sta_trkmean, MeanCount = Sums/7500) %>% 
@@ -439,8 +502,8 @@ for (t in 1:length(dts)) {
     
     #TotalCount
     sta_trktotal <- suppressMessages(freqtable %>% 
-      dplyr::group_by(Deployment,Species) %>%
-      dplyr::summarise(sum(Freq)))
+                                       dplyr::group_by(Deployment,Species) %>%
+                                       dplyr::summarise(sum(Freq)))
     names(sta_trktotal)[2] <- "Spec_Viame_Dash"
     names(sta_trktotal)[3] <- "Sums"
     sta_trktotal <- dplyr::mutate(sta_trktotal, TotalCount = Sums) %>% 
@@ -465,7 +528,7 @@ for (t in 1:length(dts)) {
     
     # exporting
     write.csv(sta_vars, file = paste0(outdir, "Part I - Counts/", year, "_v", model.run, "_", confidence, ".csv"), row.names = F)
- 
+    
   }
   if (t == length(dts)) {print("Part I Complete!")}
 }
@@ -722,9 +785,9 @@ percent_metric <- function(df, variable1, variable2, group, metric){
 
 ########## Processing steps ##########
 # options for the function below:
-  # species = "none" - gives you overall false positives/false negatives by model run, version, and confidence (not species-specific). DEFAULT - if you put nothing, this is what it will give you
-  # species = "all" - gives you the false positives/false negatives for ALL species by model run, version, and confidence
-  # species = "SPECIES_NAME" - gives you the false positives/false negatives for the specific species that you have chosen by model run, version, and confidence
+# species = "none" - gives you overall false positives/false negatives by model run, version, and confidence (not species-specific). DEFAULT - if you put nothing, this is what it will give you
+# species = "all" - gives you the false positives/false negatives for ALL species by model run, version, and confidence
+# species = "SPECIES_NAME" - gives you the false positives/false negatives for the specific species that you have chosen by model run, version, and confidence
 metrics <- calculate_metrics(combined_master, species = "all")
 percent_agreement <- percent_metric(metrics, year, Species, Confidence, Agree)
 relaxed_agreement <- percent_metric(metrics, year, Species, Confidence, Relaxed)
@@ -741,17 +804,17 @@ write.csv(metrics, paste0(outdir, "Part III - Data Analysis/Combined_False_Pos_N
 ########## Creating Analysis Reports ##########
 ###############################################
 # Would you like to cut out large schools (i.e., 999, 299, 399)?
-  print("Would you like to remove counts with large schools (i.e., 299, 399, and 999)? (y, n)")
-  remove_large_schools <- rstudioapi::showPrompt(
-    title = "Manual Input Required",
-    message = "Would you like to remove counts with large schools (i.e., 299, 399, and 999)? Please enter y or n."
-  )
-  # checking to see if the user cancelled the value selection
-  if (is.null(remove_large_schools)) {
-    stop("Script cancelled by user.", call. = FALSE)
-  }
-  
-  
+print("Would you like to remove counts with large schools (i.e., 299, 399, and 999)? (y, n)")
+remove_large_schools <- rstudioapi::showPrompt(
+  title = "Manual Input Required",
+  message = "Would you like to remove counts with large schools (i.e., 299, 399, and 999)? Please enter y or n."
+)
+# checking to see if the user cancelled the value selection
+if (is.null(remove_large_schools)) {
+  stop("Script cancelled by user.", call. = FALSE)
+}
+
+
 out.runs <- list()
 spec_runs <- list()
 for (s in 1:length(unique(combined_master$Species))){
@@ -767,37 +830,33 @@ for (s in 1:length(unique(combined_master$Species))){
   sub_false <- metrics %>% dplyr::filter(Species == species)
   anrepmkd <- paste0(script.dir, "/VIAME Output Analysis Report.Rmd")
   rmarkdown::render(anrepmkd,
-    output_dir = analysrepdir,
-    output_format = "html_document",
-    output_file = paste(spec_pretty, "Analysis Report.html"),
-    params = list(
-      spec_master = spec_master,
-      sub_false = sub_false,
-      species = species,
-      outdir = outdir))
+                    output_dir = analysrepdir,
+                    output_format = "html_document",
+                    output_file = paste(spec_pretty, "Analysis Report.html"),
+                    params = list(
+                      spec_master = spec_master,
+                      sub_false = sub_false,
+                      species = species,
+                      outdir = outdir))
   
   # converting all confidences to a data frame for precision and difference
   spec_prec <- data.frame(do.call("rbind", precision))
   spec_diff <- data.frame(do.call("rbind", difference))
   if (sum(spec_diff$Frequency, na.rm = T) == 0){  
-  spec_prec_diff <- merge(spec_prec, spec_diff, by = c("year", "Confidence"), all.x = T)
-  spec_prec_diff <- spec_prec_diff %>% 
+    spec_prec_diff <- merge(spec_prec, spec_diff, by = c("year", "Confidence"), all.x = T)
+    spec_prec_diff <- spec_prec_diff %>% 
       dplyr::mutate(year = year, Confidence = Confidence, n = n, validn = validn, R = NA, PercAgree = NA, ASD = NA, ACV = NA, AAD = NA, APE = NA, Percent = NA) %>% dplyr::select(-Count, -Frequency)
-  out.prec <- merge(mod_false, spec_prec_diff, by = c("year", "Confidence"), all.x = T) 
+    out.prec <- merge(mod_false, spec_prec_diff, by = c("year", "Confidence"), all.x = T) 
   } else {
-  spec_diff <- spec_diff %>% 
-    dplyr::filter(Count %in% c("-1", "0", "1")) %>%
-    dplyr::group_by(year, Confidence) %>% 
-    dplyr::summarise(Percent = sum(as.numeric(Frequency), na.rm = T))
-  spec_prec_diff <- merge(spec_prec, spec_diff, by = c("year", "Confidence"), all.x = T)
-  out.prec <- merge(mod_false, spec_prec_diff, by = c("year", "Confidence"), all.x = T)
+    spec_diff <- spec_diff %>% 
+      dplyr::filter(Count %in% c("-1", "0", "1")) %>%
+      dplyr::group_by(year, Confidence) %>% 
+      dplyr::summarise(Percent = sum(as.numeric(Frequency), na.rm = T))
+    spec_prec_diff <- merge(spec_prec, spec_diff, by = c("year", "Confidence"), all.x = T)
+    out.prec <- merge(mod_false, spec_prec_diff, by = c("year", "Confidence"), all.x = T)
   }
   out.runs[[s]] <- out.prec
 }
 
 spec_runs <- do.call("rbind", out.runs)
 write.csv(spec_runs, paste0(outdir, "Part III - Data Analysis/", "Combined_Species_Prec.csv"))
-
-
-
-
