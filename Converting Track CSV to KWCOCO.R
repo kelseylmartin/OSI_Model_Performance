@@ -484,14 +484,24 @@ your_column_map <- list(
 # --- Option 3: Convert a SINGLE local file ---
 # To run the conversion on a single CSV file, you would uncomment and run the following lines:
 #
+# year_of_data <- 2024 # IMPORTANT: Set the year of your data
+# convert_track_csv_to_kwcoco_r(
+#   csv_path = "C:/Users/Kelsey.l.martin.NMFS/Documents/NMFS/Automation/VIAME Output Analysis/Data/Tracks/2024_2.5/2024-SFD-022_tracks.csv",
+#   video_info = list(id = 1, name = "/2024-SFD-022_tracks", width = 1920, height = 1080),
+#   output_path = "C:/Users/Kelsey.l.martin.NMFS/Documents/NMFS/Automation/VIAME Output Analysis/Data/Tracks/2024_2.5/2024-SFD-022_tracks.coco.json",
+#   col_mapping = your_column_map,
+#   year = year_of_data
+# )
+
 year_of_data <- 2024 # IMPORTANT: Set the year of your data
 convert_track_csv_to_kwcoco_r(
-  csv_path = "C:/Users/Kelsey.l.martin.NMFS/Documents/NMFS/Automation/VIAME Output Analysis/Data/Tracks/2024_2.5/2024-SFD-022_tracks.csv",
-  video_info = list(id = 1, name = "/2024-SFD-022_tracks", width = 1920, height = 1080),
-  output_path = "C:/Users/Kelsey.l.martin.NMFS/Documents/NMFS/Automation/VIAME Output Analysis/Data/Tracks/2024_2.5/2024-SFD-022_tracks.coco.json",
+  csv_path = "C:/Users/Kelsey.l.martin.NMFS/Downloads/AUV_viame_test_detections.csv",
+  video_info = list(id = 1, name = "/AUV_viame_test_detections", width = 1920, height = 1080),
+  output_path = "C:/Users/Kelsey.l.martin.NMFS/Downloads/AUV_viame_test_detections.coco.json",
   col_mapping = your_column_map,
   year = year_of_data
 )
+
 
 
 # --- SELF-CONTAINED TEST & DEMONSTRATION ---
