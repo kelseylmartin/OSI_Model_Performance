@@ -16,6 +16,8 @@ Imports:
     dplyr,
     ggpubr,
     jsonlite,
+    pROC,
+    PRROC,
     readr,
     tidyr,
     tools

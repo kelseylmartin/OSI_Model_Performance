@@ -72,3 +72,75 @@ calculate_binary_metrics <- function(aligned_df, group_vars = NULL, total_compar
 
   return(metrics_df)
 }
+
+#' Summarize Performance Metrics Across Confidence Thresholds
+#'
+#' Evaluates model performance over a range of confidence thresholds,
+#' generating metrics like precision, recall, and F1-score for each threshold.
+#'
+#' @param model_detections A standardized detections tibble for the model,
+#'   which must include a `score` column.
+#' @param truth_detections A standardized detections tibble for the ground truth.
+#' @param metric_function The function to use for aggregating counts (e.g.,
+#'   `calculate_maxn` or `calculate_frame_abundance`). Defaults to `calculate_maxn`.
+#' @param by A character vector of column names to join the model and truth counts on.
+#' @param thresholds A numeric vector of confidence thresholds to evaluate (e.g.,
+#'   `seq(0.1, 0.9, 0.1)`).
+#' @return A `tibble` with each row representing a confidence threshold and its
+#'   corresponding performance metrics (TP, FP, FN, precision, recall, etc.).
+#' @export
+#' @importFrom dplyr filter bind_rows distinct
+#' @importFrom rlang .data
+#' @examples
+#' # Create sample model and truth detection data
+#' model_dets <- dplyr::tibble(
+#'   video_id = "v1",
+#'   frame_index = c(1, 1, 2),
+#'   category_name = c("FishA", "FishA", "FishB"),
+#'   score = c(0.95, 0.85, 0.7)
+#' )
+#' truth_dets <- dplyr::tibble(
+#'   video_id = "v1",
+#'   frame_index = c(1, 3),
+#'   category_name = c("FishA", "FishC")
+#' )
+#'
+#' # Summarize performance using MaxN across several thresholds
+#' summarize_performance_by_threshold(
+#'   model_detections = model_dets,
+#'   truth_detections = truth_dets,
+#'   by = c("video_id", "category_name"),
+#'   thresholds = c(0.5, 0.8, 0.9)
+#' )
+summarize_performance_by_threshold <- function(model_detections,
+                                               truth_detections,
+                                               by,
+                                               metric_function = calculate_maxn,
+                                               thresholds = seq(0.1, 0.9, by = 0.1)) {
+
+  # Calculate truth counts once, as they don't change
+  truth_counts <- metric_function(truth_detections)
+
+  # Determine the total number of unique groups to get accurate TN counts
+  all_groups <- dplyr::bind_rows(
+    dplyr::distinct(model_detections, dplyr::across(dplyr::all_of(by))),
+    dplyr::distinct(truth_detections, dplyr::across(dplyr::all_of(by)))
+  )
+  total_comparisons <- nrow(dplyr::distinct(all_groups))
+
+  # Loop over each threshold, calculate metrics, and collect results
+  all_metrics <- lapply(thresholds, function(thresh) {
+    model_dets_filtered <- model_detections %>%
+      dplyr::filter(.data$score >= thresh)
+
+    model_counts <- metric_function(model_dets_filtered)
+
+    aligned <- align_counts(model_counts, truth_counts, by = by)
+
+    metrics <- calculate_binary_metrics(aligned, total_comparisons = total_comparisons)
+    metrics$threshold <- thresh
+    return(metrics)
+  })
+
+  return(dplyr::bind_rows(all_metrics))
+}

@@ -53,6 +53,17 @@ align_counts <- function(model_counts, truth_counts, by, model_col = maxn, truth
   model_col_quo <- rlang::enquo(model_col)
   truth_col_quo <- rlang::enquo(truth_col)
 
+  model_col_name <- rlang::as_name(model_col_quo)
+  truth_col_name <- rlang::as_name(truth_col_quo)
+
+  # Ensure count columns exist, even if the data frame is empty, to prevent rename errors.
+  if (!model_col_name %in% names(model_counts)) {
+    model_counts[[model_col_name]] <- numeric(0)
+  }
+  if (!truth_col_name %in% names(truth_counts)) {
+    truth_counts[[truth_col_name]] <- numeric(0)
+  }
+
   aligned_df <- dplyr::full_join(model_counts, truth_counts, by = by) %>%
     dplyr::rename(
       model_count = !!model_col_quo,
