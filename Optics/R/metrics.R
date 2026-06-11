@@ -37,37 +37,31 @@ calculate_maxn <- function(detections_df, group_cols = NULL) {
     stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
   }
 
+  # Define all grouping columns
   all_groups <- c("video_id", "category_name", group_cols)
 
   # Guard Clause: If the input is empty, return a correctly structured empty tibble.
+  # This is the definitive fix for the downstream errors in summarize_performance_by_threshold.
   if (nrow(detections_df) == 0) {
-    all_return_cols <- c(all_groups, "maxn")
-    return(dplyr::tibble(!!!stats::setNames(lapply(all_return_cols, function(x) logical(0)), all_return_cols)))
+    return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "maxn"), function(x) logical(0)), c(all_groups, "maxn"))))
   }
 
-  # --- 2. Calculate MaxN using base R aggregate for robustness ---
-  # First, count detections per frame. Using `video_id` to count rows.
-  frame_counts <- stats::aggregate(
-    x = list(n_in_frame = detections_df$video_id),
-    by = detections_df[, c(all_groups, "frame_index"), drop = FALSE],
-    FUN = length
-  )
-
-  # Then, find the max of those counts for each group
-  maxn_df <- stats::aggregate(
-    x = list(maxn = frame_counts$n_in_frame),
-    by = frame_counts[, all_groups, drop = FALSE],
-    FUN = max
-  )
-
-  return(dplyr::as_tibble(maxn_df))
+  # --- 2. Calculate MaxN with a standard, robust dplyr workflow ---
+  detections_df %>%
+    # First, count detections per frame
+    dplyr::group_by(dplyr::across(dplyr::all_of(c(all_groups, "frame_index")))) %>%
+    dplyr::summarise(n_in_frame = dplyr::n(), .groups = "drop") %>%
+    # Then, find the max of those counts for each group
+    dplyr::group_by(dplyr::across(dplyr::all_of(all_groups))) %>%
+    # max(c(0, ...)) ensures a 0 is returned for empty sets, preventing column drop
+    dplyr::summarise(maxn = max(c(0, .data$n_in_frame)), .groups = "drop")
 }
 
 #' Calculate Frame-by-Frame Abundance
-#' 
+#'
 #' Calculates the number of detections for each species category in every frame
 #' where they appear. This provides a time-series of counts.
-#' 
+#'
 #' @param detections_df A standardized detections tibble, as produced by one of
 #'   the `read_*` ingestion functions. Must contain `video_id`, `frame_index`,
 #'   and `category_name`.
@@ -85,7 +79,7 @@ calculate_maxn <- function(detections_df, group_cols = NULL) {
 #'   frame_index = c(1, 1, 2),
 #'   category_name = c("FishA", "FishA", "FishB"),
 #'   annotation_id = 1:3
-#' ) 
+#' )
 #'
 #' # Calculate frame-by-frame abundance
 #' calculate_frame_abundance(sample_df)
@@ -102,16 +96,10 @@ calculate_frame_abundance <- function(detections_df, group_cols = NULL) {
 
   # Guard Clause: If the input is empty, return a correctly structured empty tibble.
   if (nrow(detections_df) == 0) {
-    all_return_cols <- c(all_groups, "abundance")
-    return(dplyr::tibble(!!!stats::setNames(lapply(all_return_cols, function(x) logical(0)), all_return_cols)))
+    return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "abundance"), function(x) logical(0)), c(all_groups, "abundance"))))
   }
 
-  # Use aggregate to count rows for each group
-  frame_abundance <- stats::aggregate(
-    x = list(abundance = detections_df$video_id),
-    by = detections_df[, all_groups, drop = FALSE],
-    FUN = length
-  )
-
-  return(dplyr::as_tibble(frame_abundance))
+  # A simple group-and-count operation. The guard clause handles the empty case.
+  dplyr::group_by(detections_df, dplyr::across(dplyr::all_of(all_groups))) %>%
+    dplyr::summarise(abundance = dplyr::n(), .groups = "drop")
 }

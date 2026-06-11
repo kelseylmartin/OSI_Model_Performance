@@ -30,7 +30,7 @@ sample_df <- dplyr::tibble(
   frame_index = c(1, 1, 2),
   category_name = c("FishA", "FishA", "FishB"),
   annotation_id = 1:3
-) 
+)
 
 # Calculate frame-by-frame abundance
 calculate_frame_abundance(sample_df)
