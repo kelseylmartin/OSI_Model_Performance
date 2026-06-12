@@ -4,13 +4,21 @@
 \alias{plot_bland_altman}
 \title{Plot a Bland-Altman Plot for Agreement}
 \usage{
-plot_bland_altman(aligned_df, title = "Bland-Altman Agreement Plot")
+plot_bland_altman(
+  aligned_df,
+  title = "Bland-Altman Agreement Plot",
+  model_col = NULL
+)
 }
 \arguments{
 \item{aligned_df}{A data frame or tibble containing aligned counts, typically
 the output of \code{align_counts()}. Must contain \code{model_count} and \code{truth_count}.}
 
 \item{title}{An optional title for the plot.}
+
+\item{model_col}{An optional unquoted column name that identifies the model
+or group. If provided, a separate plot panel will be generated for each
+unique value in this column.}
 }
 \value{
 A \code{ggplot} object representing the Bland-Altman plot.

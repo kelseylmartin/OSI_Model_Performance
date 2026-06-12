@@ -4,13 +4,21 @@
 \alias{plot_counts_scatterplot}
 \title{Plot a Scatterplot of Model vs. Truth Counts}
 \usage{
-plot_counts_scatterplot(aligned_df, title = "Model vs. Truth Counts")
+plot_counts_scatterplot(
+  aligned_df,
+  title = "Model vs. Truth Counts",
+  model_col = NULL
+)
 }
 \arguments{
 \item{aligned_df}{A data frame or tibble containing aligned counts, typically
 the output of \code{align_counts()}. Must contain \code{model_count} and \code{truth_count}.}
 
 \item{title}{An optional title for the plot.}
+
+\item{model_col}{An optional unquoted column name that identifies the model
+or group. If provided, a separate plot panel will be generated for each
+unique value in this column.}
 }
 \value{
 A \code{ggplot} object, which can be further customized.
@@ -27,5 +35,13 @@ aligned_data <- dplyr::tibble(
 )
 
 plot_counts_scatterplot(aligned_data, title = "Model vs. Truth MaxN")
+
+# Example with multiple models
+aligned_multi <- dplyr::tibble(
+  model_count = c(10, 1, 5, 12, 2, 4),
+  truth_count = c(12, 0, 2, 11, 3, 4),
+  model_name = rep(c("Model A", "Model B"), each = 3)
+)
+plot_counts_scatterplot(aligned_multi, model_col = model_name)
 
 }

@@ -4,7 +4,7 @@
 \alias{plot_confusion_matrix}
 \title{Plot a Confusion Matrix}
 \usage{
-plot_confusion_matrix(metrics_df, title = "Confusion Matrix")
+plot_confusion_matrix(metrics_df, title = "Confusion Matrix", model_col = NULL)
 }
 \arguments{
 \item{metrics_df}{A data frame containing performance metrics, typically the
@@ -12,6 +12,10 @@ output of \code{calculate_binary_metrics()}. Must contain \code{tp}, \code{fp}, 
 If the data frame is grouped, only the first group's metrics will be plotted.}
 
 \item{title}{An optional title for the plot.}
+
+\item{model_col}{An optional unquoted column name that identifies the model
+or group. If provided, a separate plot panel will be generated for each
+unique value in this column.}
 }
 \value{
 A \code{ggplot} object representing the confusion matrix.

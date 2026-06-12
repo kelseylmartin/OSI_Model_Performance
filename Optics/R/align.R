@@ -65,16 +65,12 @@ align_counts <- function(model_counts, truth_counts, by, model_col = maxn, truth
     truth_counts[[truth_col_name]] <- numeric(0)
   }
 
-  # --- FIX: Rename the columns BEFORE joining ---
-  model_counts <- model_counts %>%
-    dplyr::rename(model_count = !!model_col_quo)
-    
-  truth_counts <- truth_counts %>%
-    dplyr::rename(truth_count = !!truth_col_quo)
+  # Rename columns BEFORE the join to ensure names are consistent and predictable.
+  model_counts_renamed <- model_counts %>% dplyr::rename(model_count = !!model_col_quo)
+  truth_counts_renamed <- truth_counts %>% dplyr::rename(truth_count = !!truth_col_quo)
 
-  # --- Now perform the join ---
-  aligned_df <- dplyr::full_join(model_counts, truth_counts, by = by) %>%
-    # Use dplyr::across safely inside mutate()
+  # Now perform the join and replace NAs that result from non-matches.
+  aligned_df <- dplyr::full_join(model_counts_renamed, truth_counts_renamed, by = by) %>%
     dplyr::mutate(dplyr::across(c("model_count", "truth_count"), ~ifelse(is.na(.), 0, .)))
 
   return(aligned_df)

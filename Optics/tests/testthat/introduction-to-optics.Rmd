@@ -1,0 +1,189 @@
+---
+title: "Introduction to Optics"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to Optics}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+The `Optics` package provides a standardized and flexible toolkit for evaluating the performance of machine learning models on optical survey data. This vignette demonstrates the core workflow of the package, from raw detections to performance metrics and visualizations.
+
+We will cover:
+
+1.  **Setting up Data**: Creating sample model and ground truth data.
+2.  **Calculating Count Metrics**: Using `calculate_maxn()` to aggregate detections.
+3.  **Aligning Data**: Using `align_counts()` to prepare for comparison.
+4.  **Evaluating Performance**: Using `calculate_binary_metrics()` and `classify_detections()`.
+5.  **Visualizing Results**: Creating comparative plots for multiple models.
+
+```{r setup}
+library(Optics)
+library(dplyr)
+library(ggplot2)
+```
+
+## 1. Setting up Data
+
+First, let's create some sample data. We will simulate the output for two different models, "Odyssey" and "Voyager", along with a single ground truth dataset. This allows us to demonstrate both single-model and multi-model analysis.
+
+Note: The `Optics` package assumes your data has been standardized into a common format. Here, we create tibbles that match this expected internal schema.
+
+```{r create-data}
+# Ground truth data (human-annotated)
+truth_detections <- dplyr::tibble(
+  video_id = "vid01",
+  frame_index = c(10, 10, 15, 20, 25),
+  category_name = c("FishA", "FishA", "FishA", "FishB", "FishC"),
+  detection_id = 1:5
+)
+
+# Raw detections from two different models
+model_detections <- dplyr::tibble(
+  video_id = "vid01",
+  frame_index = c(10, 10, 12, 18, 30, 10, 16, 22),
+  category_name = c("FishA", "FishA", "FishA", "FishB", "FishD", "FishA", "FishB", "FishB"),
+  score = c(0.95, 0.90, 0.85, 0.88, 0.75, 0.92, 0.80, 0.70),
+  detection_id = 6:13,
+  model_name = c(rep("Odyssey", 5), rep("Voyager", 3))
+)
+
+print("Ground Truth Detections:")
+print(truth_detections)
+
+print("Model Detections:")
+print(model_detections)
+```
+
+## 2. Calculating Count Metrics
+
+The first step in many analyses is to aggregate raw detections into a meaningful count metric. For this example, we'll use `calculate_maxn()`, a common metric for baited video surveys.
+
+We calculate MaxN for the ground truth data and for each model's data separately by using the `group_cols` argument.
+
+```{r calc-maxn}
+# Calculate MaxN for the ground truth
+truth_counts <- calculate_maxn(truth_detections)
+
+# Calculate MaxN for each model
+model_counts <- calculate_maxn(model_detections, group_cols = "model_name")
+
+print("Truth MaxN Counts:")
+print(truth_counts)
+
+print("Model MaxN Counts:")
+print(model_counts)
+```
+
+## 3. Aligning Model and Truth Counts
+
+To compare the model to the ground truth, we need to align them into a single data frame. The `align_counts()` function performs a full join, ensuring that we capture true positives, false positives (model saw something the human didn't), and false negatives (human saw something the model didn't).
+
+When aligning multi-model data, it's crucial to include the model-identifying column in the `by` argument.
+
+```{r align-data}
+aligned_data <- align_counts(
+  model_counts = model_counts,
+  truth_counts = truth_counts,
+  by = c("video_id", "category_name", "model_name")
+)
+
+print("Aligned Model and Truth Data:")
+print(aligned_data)
+```
+
+## 4. Calculating Performance Statistics
+
+With our data aligned, we can now calculate performance metrics. `calculate_binary_metrics()` treats any non-zero count as a "presence" to calculate TP, FP, and FN. We can group by `model_name` to get a performance summary for each model.
+
+```{r calc-metrics}
+binary_metrics <- calculate_binary_metrics(aligned_data, group_vars = "model_name")
+
+print("Binary Classification Metrics per Model:")
+print(binary_metrics)
+```
+
+## 5. Visualizing Performance
+
+Visualizations are key to understanding model performance. The `Optics` package provides several plotting functions that can handle multi-model data.
+
+### Scatter and Bland-Altman Plots
+
+These plots are useful for comparing the agreement between model and truth counts. By providing the `model_col` argument, we can generate faceted plots for easy side-by-side comparison.
+
+```{r scatter-plot, fig.width=8, fig.height=4}
+plot_counts_scatterplot(aligned_data, model_col = model_name)
+plot_bland_altman(aligned_data, model_col = model_name)
+```
+
+### Confusion Matrix
+
+To plot a confusion matrix, we first need to calculate True Negatives (TN). We can do this by providing the `total_comparisons` argument to `calculate_binary_metrics`.
+
+```{r cm-plot, fig.width=8, fig.height=4}
+# Recalculate metrics with TN
+total_unique_groups <- nrow(dplyr::distinct(aligned_data, video_id, category_name))
+metrics_with_tn <- calculate_binary_metrics(aligned_data, group_vars = "model_name", total_comparisons = total_unique_groups)
+
+plot_confusion_matrix(metrics_with_tn, model_col = model_name)
+```
+
+### ROC and PR Curves
+
+ROC and PR curves are essential for understanding performance across different confidence thresholds. These plots require a data frame where each raw model detection has been classified as a "TP" or "FP". We use our `classify_detections()` function for this.
+
+First, we need a "validated" dataset that contains only the detections that a human reviewer kept. For this example, we'll assume the human kept all detections that matched a species in the ground truth.
+
+```{r classify-for-curves}
+# Simulate a validated set by finding which raw detections match the truth
+validated_ids <- model_detections %>%
+  dplyr::semi_join(truth_detections, by = c("video_id", "category_name")) %>%
+  dplyr::select(detection_id)
+
+classified_for_curves <- classify_detections(
+  raw_detections = model_detections,
+  validated_detections = validated_ids,
+  detection_id = detection_id
+)
+
+print("Classified Detections for Curves:")
+print(classified_for_curves)
+```
+
+Now we can generate the comparative plots.
+
+```{r roc-pr-plots, fig.width=8, fig.height=4}
+plot_roc_curve(classified_for_curves, model_col = model_name)
+plot_pr_curve(classified_for_curves, model_col = model_name)
+```
+
+## 6. Summarizing Performance by Threshold
+
+Finally, we can use `summarize_performance_by_threshold()` to see how metrics like precision and recall change as we adjust the model's confidence score cutoff.
+
+```{r threshold-summary}
+# We'll analyze just the "Odyssey" model for this example
+odyssey_detections <- model_detections %>%
+  filter(model_name == "Odyssey")
+
+threshold_summary <- summarize_performance_by_threshold(
+  model_detections = odyssey_detections,
+  truth_detections = truth_detections,
+  by = c("video_id", "category_name"),
+  thresholds = c(0.7, 0.8, 0.9, 0.95)
+)
+
+print("Performance at Different Thresholds for 'Odyssey' Model:")
+print(threshold_summary)
+```
+
+This concludes our introduction to the core workflow of the `Optics` package. With these functions, you can perform a comprehensive, multi-model evaluation from start to finish.

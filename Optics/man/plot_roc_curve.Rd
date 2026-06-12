@@ -4,7 +4,7 @@
 \alias{plot_roc_curve}
 \title{Plot a Receiver Operating Characteristic (ROC) Curve}
 \usage{
-plot_roc_curve(detection_df, title = "ROC Curve")
+plot_roc_curve(detection_df, title = "ROC Curve", model_col = NULL)
 }
 \arguments{
 \item{detection_df}{A data frame where each row is a model detection. Must
@@ -13,6 +13,10 @@ column (e.g., "TP" or "FP") indicating if the detection was a true or false
 positive.}
 
 \item{title}{An optional title for the plot.}
+
+\item{model_col}{An optional unquoted column name that identifies the model
+or group. If provided, a separate ROC curve will be generated for each
+unique value in this column.}
 }
 \value{
 A \code{ggplot} object representing the ROC curve.

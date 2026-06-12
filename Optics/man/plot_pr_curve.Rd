@@ -4,12 +4,16 @@
 \alias{plot_pr_curve}
 \title{Plot a Precision-Recall (PR) Curve}
 \usage{
-plot_pr_curve(detection_df, title = "Precision-Recall Curve")
+plot_pr_curve(detection_df, model_col = NULL, title = "Precision-Recall Curve")
 }
 \arguments{
 \item{detection_df}{A data frame where each row is a model detection. Must
 contain a \code{score} column with the model's confidence score, and a \code{status}
 column (e.g., "TP" or "FP").}
+
+\item{model_col}{An optional unquoted column name that identifies the model
+or group. If provided, a separate PR curve will be generated for each
+unique value in this column.}
 
 \item{title}{An optional title for the plot.}
 }
@@ -33,5 +37,13 @@ pr_data <- dplyr::tibble(
 )
 
 plot_pr_curve(pr_data)
+
+# Example with multiple models
+pr_data_multi <- dplyr::tibble(
+  score = runif(200),
+  status = sample(c("TP", "FP"), 200, replace = TRUE),
+  model_name = rep(c("Model A", "Model B"), each = 100)
+)
+plot_pr_curve(pr_data_multi, model_col = model_name)
 
 }
