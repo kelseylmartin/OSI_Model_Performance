@@ -15,8 +15,9 @@
 #'   `video_id` and `category_name`) and a `maxn` column containing the
 #'   calculated MaxN value.
 #' @export
-#' @importFrom dplyr group_by summarise n n_distinct ungroup
-#' @importFrom rlang .data
+#' @importFrom dplyr group_by summarise n
+#' @importFrom rlang .data syms
+#' @importFrom magrittr %>%
 #' @examples
 #' # Create a sample standardized data frame
 #' sample_df <- dplyr::tibble(
@@ -37,23 +38,21 @@ calculate_maxn <- function(detections_df, group_cols = NULL) {
     stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
   }
 
-  all_groups <- c("video_id", "category_name", group_cols)
+  all_groups <- unique(c("video_id", "category_name", group_cols))
 
   # Guard Clause: If the input is empty, return a correctly structured empty tibble.
-  # This is the definitive fix for the downstream errors in summarize_performance_by_threshold.
   if (nrow(detections_df) == 0) {
     return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "maxn"), function(x) logical(0)), c(all_groups, "maxn"))))
   }
 
   # --- 2. Calculate MaxN with a standard, robust dplyr workflow ---
-    detections_df %>%
-    # First, count detections per frame
-    dplyr::group_by(dplyr::across(dplyr::all_of(c(all_groups, "frame_index")))) %>%
+  detections_df %>%
+    # First, count detections per frame using !!!rlang::syms() for safe injection
+    dplyr::group_by(!!!rlang::syms(unique(c(all_groups, "frame_index")))) %>%
     dplyr::summarise(n_in_frame = dplyr::n(), .groups = "drop") %>%
     # Then, find the max of those counts for each group
-    dplyr::group_by(dplyr::across(dplyr::all_of(all_groups))) %>%
+    dplyr::group_by(!!!rlang::syms(all_groups)) %>%
     # max(c(0, ...)) ensures a 0 is returned for empty sets, preventing column drop.
-    # This is the definitive fix for the error.
     dplyr::summarise(maxn = max(c(0, .data$n_in_frame)), .groups = "drop")
 }
 
@@ -71,7 +70,9 @@ calculate_maxn <- function(detections_df, group_cols = NULL) {
 #'   `video_id`, `frame_index`, and `category_name`) and an `abundance` column
 #'   containing the per-frame counts.
 #' @export
-#' @importFrom dplyr group_by summarise n across all_of
+#' @importFrom dplyr group_by summarise n
+#' @importFrom rlang syms
+#' @importFrom magrittr %>%
 #' @examples
 #' # Create a sample standardized data frame
 #' sample_df <- dplyr::tibble(
@@ -92,15 +93,15 @@ calculate_frame_abundance <- function(detections_df, group_cols = NULL) {
     stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
   }
 
-  all_groups <- c("video_id", "frame_index", "category_name", group_cols)
+  all_groups <- unique(c("video_id", "frame_index", "category_name", group_cols))
 
-  # Guard Clause: If the input is empty, return a correctly structured empty tibble.
+  # Guard Clause
   if (nrow(detections_df) == 0) {
     return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "abundance"), function(x) logical(0)), c(all_groups, "abundance"))))
   }
 
-  # A simple group-and-count operation. The guard clause handles the empty case.
+  # A simple group-and-count operation using symbol injection
   detections_df %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(all_groups))) %>%
+    dplyr::group_by(!!!rlang::syms(all_groups)) %>%
     dplyr::summarise(abundance = dplyr::n(), .groups = "drop")
 }

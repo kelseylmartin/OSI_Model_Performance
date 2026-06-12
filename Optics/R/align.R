@@ -28,6 +28,7 @@
 #' @importFrom dplyr full_join rename select mutate across everything
 #' @importFrom rlang enquo as_name
 #' @importFrom tidyselect all_of
+#' @importFrom magrittr %>%
 #' @examples
 #' model_df <- dplyr::tibble(
 #'   video_id = c("v1", "v1", "v2"),
@@ -64,11 +65,16 @@ align_counts <- function(model_counts, truth_counts, by, model_col = maxn, truth
     truth_counts[[truth_col_name]] <- numeric(0)
   }
 
+  # --- FIX: Rename the columns BEFORE joining ---
+  model_counts <- model_counts %>%
+    dplyr::rename(model_count = !!model_col_quo)
+    
+  truth_counts <- truth_counts %>%
+    dplyr::rename(truth_count = !!truth_col_quo)
+
+  # --- Now perform the join ---
   aligned_df <- dplyr::full_join(model_counts, truth_counts, by = by) %>%
-    dplyr::rename(
-      model_count = !!model_col_quo,
-      truth_count = !!truth_col_quo
-    ) %>%
+    # Use dplyr::across safely inside mutate()
     dplyr::mutate(dplyr::across(c("model_count", "truth_count"), ~ifelse(is.na(.), 0, .)))
 
   return(aligned_df)
