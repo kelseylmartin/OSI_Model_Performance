@@ -37,7 +37,6 @@ calculate_maxn <- function(detections_df, group_cols = NULL) {
     stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
   }
 
-  # Define all grouping columns
   all_groups <- c("video_id", "category_name", group_cols)
 
   # Guard Clause: If the input is empty, return a correctly structured empty tibble.
@@ -47,13 +46,14 @@ calculate_maxn <- function(detections_df, group_cols = NULL) {
   }
 
   # --- 2. Calculate MaxN with a standard, robust dplyr workflow ---
-  detections_df %>%
+    detections_df %>%
     # First, count detections per frame
     dplyr::group_by(dplyr::across(dplyr::all_of(c(all_groups, "frame_index")))) %>%
     dplyr::summarise(n_in_frame = dplyr::n(), .groups = "drop") %>%
     # Then, find the max of those counts for each group
     dplyr::group_by(dplyr::across(dplyr::all_of(all_groups))) %>%
-    # max(c(0, ...)) ensures a 0 is returned for empty sets, preventing column drop
+    # max(c(0, ...)) ensures a 0 is returned for empty sets, preventing column drop.
+    # This is the definitive fix for the error.
     dplyr::summarise(maxn = max(c(0, .data$n_in_frame)), .groups = "drop")
 }
 
@@ -61,7 +61,7 @@ calculate_maxn <- function(detections_df, group_cols = NULL) {
 #'
 #' Calculates the number of detections for each species category in every frame
 #' where they appear. This provides a time-series of counts.
-#'
+#' 
 #' @param detections_df A standardized detections tibble, as produced by one of
 #'   the `read_*` ingestion functions. Must contain `video_id`, `frame_index`,
 #'   and `category_name`.
@@ -79,7 +79,7 @@ calculate_maxn <- function(detections_df, group_cols = NULL) {
 #'   frame_index = c(1, 1, 2),
 #'   category_name = c("FishA", "FishA", "FishB"),
 #'   annotation_id = 1:3
-#' )
+#' ) 
 #'
 #' # Calculate frame-by-frame abundance
 #' calculate_frame_abundance(sample_df)
@@ -100,6 +100,7 @@ calculate_frame_abundance <- function(detections_df, group_cols = NULL) {
   }
 
   # A simple group-and-count operation. The guard clause handles the empty case.
-  dplyr::group_by(detections_df, dplyr::across(dplyr::all_of(all_groups))) %>%
+  detections_df %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(all_groups))) %>%
     dplyr::summarise(abundance = dplyr::n(), .groups = "drop")
 }

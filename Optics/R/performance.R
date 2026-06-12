@@ -133,12 +133,27 @@ summarize_performance_by_threshold <- function(model_detections,
     model_dets_filtered <- model_detections %>%
       dplyr::filter(.data$score >= thresh)
 
-    model_counts <- metric_function(model_dets_filtered)
-
-    aligned <- align_counts(model_counts, truth_counts, by = by)
-
-    metrics <- calculate_binary_metrics(aligned, total_comparisons = total_comparisons)
-    metrics$threshold <- thresh
+    # If filtering results in no model detections, we can shortcut the process.
+    # This is the definitive fix for the "column `maxn` doesn't exist" error.
+    if (nrow(model_dets_filtered) == 0) {
+      # When the model detects nothing:
+      # TP and FP are 0.
+      # FN is the total number of actual presences in the truth data.
+      fn_count <- sum(truth_counts[[ncol(truth_counts)]] > 0)
+      metrics <- dplyr::tibble(
+        tp = 0, fp = 0, fn = fn_count,
+        precision = NA_real_, # Or 0, depending on desired convention for 0/0
+        recall = 0,
+        f1_score = NA_real_,
+        threshold = thresh
+      )
+    } else {
+      # Proceed with normal calculation if there are detections
+      model_counts <- metric_function(model_dets_filtered)
+      aligned <- align_counts(model_counts, truth_counts, by = by)
+      metrics <- calculate_binary_metrics(aligned, total_comparisons = total_comparisons)
+      metrics$threshold <- thresh
+    }
     return(metrics)
   })
 
