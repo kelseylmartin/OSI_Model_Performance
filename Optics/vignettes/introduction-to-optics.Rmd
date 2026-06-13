@@ -11,15 +11,12 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.width = 8,
-  fig.height = 4.5
+  fig.width = 7,
+  fig.height = 5
 )
 ```
 
-<!-- Note: This vignette uses functions that may require packages like 'lme4'. -->
-<!-- Ensure such packages are listed under "Suggests:" in the DESCRIPTION file. -->
-
-## Introduction
+## 1. Introduction
 
 The `Optics` package provides a standardized toolkit for evaluating the performance of machine learning models on optical survey data. This vignette demonstrates a complete workflow, from ingesting raw model output to generating final performance metrics and visualizations.
 
@@ -31,12 +28,12 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## 1. Creating Sample Data
+## 2. Creating Sample Data
 
 For this example, we will create sample data representing raw model detections and a corresponding ground truth dataset.
 
 *   **Model Detections**: Detections from two different models (`Model A` and `Model B`) across a range of confidence scores.
-*   **Truth Detections**: The human-annotated ground truth data for a single video.
+*   **Truth Detections**: The human-annotated ground truth data.
 
 ```{r create-data}
 # Sample model detections with scores
@@ -62,11 +59,14 @@ truth_detections <- tibble(
   frame_index = c(10, 10, 20, 30)
 )
 
-knitr::kable(model_detections, caption = "Sample Model Detections")
-knitr::kable(truth_detections, caption = "Sample Ground Truth Detections")
+print("Model Detections:")
+print(model_detections)
+
+print("Truth Detections:")
+print(truth_detections)
 ```
 
-## 2. Summarizing Performance by Threshold
+## 3. Summarizing Performance by Threshold
 
 A key task is to evaluate how a model performs at different confidence thresholds. The `summarize_performance_by_threshold()` function automates this by calculating metrics like precision, recall, and F1-score for each threshold.
 
@@ -74,7 +74,7 @@ We will run this for each model separately and then combine the results.
 
 ```{r summarize-performance}
 # Define the thresholds we want to test
-thresholds_to_test <- seq(0.5, 0.9, by = 0.1)
+thresholds_to_test <- seq(0.5, 1.0, by = 0.1)
 
 # Analyze Model A
 perf_model_a <- summarize_performance_by_threshold(
@@ -95,10 +95,10 @@ perf_model_b <- summarize_performance_by_threshold(
 # Combine into a single data frame
 performance_summary <- bind_rows(perf_model_a, perf_model_b)
 
-knitr::kable(performance_summary, caption = "Performance Metrics by Model and Threshold", digits = 2)
+print(performance_summary)
 ```
 
-## 3. Visualizing Performance
+## 4. Visualizing Performance
 
 With the summary data, we can now create plots to compare the models.
 
@@ -106,7 +106,7 @@ With the summary data, we can now create plots to compare the models.
 
 The `plot_performance_by_threshold()` function is perfect for visualizing the trade-offs between precision, recall, and F1-score. This helps in selecting an optimal confidence threshold for each model.
 
-```{r plot-performance, fig.cap="Precision, Recall, and F1-Score for Model A and Model B across different confidence thresholds.", out.width="100%"}
+```{r plot-performance, fig.cap="Precision, Recall, and F1-Score for Model A and Model B across different confidence thresholds."}
 plot_performance_by_threshold(
   performance_summary,
   model_col = model_name,
@@ -118,7 +118,7 @@ plot_performance_by_threshold(
 
 To see how well the model counts match the truth counts at a *specific* threshold (e.g., 0.8), we can generate a scatterplot.
 
-```{r plot-scatterplot, fig.cap="Model vs. Truth MaxN counts at a 0.8 confidence threshold.", out.width="100%"}
+```{r plot-scatterplot, fig.cap="Model vs. Truth MaxN counts at a 0.8 confidence threshold."}
 # First, calculate counts at a chosen threshold
 model_counts_at_08 <- model_detections %>%
   filter(score >= 0.8) %>%
@@ -126,12 +126,21 @@ model_counts_at_08 <- model_detections %>%
 
 truth_counts <- calculate_maxn(truth_detections)
 
-# Align the data
-aligned_counts <- align_counts(
-  model_counts = model_counts_at_08,
+# Align each model's counts to the truth separately, then combine.
+aligned_a <- align_counts(
+  model_counts = filter(model_counts_at_08, model_name == "Model A"),
   truth_counts = truth_counts,
-  by = c("video_id", "category_name", "model_name")
-)
+  by = c("video_id", "category_name")
+) %>% mutate(model_name = "Model A")
+
+aligned_b <- align_counts(
+  model_counts = filter(model_counts_at_08, model_name == "Model B"),
+  truth_counts = truth_counts,
+  by = c("video_id", "category_name")
+) %>% mutate(model_name = "Model B")
+
+# Combine the aligned results into a single data frame for plotting
+aligned_counts <- bind_rows(aligned_a, aligned_b)
 
 # Generate the plot, faceting by model
 plot_counts_scatterplot(
@@ -141,4 +150,4 @@ plot_counts_scatterplot(
 )
 ```
 
-This vignette provides a basic overview of a standard workflow. The `Optics` package contains many other functions for more in-depth analysis, including generating ROC curves (`plot_roc_curve`), multi-class confusion matrices (`plot_multiclass_confusion_matrix`), and analyzing the drivers of model error (`analyze_performance_drivers`).
+This vignette provides a basic overview of a standard workflow. The `Optics` package contains many other functions for more in-depth analysis, including generating ROC curves, confusion matrices, and analyzing the drivers of model error.
