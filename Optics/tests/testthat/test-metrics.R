@@ -1,68 +1,50 @@
-test_that("calculate_maxn works correctly for basic case", {
-  # 1. SETUP: Create a sample standardized data frame
-  sample_df <- dplyr::tibble(
-    video_id = c(rep("video1", 5), rep("video2", 3)),
-    frame_index = c(1, 1, 2, 2, 2, 1, 1, 1),
-    category_name = c("FishA", "FishA", "FishA", "FishB", "FishA", "FishA", "FishA", "FishA"),
-    annotation_id = 1:8
-  )
-
-  # 2. EXECUTION
-  result <- calculate_maxn(sample_df)
-
-  # 3. ASSERTION
-  # Expected: video1/FishA has 2 in frame 1, 2 in frame 2 -> MaxN = 2
-  #           video1/FishB has 1 in frame 2 -> MaxN = 1
-  #           video2/FishA has 3 in frame 1 -> MaxN = 3
-  expect_equal(nrow(result), 3)
-  expect_true(all(c("video_id", "category_name", "maxn") %in% names(result)))
-
-  # Check specific values
-  expect_equal(result$maxn[result$video_id == "video1" & result$category_name == "FishA"], 2)
-  expect_equal(result$maxn[result$video_id == "video1" & result$category_name == "FishB"], 1)
-  expect_equal(result$maxn[result$video_id == "video2" & result$category_name == "FishA"], 3)
-})
-
-test_that("calculate_maxn works with additional group_cols", {
+test_that("calculate_maxn works correctly", {
   # 1. SETUP
   sample_df <- dplyr::tibble(
-    video_id = "v1",
-    frame_index = c(1, 1, 2, 2),
-    category_name = "FishA",
-    confidence = c(0.8, 0.8, 0.9, 0.9), # Extra column to group by
-    annotation_id = 1:4
+    video_id = c(rep("v1", 4), rep("v2", 3)),
+    frame_index = c(1, 1, 2, 2, 1, 1, 1),
+    category_name = c("A", "A", "A", "B", "A", "A", "A"),
+    model_name = "TestModel"
   )
 
   # 2. EXECUTION
-  result <- calculate_maxn(sample_df, group_cols = "confidence")
+  maxn_results <- calculate_maxn(sample_df)
+  maxn_grouped <- calculate_maxn(sample_df, group_cols = "model_name")
 
   # 3. ASSERTION
-  expect_equal(nrow(result), 2) # Should have one row for each confidence group
-  expect_equal(result$maxn[result$confidence == 0.8], 2)
-  expect_equal(result$maxn[result$confidence == 0.9], 2)
+  expect_equal(nrow(maxn_results), 3)
+  # v1, FishA should have MaxN of 2
+  expect_equal(maxn_results$maxn[maxn_results$video_id == "v1" & maxn_results$category_name == "A"], 2)
+  # v2, FishA should have MaxN of 3
+  expect_equal(maxn_results$maxn[maxn_results$video_id == "v2" & maxn_results$category_name == "A"], 3)
+  # Check grouped calculation
+  expect_true("model_name" %in% names(maxn_grouped))
 })
 
-test_that("calculate_frame_abundance works correctly", {
+test_that("calculate_density works correctly", {
   # 1. SETUP
-  sample_df <- dplyr::tibble(
-    video_id = "v1",
-    frame_index = c(1, 1, 2, 2, 2),
-    category_name = c("FishA", "FishA", "FishA", "FishB", "FishA"),
-    annotation_id = 1:5
+  count_data <- dplyr::tibble(
+    site = c("A", "B"),
+    count = c(10, 25),
+    area_m2 = c(5, 10)
   )
 
   # 2. EXECUTION
-  result <- calculate_frame_abundance(sample_df)
+  # Test with a single area value
+  density_fixed_area <- calculate_density(count_data, count_col = count, area = 50)
+  # Test with an area column
+  density_col_area <- calculate_density(count_data, count_col = count, area_col = area_m2)
 
   # 3. ASSERTION
-  # Expected: v1/frame1/FishA -> 2
-  #           v1/frame2/FishA -> 2
-  #           v1/frame2/FishB -> 1
-  expect_equal(nrow(result), 3)
-  expect_true(all(c("video_id", "frame_index", "category_name", "abundance") %in% names(result)))
+  expect_true("density" %in% names(density_fixed_area))
+  expect_equal(density_fixed_area$density, c(10/50, 25/50))
 
-  # Check specific values
-  expect_equal(result$abundance[result$frame_index == 1 & result$category_name == "FishA"], 2)
-  expect_equal(result$abundance[result$frame_index == 2 & result$category_name == "FishA"], 2)
-  expect_equal(result$abundance[result$frame_index == 2 & result$category_name == "FishB"], 1)
+  expect_true("density" %in% names(density_col_area))
+  expect_equal(density_col_area$density, c(10/5, 25/10))
+
+  # Test error handling
+  expect_error(
+    calculate_density(count_data, count_col = count, area = 50, area_col = area_m2),
+    "Please provide 'area' or 'area_col', but not both."
+  )
 })

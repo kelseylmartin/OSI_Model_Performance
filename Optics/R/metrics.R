@@ -17,6 +17,7 @@
 #' @export
 #' @importFrom dplyr group_by summarise n
 #' @importFrom rlang .data syms
+#' @import dplyr
 #' @importFrom magrittr %>%
 #' @examples
 #' # Create a sample standardized data frame
@@ -72,6 +73,7 @@ calculate_maxn <- function(detections_df, group_cols = NULL) {
 #' @export
 #' @importFrom dplyr group_by summarise n
 #' @importFrom rlang syms
+#' @import dplyr
 #' @importFrom magrittr %>%
 #' @examples
 #' # Create a sample standardized data frame
@@ -104,4 +106,55 @@ calculate_frame_abundance <- function(detections_df, group_cols = NULL) {
   detections_df %>%
     dplyr::group_by(!!!rlang::syms(all_groups)) %>%
     dplyr::summarise(abundance = dplyr::n(), .groups = "drop")
+}
+
+#' Calculate Density from Counts and Area
+#'
+#' Calculates a density metric (e.g., individuals per square meter) by dividing
+#' a count by a specified survey area.
+#'
+#' This function can operate in two ways:
+#' 1. If a single numeric `area` is provided, it is applied to all rows.
+#' 2. If an `area_col` is provided, the function uses the area values from that
+#'    specific column for each row.
+#'
+#' You must provide either `area` or `area_col`, but not both.
+#'
+#' @param counts_df A data frame containing counts and, optionally, area information.
+#' @param count_col The unquoted name of the column in `counts_df` that contains
+#'   the count data (e.g., `maxn`).
+#' @param area A single numeric value representing the survey area.
+#' @param area_col An optional unquoted column name in `counts_df` that contains
+#'   area values on a per-row basis.
+#' @return The input `counts_df` with an added `density` column.
+#' @export
+#' @importFrom dplyr mutate
+#' @import dplyr
+#' @importFrom rlang enquo as_name .data
+#' @examples
+#' count_data <- dplyr::tibble(
+#'   site = c("A", "B"),
+#'   maxn = c(10, 25),
+#'   survey_area_m2 = c(5, 10)
+#' )
+#'
+#' # Using a fixed area for all sites
+#' calculate_density(count_data, count_col = maxn, area = 100)
+#'
+#' # Using a per-site area from a column
+#' calculate_density(count_data, count_col = maxn, area_col = survey_area_m2)
+#'
+calculate_density <- function(counts_df, count_col, area = NULL, area_col = NULL) {
+  count_col_quo <- rlang::enquo(count_col)
+  area_col_quo <- rlang::enquo(area_col)
+
+  if (!is.null(area) && !rlang::quo_is_null(area_col_quo)) {
+    stop("Please provide 'area' or 'area_col', but not both.")
+  }
+
+  if (!is.null(area)) {
+    return(dplyr::mutate(counts_df, density = !!count_col_quo / area))
+  } else {
+    return(dplyr::mutate(counts_df, density = !!count_col_quo / !!area_col_quo))
+  }
 }

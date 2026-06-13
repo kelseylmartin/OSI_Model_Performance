@@ -1,3 +1,14 @@
+#' @import ggplot2
+#' @importFrom dplyr tibble filter group_by do ungroup mutate pull distinct semi_join
+#' @importFrom ggpubr stat_regline_equation
+#' @importFrom lme4 ranef fixef
+#' @importFrom pROC roc
+#' @importFrom PRROC pr.curve
+#' @importFrom rlang enquo quo_is_null sym .data
+#' @importFrom stringr str_wrap
+#' @importFrom tidyr pivot_longer unnest
+NULL
+
 #' Plot a Scatterplot of Model vs. Truth Counts
 #'
 #' Creates a scatter plot comparing model-derived counts to ground truth counts,
@@ -11,10 +22,8 @@
 #'   or group. If provided, a separate plot panel will be generated for each
 #'   unique value in this column.
 #' @return A `ggplot` object, which can be further customized.
+#'
 #' @export
-#' @importFrom ggpubr stat_regline_equation
-#' @import ggplot2
-#' @importFrom rlang enquo quo_is_null
 #' @examples
 #' aligned_data <- dplyr::tibble(
 #'   model_count = c(10, 1, 5, 0, 0, 20),
@@ -78,10 +87,8 @@ plot_counts_scatterplot <- function(aligned_df, title = "Model vs. Truth Counts"
 #'   unique value in this column.
 #' @param title An optional title for the plot.
 #' @return A `ggplot` object representing the PR curve.
+#'
 #' @export
-#' @import ggplot2
-#' @importFrom PRROC pr.curve
-#' @importFrom dplyr filter
 #' @examples
 #' # Create sample data of classified detections
 #' pr_data <- dplyr::tibble(
@@ -157,10 +164,8 @@ plot_pr_curve <- function(detection_df, model_col = NULL, title = "Precision-Rec
 #'   or group. If provided, a separate plot panel will be generated for each
 #'   unique value in this column.
 #' @return A `ggplot` object representing the Bland-Altman plot.
+#'
 #' @export
-#' @import ggplot2
-#' @importFrom dplyr mutate
-#' @importFrom rlang enquo quo_is_null
 #' @examples
 #' aligned_data <- dplyr::tibble(
 #'   model_count = c(10, 1, 5, 2, 8, 20),
@@ -230,11 +235,8 @@ plot_bland_altman <- function(aligned_df, title = "Bland-Altman Agreement Plot",
 #'   unique value in this column.
 #' @param title An optional title for the plot.
 #' @return A `ggplot` object representing the confusion matrix.
+#'
 #' @export
-#' @import ggplot2
-#' @importFrom dplyr tibble
-#' @importFrom tidyr pivot_longer
-#' @importFrom rlang enquo quo_is_null .data
 #' @examples
 #' metrics <- dplyr::tibble(tp = 10, fp = 2, fn = 3, tn = 85)
 #' plot_confusion_matrix(metrics, "Model Performance")
@@ -294,9 +296,6 @@ plot_confusion_matrix <- function(metrics_df, title = "Confusion Matrix", model_
 #' @param title An optional title for the plot.
 #' @return A `ggplot` object representing the ROC curve.
 #' @export
-#' @import ggplot2
-#' @importFrom pROC roc
-#' @importFrom rlang enquo quo_is_null .data
 #' @examples
 #' # Create sample data of classified detections
 #' roc_data <- dplyr::tibble(
@@ -356,6 +355,123 @@ plot_roc_curve <- function(detection_df, title = "ROC Curve", model_col = NULL) 
     ggplot2::geom_text(data = text_data, ggplot2::aes(x = 0.75, y = 0.25, label = .data$legend_label), show.legend = FALSE) +
     ggplot2::labs(title = title, x = "False Positive Rate (1 - Specificity)", y = "True Positive Rate (Sensitivity)", color = "Model") +
     theme_optics()
+
+  return(p)
+}
+
+#' Plot a Multi-Class Confusion Matrix Heatmap
+#'
+#' Visualizes a multi-class confusion matrix using a `ggplot2` heatmap. The plot
+#' shows true classes on the y-axis and predicted classes on the x-axis, which
+#' is ideal for understanding inter-class confusion.
+#'
+#' @param confusion_df A dataframe produced by `calculate_confusion_matrix()`,
+#'   containing `Truth`, `Prediction`, and `n` columns.
+#' @param title A string for the plot title.
+#' @return A `ggplot` object representing the confusion matrix plot.
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#'   # First, calculate the confusion matrix data
+#'   model_data <- groundtruth_master %>%
+#'     dplyr::filter(year == 2022, Version == "v2", Confidence == 0.5)
+#'   confusion_data <- calculate_confusion_matrix(model_data)
+#'
+#'   # Now, plot it
+#'   plot_multiclass_confusion_matrix(confusion_data, title = "Confusion Matrix for Model v2")
+#' }
+plot_multiclass_confusion_matrix <- function(confusion_df, title = "Confusion Matrix") {
+
+  required_cols <- c("Truth", "Prediction", "n")
+  if (!all(required_cols %in% names(confusion_df))) {
+    stop("Input dataframe must contain columns: Truth, Prediction, n")
+  }
+
+  plot_data <- confusion_df %>%
+    dplyr::mutate(
+      Truth = as.factor(Truth),
+      Prediction = as.factor(Prediction)
+    )
+
+  p <- ggplot(plot_data, aes(x = .data$Prediction, y = .data$Truth, fill = .data$n)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = .data$n), color = "white", size = 4) +
+    scale_fill_gradient(low = "steelblue", high = "midnightblue", name = "Count") +
+    scale_x_discrete(
+      name = "Predicted Class",
+      labels = function(x) stringr::str_wrap(x, width = 15)
+    ) +
+    scale_y_discrete(
+      name = "True Class",
+      labels = function(x) stringr::str_wrap(x, width = 15)
+    ) +
+    labs(title = title, subtitle = "Count of co-occurrences in deployments") +
+    theme_minimal(base_size = 12) +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+      axis.ticks = element_blank(), panel.grid = element_blank(),
+      plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)
+    )
+
+  return(p)
+}
+
+#' Plot Performance Metrics Across Confidence Thresholds
+#'
+#' Creates a line plot to visualize how Precision, Recall, and F1-Score change
+#' across a range of confidence thresholds. This is useful for comparing the
+#' performance of one or more models and selecting an optimal threshold.
+#'
+#' @param summary_df A data frame containing performance metrics calculated at
+#'   various thresholds, typically the output of `summarize_performance_by_threshold()`.
+#'   Must contain `threshold`, `precision`, `recall`, `f1_score`, and optionally
+#'   a column to identify different models.
+#' @param model_col An optional unquoted column name that identifies the model
+#'   or group (e.g., `model_name`). If provided, the plot will show separate
+#'   lines for each model.
+#' @param title An optional title for the plot.
+#' @return A `ggplot` object representing the performance comparison plot.
+#'
+#' @export
+#' @examples
+#' # Create sample performance summary data
+#' perf_summary <- dplyr::tibble(
+#'   threshold = rep(seq(0.1, 0.9, 0.1), 2),
+#'   precision = c(runif(9, 0.6, 1), runif(9, 0.5, 0.9)),
+#'   recall = c(runif(9, 0.4, 1), runif(9, 0.3, 0.95)),
+#'   f1_score = (2 * precision * recall) / (precision + recall),
+#'   model_name = rep(c("Model A", "Model B"), each = 9)
+#' )
+#'
+#' plot_performance_by_threshold(perf_summary, model_col = model_name)
+#'
+plot_performance_by_threshold <- function(summary_df, model_col = NULL, title = "Performance by Confidence Threshold") {
+
+  required_cols <- c("threshold", "precision", "recall", "f1_score")
+  if (!all(required_cols %in% names(summary_df))) {
+    stop("Input data frame must contain 'threshold', 'precision', 'recall', and 'f1_score' columns.")
+  }
+
+  model_col_quo <- rlang::enquo(model_col)
+
+  plot_data <- summary_df %>%
+    tidyr::pivot_longer(
+      cols = c("precision", "recall", "f1_score"),
+      names_to = "metric",
+      values_to = "value"
+    )
+
+  p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$threshold, y = .data$value, color = .data$metric)) +
+    ggplot2::geom_line(linewidth = 1.1) +
+    ggplot2::geom_point(size = 2) +
+    ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
+    ggplot2::labs(title = title, x = "Confidence Threshold", y = "Metric Value", color = "Metric") +
+    theme_optics()
+
+  if (!rlang::quo_is_null(model_col_quo)) {
+    p <- p + ggplot2::facet_wrap(rlang::quo_get_expr(model_col_quo))
+  }
 
   return(p)
 }

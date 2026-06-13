@@ -26,6 +26,7 @@
 #'   values replaced by 0.
 #' @export
 #' @importFrom dplyr full_join rename select mutate across everything
+#' @import dplyr
 #' @importFrom rlang enquo as_name
 #' @importFrom tidyselect all_of
 #' @importFrom magrittr %>%

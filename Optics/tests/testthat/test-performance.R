@@ -26,6 +26,17 @@ test_that("calculate_binary_metrics works for ungrouped data", {
   expect_equal(metrics$recall, expected_recall)
   expect_equal(metrics$f1_score, expected_f1)
   expect_equal(metrics$tn, 95)
+  # Check new metrics
+  expect_equal(metrics$accuracy, (1 + 95) / 100)
+  expect_equal(metrics$fpr, 2 / (2 + 95)) # FP / (FP + TN)
+  expect_equal(metrics$fnr, 2 / (2 + 1)) # FN / (FN + TP)
+  expect_equal(metrics$false_positive_ratio, 2 / (1 + 2 + 95)) # FP / (TP + FN + TN)
+  expect_equal(metrics$false_negative_ratio, 2 / (1 + 2 + 95)) # FN / (TP + FP + TN)
+  
+  # MCC = (TP*TN - FP*FN) / sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
+  # MCC = (1*95 - 2*2) / sqrt((1+2)*(1+2)*(95+2)*(95+2))
+  # MCC = 91 / sqrt(3 * 3 * 97 * 97) = 91 / (3 * 97) = 91 / 291
+  expect_equal(metrics$mcc, 91 / 291)
 })
 
 test_that("calculate_binary_metrics works for grouped data", {
@@ -160,4 +171,138 @@ test_that("classify_detections works correctly", {
   expect_error(
     classify_detections(raw, validated, detection_id = wrong_id)
   )
+})
+
+test_that("calculate_confusion_matrix works correctly", {
+  # 1. Create sample aligned data to simulate different scenarios
+  aligned_data <- dplyr::tibble(
+    Deployment = c(
+      "Dep1", "Dep1", # Scenario: Manual: A, Model: A (Correctly identifies A)
+      "Dep2", "Dep2", # Scenario: Manual: B, Model: C (Misclassifies B as C)
+      "Dep3",         # Scenario: Manual: D, Model: nothing (False Negative for D)
+      "Dep4"          # Scenario: Manual: nothing, Model: E (False Positive for E)
+    ),
+    Species = c(
+      "SpeciesA", "SpeciesA",
+      "SpeciesB", "SpeciesC",
+      "SpeciesD",
+      "SpeciesE"
+    ),
+    Manual = c(1, 0, 1, 0, 1, 0),
+    VIAME_MaxN = c(0, 1, 0, 1, 0, 1)
+  )
+
+  # 2. Run the function
+  confusion_result <- calculate_confusion_matrix(aligned_data)
+
+  # 3. Define the expected output
+  expected_result <- dplyr::tribble(
+    ~Truth,     ~Prediction,          ~n,
+    "SpeciesA", "SpeciesA",           1L,
+    "SpeciesB", "SpeciesC",           1L,
+    "SpeciesD", "FN (No Prediction)", 1L
+  ) %>% dplyr::arrange(Truth, Prediction)
+
+  # 4. Assert that the result matches the expectation
+  expect_equal(dplyr::arrange(confusion_result, Truth, Prediction), expected_result)
+})
+
+test_that("analyze_reviewer_effort calculates metrics correctly", {
+  # 1. SETUP: Create sample raw and validated data
+  raw <- dplyr::tibble(
+    Deployment = "D1",
+    TrackID = 1:6,
+    Species = c("seal", "seal", "rock", "seal", "glare", "seal")
+  )
+  # Reviewer keeps tracks 1, 2, 4 as "seal".
+  # Reviewer reclassifies track 6 from "seal" to "beluga".
+  # Reviewer deletes tracks 3 ("rock") and 5 ("glare").
+  validated <- dplyr::tibble(
+    Deployment = "D1",
+    TrackID = c(1, 2, 4, 6),
+    Species = c("seal", "seal", "seal", "beluga")
+  )
+
+  # 2. EXECUTION
+  effort_summary <- analyze_reviewer_effort(raw, validated, group_vars = "Deployment")
+
+  # 3. ASSERTION
+  expect_equal(nrow(effort_summary), 1)
+  expect_equal(effort_summary$n_raw, 6)
+  expect_equal(effort_summary$n_validated, 4)
+  expect_equal(effort_summary$n_deleted, 2)
+  expect_equal(effort_summary$avg_raw_per_validated, 6 / 4)
+  # There is one reclassification: track 6 from seal to beluga.
+  expect_equal(effort_summary$n_reclassified, 1)
+
+  # Test with no reclassifications
+  validated_no_reclass <- dplyr::filter(validated, TrackID != 6)
+  effort_no_reclass <- analyze_reviewer_effort(raw, validated_no_reclass, group_vars = "Deployment")
+  expect_equal(effort_no_reclass$n_reclassified, 0)
+})
+
+test_that("get_disagreement_report works correctly", {
+  # 1. SETUP
+  aligned_data <- dplyr::tibble(
+    Deployment = c("D1", "D1", "D2", "D2", "D3", "D3", "D3"),
+    Species = c("Seal", "Rock", "Seal", "Glare", "Seal", "Seal", "Fish"),
+    model_count = c(1, 1, 0, 1, 1, 0, 1),
+    truth_count = c(1, 0, 1, 0, 0, 1, 0)
+  )
+  # D1: 1 FP (Rock) -> total 1 error
+  # D2: 1 FN (Seal), 1 FP (Glare) -> total 2 errors
+  # D3: 1 FP (Seal), 1 FN (Seal), 1 FP (Fish) -> total 3 errors
+
+  # 2. EXECUTION
+  report <- get_disagreement_report(aligned_data, group_vars = "Deployment")
+
+  # 3. ASSERTION
+  expect_equal(nrow(report), 3)
+  # Check that it's ranked correctly by total disagreement
+  expect_equal(report$Deployment, c("D3", "D2", "D1"))
+
+  # Check the values for the top offender (D3)
+  d3_report <- report %>% dplyr::filter(Deployment == "D3")
+  expect_equal(d3_report$false_positives, 2)
+  expect_equal(d3_report$false_negatives, 1)
+  expect_equal(d3_report$total_disagreement, 3)
+})
+
+test_that("analyze_performance_drivers fits a model correctly", {
+  # 1. SETUP: Create more complex aligned data for modeling
+  aligned_data <- dplyr::tibble(
+    Deployment = rep(c("D1", "D2", "D3", "D4"), each = 3),
+    Species = rep(c("Seal", "Rock", "Fish"), 4),
+    # D1: Low complexity, low error
+    # D2: High species richness, higher error
+    # D3: High abundance, higher error
+    # D4: Low complexity, high error (for model variability)
+    truth_count = c(2, 0, 0,  5, 2, 1,  20, 0, 0,  1, 0, 0),
+    model_count = c(2, 1, 0,  3, 3, 0,  15, 1, 1,  5, 1, 0)
+  )
+  # Expected predictors & errors by Deployment:
+  # D1: n_spec=1, tot_ind=2,  err=abs(2-2)+abs(0-1)+abs(0-0) = 1
+  # D2: n_spec=3, tot_ind=8,  err=abs(3-5)+abs(3-2)+abs(0-1) = 4
+  # D3: n_spec=1, tot_ind=20, err=abs(15-20)+abs(1-0)+abs(1-0) = 7
+  # D4: n_spec=1, tot_ind=1,  err=abs(5-1)+abs(1-0)+abs(0-0) = 5
+
+  # 2. EXECUTION
+  # Suppress convergence warnings that can occur with small sample sizes in tests
+  suppressWarnings({
+    model_fit <- analyze_performance_drivers(aligned_data, group_vars = "Deployment")
+  })
+
+  # 3. ASSERTION
+  # Check that the output is a valid glmer model object
+  expect_s4_class(model_fit, "glmerMod")
+
+  # Check that the model fixed effects are what we expect
+  model_coefs <- lme4::fixef(model_fit)
+  expect_true("n_species_truth" %in% names(model_coefs))
+  expect_true("total_individuals_truth" %in% names(model_coefs))
+
+  # Check that the random effects are what we expect
+  random_effects <- names(lme4::ranef(model_fit))
+  expect_true("Species" %in% random_effects)
+  expect_true("Deployment" %in% random_effects)
 })

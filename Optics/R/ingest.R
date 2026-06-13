@@ -37,6 +37,7 @@
 #'   unlink(json_path)
 #' }
 read_kwcoco <- function(file_path) {
+#' @import dplyr
 
   # --- 1. Input Validation and Reading ---
   if (!file.exists(file_path)) {
@@ -119,6 +120,7 @@ read_kwcoco <- function(file_path) {
 #'   empty tibble if the file is empty or cannot be read.
 #' @export
 #' @importFrom readr read_csv cols
+#' @import readr
 #' @importFrom dplyr tibble rename mutate select across
 #' @importFrom tools file_path_sans_ext
 read_viame_csv <- function(file_path, video_id = NULL) {

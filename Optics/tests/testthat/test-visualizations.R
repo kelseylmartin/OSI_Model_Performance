@@ -86,3 +86,53 @@ test_that("plot_roc_curve works correctly", {
   text_layer_data <- plot_build$data[[3]]
   expect_true(grepl("AUC =", text_layer_data$label))
 })
+
+test_that("plot_multiclass_confusion_matrix returns a ggplot object", {
+  # 1. Create sample confusion matrix data
+  confusion_data <- dplyr::tribble(
+    ~Truth,     ~Prediction,          ~n,
+    "SpeciesA", "SpeciesA",           10L,
+    "SpeciesB", "SpeciesA",           2L,
+    "SpeciesA", "FN (No Prediction)", 1L
+  )
+
+  # 2. Call the plotting function
+  p <- plot_multiclass_confusion_matrix(confusion_data, title = "Test Plot")
+
+  # 3. Assert that the output is a ggplot object
+  testthat::expect_s3_class(p, "ggplot")
+})
+
+test_that("plot_multiclass_confusion_matrix throws error with incorrect columns", {
+  # 1. Create data with missing columns
+  bad_data <- dplyr::tribble(~True_Species, ~Predicted_Species, ~count, "SpeciesA", "SpeciesA", 10L)
+
+  # 2. Assert that the function stops with an informative error
+  testthat::expect_error(plot_multiclass_confusion_matrix(bad_data))
+})
+
+test_that("plot_performance_by_threshold works correctly", {
+  # 1. SETUP
+  perf_summary <- dplyr::tibble(
+    threshold = rep(seq(0.1, 0.5, 0.1), 2),
+    precision = runif(10, 0.5, 1),
+    recall = runif(10, 0.5, 1),
+    f1_score = runif(10, 0.5, 1),
+    model_name = rep(c("Model A", "Model B"), each = 5)
+  )
+
+  # 2. EXECUTION
+  p <- plot_performance_by_threshold(perf_summary, model_col = model_name)
+
+  # 3. ASSERTION
+  expect_s3_class(p, "ggplot")
+
+  # Check that it creates facets for the different models
+  expect_true("FacetWrap" %in% class(p$facet))
+
+  # Check that the underlying data is pivoted correctly
+  # ggplot maps the 'metric' column to 'colour', so we test for that.
+  p_data <- ggplot2::ggplot_build(p)$data[[1]]
+  expect_true("colour" %in% names(p_data))
+  expect_equal(length(unique(p_data$colour)), 3) # One color for each metric
+})
