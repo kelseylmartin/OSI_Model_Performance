@@ -20,7 +20,6 @@
 #' @return A `tibble` containing the grouping variables along with the
 #'   calculated metrics: `tp`, `fp`, `fn`, `precision`, `recall`, and `f1_score`.
 #' @export
-#' @import dplyr
 #' @importFrom dplyr group_by summarise mutate
 #' @importFrom rlang .data syms
 #' @importFrom magrittr %>%
@@ -110,7 +109,6 @@ calculate_binary_metrics <- function(aligned_df, group_vars = NULL, total_compar
 #'   corresponding performance metrics (TP, FP, FN, precision, recall, etc.).
 #' @export
 #' @importFrom dplyr filter bind_rows distinct
-#' @import dplyr
 #' @importFrom rlang .data syms
 #' @importFrom magrittr %>%
 #' @examples
@@ -201,7 +199,6 @@ summarize_performance_by_threshold <- function(model_detections,
 #'   for use with `plot_roc_curve()` and `plot_pr_curve()`.
 #' @export
 #' @importFrom dplyr mutate anti_join bind_rows
-#' @import dplyr
 #' @importFrom rlang enquo as_name .data
 #' @examples
 #' raw <- dplyr::tibble(
@@ -256,7 +253,6 @@ classify_detections <- function(raw_detections, validated_detections, detection_
 #'   any species in that deployment.
 #' @export
 #' @importFrom dplyr group_by summarize filter mutate select left_join ungroup
-#' @import dplyr
 #' @importFrom rlang enquo .data
 #' @examples
 #' \dontrun{
@@ -270,11 +266,6 @@ classify_detections <- function(raw_detections, validated_detections, detection_
 #'   print(confusion_data)
 #' }
 calculate_confusion_matrix <- function(aligned_df, group_vars, species_col = Species, model_col = model_count, truth_col = truth_count) {
-
-  required_cols <- c("Deployment", "Species", "Manual", "VIAME_MaxN")
-  if (!all(required_cols %in% names(aligned_df))) {
-    stop("Input dataframe must contain columns: Deployment, Species, Manual, VIAME_MaxN")
-  }
 
   model_predictions <- aligned_df %>%
     dplyr::filter({{ model_col }} > 0) %>%
@@ -313,7 +304,6 @@ calculate_confusion_matrix <- function(aligned_df, group_vars, species_col = Spe
 #' @return A `tibble` summarizing the reviewer effort metrics for each group.
 #' @export
 #' @importFrom dplyr inner_join group_by summarise n_distinct n left_join
-#' @import dplyr
 #' @importFrom rlang syms .data
 #' @examples
 #' raw_detections <- dplyr::tibble(
@@ -388,7 +378,6 @@ analyze_reviewer_effort <- function(raw_df, validated_df, group_vars = NULL) {
 #'   total FPs, FNs, and overall disagreement count for each group.
 #' @export
 #' @importFrom dplyr group_by summarise mutate arrange desc slice_head
-#' @import dplyr
 #' @importFrom rlang syms .data
 #' @examples
 #' aligned_data <- dplyr::tibble(
@@ -449,7 +438,6 @@ get_disagreement_report <- function(aligned_df, group_vars, top_n = 10) {
 #'   significant predictors of model error.
 #' @export
 #' @importFrom dplyr group_by summarise mutate left_join n_distinct
-#' @import dplyr
 #' @importFrom rlang syms .data
 #' @importFrom stats as.formula Gamma
 #' @importFrom lme4 glmer

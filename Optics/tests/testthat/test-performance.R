@@ -192,8 +192,14 @@ test_that("calculate_confusion_matrix works correctly", {
     VIAME_MaxN = c(0, 1, 0, 1, 0, 1)
   )
 
-  # 2. Run the function
-  confusion_result <- calculate_confusion_matrix(aligned_data)
+  # 2. Run the function, explicitly passing the column names
+  confusion_result <- calculate_confusion_matrix(
+    aligned_data,
+    group_vars = "Deployment",
+    species_col = Species,
+    model_col = VIAME_MaxN,
+    truth_col = Manual
+  )
 
   # 3. Define the expected output
   expected_result <- dplyr::tribble(

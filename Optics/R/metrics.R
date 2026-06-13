@@ -17,7 +17,6 @@
 #' @export
 #' @importFrom dplyr group_by summarise n
 #' @importFrom rlang .data syms
-#' @import dplyr
 #' @importFrom magrittr %>%
 #' @examples
 #' # Create a sample standardized data frame
@@ -73,7 +72,6 @@ calculate_maxn <- function(detections_df, group_cols = NULL) {
 #' @export
 #' @importFrom dplyr group_by summarise n
 #' @importFrom rlang syms
-#' @import dplyr
 #' @importFrom magrittr %>%
 #' @examples
 #' # Create a sample standardized data frame
@@ -129,7 +127,6 @@ calculate_frame_abundance <- function(detections_df, group_cols = NULL) {
 #' @return The input `counts_df` with an added `density` column.
 #' @export
 #' @importFrom dplyr mutate
-#' @import dplyr
 #' @importFrom rlang enquo as_name .data
 #' @examples
 #' count_data <- dplyr::tibble(
