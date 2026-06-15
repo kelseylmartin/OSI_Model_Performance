@@ -7,14 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.width = 7,
-  fig.height = 5
-)
-```
+
 
 ## 1. Introduction
 
@@ -22,9 +15,21 @@ The `Optics` package provides a standardized toolkit for evaluating the performa
 
 First, let's load the `Optics` package and other useful libraries like `dplyr`.
 
-```{r setup}
+
+``` r
 library(Optics)
+#> Registered S3 method overwritten by 'lme4':
+#>   method           from
+#>   na.action.merMod car
 library(dplyr)
+#> 
+#> Attaching package: 'dplyr'
+#> The following objects are masked from 'package:stats':
+#> 
+#>     filter, lag
+#> The following objects are masked from 'package:base':
+#> 
+#>     intersect, setdiff, setequal, union
 library(ggplot2)
 ```
 
@@ -34,7 +39,8 @@ For this example, we will create sample data representing raw model detections a
 
 For this vignette, we'll construct the data frames manually and then create the S4 objects. Note that the `OpticsDetections` class requires a specific set of columns.
 
-```{r create-data}
+
+``` r
 # Sample model detections with scores
 model_detections_df <- tibble(
   video_id = "vid01",
@@ -59,17 +65,41 @@ truth_detections_df <- tibble(
 )
 
 print("Model Detections:")
+#> [1] "Model Detections:"
 print(model_detections_df)
+#> # A tibble: 8 x 11
+#>   video_id image_id annotation_id category_name     score frame_index model_name
+#>   <chr>    <chr>            <int> <chr>             <dbl>       <dbl> <chr>     
+#> 1 vid01    img01                1 Gadus morhua       0.95          10 Model A   
+#> 2 vid01    img01                2 Gadus morhua       0.85          10 Model A   
+#> 3 vid01    img01                3 Melanogrammus ae~  0.8           15 Model A   
+#> 4 vid01    img01                4 Gadus morhua       0.65          20 Model A   
+#> 5 vid01    img01                5 Pollachius virens  0.5           20 Model A   
+#> 6 vid01    img01                6 Gadus morhua       0.92          10 Model B   
+#> 7 vid01    img01                7 Melanogrammus ae~  0.75          15 Model B   
+#> 8 vid01    img01                8 Melanogrammus ae~  0.6           15 Model B   
+#> # i 4 more variables: bbox_x <dbl>, bbox_y <dbl>, bbox_width <dbl>,
+#> #   bbox_height <dbl>
 
 print("Truth Detections:")
+#> [1] "Truth Detections:"
 print(truth_detections_df)
+#> # A tibble: 4 x 10
+#>   video_id image_id annotation_id category_name  frame_index score bbox_x bbox_y
+#>   <chr>    <chr>            <int> <chr>                <dbl> <dbl>  <dbl>  <dbl>
+#> 1 vid01    img01                9 Gadus morhua            10     1      0      0
+#> 2 vid01    img01               10 Gadus morhua            10     1      0      0
+#> 3 vid01    img01               11 Gadus morhua            20     1      0      0
+#> 4 vid01    img01               12 Urophycis ten~          30     1      0      0
+#> # i 2 more variables: bbox_width <dbl>, bbox_height <dbl>
 ```
 
 ## 3. Summarizing Performance by Threshold
 
 A key task is to evaluate how a model performs at different confidence thresholds. The `summarize_performance_by_threshold()` function automates this. It now operates on `OpticsDetections` S4 objects.
 
-```{r summarize-performance}
+
+``` r
 # Define the thresholds we want to test
 thresholds_to_test <- seq(0.5, 1.0, by = 0.1)
 
@@ -78,14 +108,20 @@ model_a_obj <- OpticsDetections(
   data = filter(model_detections_df, model_name == "Model A"),
   source_file = "manual", ingest_format = "manual"
 )
+#> Error in `OpticsDetections()`:
+#> ! could not find function "OpticsDetections"
 model_b_obj <- OpticsDetections(
   data = filter(model_detections_df, model_name == "Model B"),
   source_file = "manual", ingest_format = "manual"
 )
+#> Error in `OpticsDetections()`:
+#> ! could not find function "OpticsDetections"
 truth_obj <- OpticsDetections(
   data = truth_detections_df,
   source_file = "manual", ingest_format = "manual"
 )
+#> Error in `OpticsDetections()`:
+#> ! could not find function "OpticsDetections"
 
 # Analyze Model A
 perf_model_a <- summarize_performance_by_threshold(
@@ -94,6 +130,8 @@ perf_model_a <- summarize_performance_by_threshold(
   by = c("video_id", "category_name"),
   thresholds = thresholds_to_test
 ) %>% mutate(model_name = "Model A")
+#> Error:
+#> ! object 'truth_obj' not found
 
 # Analyze Model B
 perf_model_b <- summarize_performance_by_threshold(
@@ -102,11 +140,17 @@ perf_model_b <- summarize_performance_by_threshold(
   by = c("video_id", "category_name"),
   thresholds = thresholds_to_test
 ) %>% mutate(model_name = "Model B")
+#> Error:
+#> ! object 'truth_obj' not found
 
 # Combine into a single data frame
 performance_summary <- bind_rows(perf_model_a, perf_model_b)
+#> Error:
+#> ! object 'perf_model_a' not found
 
 print(performance_summary)
+#> Error:
+#> ! object 'performance_summary' not found
 ```
 
 ## 4. Visualizing Performance
@@ -117,19 +161,23 @@ With the summary data, we can now create plots to compare the models. The plotti
 
 The `plot_performance_by_threshold()` function visualizes the trade-offs between precision, recall, and F1-score.
 
-```{r plot-performance, fig.cap="Precision, Recall, and F1-Score for Model A and Model B across different confidence thresholds."}
+
+``` r
 plot_performance_by_threshold(
   performance_summary,
   model_col = model_name,
   title = "Model Performance Comparison"
 )
+#> Error:
+#> ! object 'performance_summary' not found
 ```
 
 ### Count Comparison Scatterplot
 
 To see how well the model counts match the truth counts at a *specific* threshold (e.g., 0.8), we can generate a scatterplot. The `calculate_maxn` generic works on both `OpticsDetections` objects and standard `data.frame`s.
 
-```{r plot-scatterplot, fig.cap="Model vs. Truth MaxN counts at a 0.8 confidence threshold."}
+
+``` r
 # We can still use standard dplyr pipes. The calculate_maxn S4 generic will
 # dispatch the correct method for a data.frame.
 model_counts_at_08 <- model_detections_df %>%
@@ -160,5 +208,7 @@ plot_counts_scatterplot(
   title = "MaxN Counts at 0.8 Confidence"
 )
 ```
+
+![Model vs. Truth MaxN counts at a 0.8 confidence threshold.](figure/plot-scatterplot-1.png)
 
 This vignette provides a basic overview of a standard workflow. The `Optics` package contains many other S4 methods for more in-depth analysis, including generating ROC curves, confusion matrices, and analyzing the drivers of model error.
