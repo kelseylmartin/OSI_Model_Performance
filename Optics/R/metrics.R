@@ -180,17 +180,26 @@ setMethod("calculate_frame_abundance", "data.frame",
 
 #' Calculate Density from Counts and Area
 #'
-#' This function remains an S3-style utility function as it operates on generic
-#' data frames of counts, not directly on a specific S4 class from this package.
+#' Calculates density by dividing a count by an area. This generic function
+#' dispatches to methods based on the class of the input object.
 #'
-#' @param counts_df A data frame containing counts.
+#' @param object A data frame or other object containing count data.
+#' @param ... Additional arguments passed to methods.
+#'
+#' @return The input object with an added `density` column.
+#' @export
+#' @rdname calculate_density
+setGeneric("calculate_density", function(object, ...) {
+  standardGeneric("calculate_density")
+})
+
 #' @param count_col The unquoted name of the column containing the count data.
 #' @param area A single numeric value for the survey area.
 #' @param area_col An optional unquoted column name for area values.
-#' @return The input `counts_df` with an added `density` column.
+#' @rdname calculate_density
 #' @export
 #' @importFrom dplyr mutate
-#' @importFrom rlang enquo
+#' @importFrom rlang enquo quo_is_null
 #' @examples
 #' count_data <- dplyr::tibble(
 #'   site = c("A", "B"),
@@ -203,18 +212,22 @@ setMethod("calculate_frame_abundance", "data.frame",
 #'
 #' # Using a per-site area from a column
 #' calculate_density(count_data, count_col = maxn, area_col = survey_area_m2)
-#'
-calculate_density <- function(counts_df, count_col, area = NULL, area_col = NULL) {
-  count_col_quo <- rlang::enquo(count_col)
-  area_col_quo <- rlang::enquo(area_col)
-  
-  if (!is.null(area) && !rlang::quo_is_null(area_col_quo)) {
-    stop("Please provide 'area' or 'area_col', but not both.")
-  }
-  
-  if (!is.null(area)) {
-    return(dplyr::mutate(counts_df, density = !!count_col_quo / area))
-  } else {
-    return(dplyr::mutate(counts_df, density = !!count_col_quo / !!area_col_quo))
-  }
-}
+setMethod("calculate_density", "data.frame",
+          function(object, count_col, area = NULL, area_col = NULL) {
+            count_col_quo <- rlang::enquo(count_col)
+            area_col_quo <- rlang::enquo(area_col)
+            
+            if (!is.null(area) && !rlang::quo_is_null(area_col_quo)) {
+              stop("Please provide 'area' or 'area_col', but not both.")
+            }
+            
+            if (is.null(area) && rlang::quo_is_null(area_col_quo)) {
+              stop("Please provide either 'area' or 'area_col'.")
+            }
+            
+            if (!is.null(area)) {
+              return(dplyr::mutate(object, density = !!count_col_quo / area))
+            } else {
+              return(dplyr::mutate(object, density = !!count_col_quo / !!area_col_quo))
+            }
+          })

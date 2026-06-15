@@ -7,6 +7,32 @@
 #' one lines, that will be used in the bookdown report of the results from
 #' {testthat}. This line can be more than 80 characters.
 
+# {{{ plot_counts_scatterplot }}} ----
+## Setup ----
+scatterplot_df <- dplyr::tibble(
+  model_count = c(10, 1, 5, 0),
+  truth_count = c(12, 0, 5, 2)
+)
+
+## IO correctness ----
+test_that("plot_counts_scatterplot() works with correct inputs", {
+  #' @description Test that plot_counts_scatterplot returns a ggplot object.
+  p <- plot_counts_scatterplot(scatterplot_df)
+  expect_s3_class(p, "ggplot")
+  expect_equal(p$labels$x, "Ground Truth Count")
+  expect_equal(p$labels$y, "Model Predicted Count")
+})
+
+## Error handling ----
+test_that("plot_counts_scatterplot() returns correct error messages", {
+  #' @description Test that plot_counts_scatterplot() errors if columns are missing.
+  expect_error(
+    plot_counts_scatterplot(dplyr::tibble(a = 1, b = 2)),
+    regexp = "must contain 'model_count' and 'truth_count' columns"
+  )
+})
+
+
 # {{{ plot_pr_curve }}} ----
 ## Setup ----
 pr_data <- dplyr::tibble(
@@ -25,11 +51,27 @@ test_that("plot_pr_curve() works with correct inputs", {
   p <- plot_pr_curve(pr_data)
   expect_s3_class(p, "ggplot")
   expect_equal(p$labels$title, "Precision-Recall Curve")
-  
+
   #' @description Test that plot_pr_curve() handles multiple models correctly.
   p_multi <- plot_pr_curve(pr_data_multi, model_col = model_identifier)
   expect_s3_class(p_multi, "ggplot")
   expect_equal(length(unique(p_multi$data$legend_label)), 2)
+})
+
+# {{{ plot_bland_altman }}} ----
+## Setup ----
+bland_altman_df <- dplyr::tibble(
+  model_count = c(10, 1, 5, 4),
+  truth_count = c(12, 0, 5, 2)
+)
+
+## IO correctness ----
+test_that("plot_bland_altman() works with correct inputs", {
+  #' @description Test that plot_bland_altman returns a ggplot object.
+  p <- plot_bland_altman(bland_altman_df)
+  expect_s3_class(p, "ggplot")
+  expect_equal(p$labels$x, "Average of Counts")
+  expect_equal(p$labels$y, "Difference (Model - Truth)")
 })
 
 # {{{ plot_confusion_matrix }}} ----
@@ -42,7 +84,7 @@ test_that("plot_confusion_matrix() works with correct inputs", {
   p <- plot_confusion_matrix(cm_metrics, title = "Test CM")
   expect_s3_class(p, "ggplot")
   expect_equal(p$labels$title, "Test CM")
-  
+
   #' @description Test that plot_confusion_matrix() correctly maps data to the plot.
   p <- plot_confusion_matrix(cm_metrics)
   expect_equal(nrow(p$data), 4)
@@ -63,7 +105,7 @@ test_that("plot_roc_curve() works correctly", {
   p <- plot_roc_curve(roc_data, title = "Test ROC")
   expect_s3_class(p, "ggplot")
   expect_equal(p$labels$title, "Test ROC")
-  
+
   #' @description Test that plot_roc_curve() contains the correct geometric layers.
   p <- plot_roc_curve(roc_data)
   geoms <- sapply(p$layers, function(x) class(x$geom)[1])
@@ -111,7 +153,7 @@ test_that("plot_performance_by_threshold() works correctly", {
   p <- plot_performance_by_threshold(perf_summary_df, model_col = model_name)
   expect_s3_class(p, "ggplot")
   expect_true("FacetWrap" %in% class(p$facet))
-  
+
   #' @description Test that plot_performance_by_threshold() correctly pivots the data for plotting.
   p <- plot_performance_by_threshold(perf_summary_df, model_col = model_name)
   p_data <- ggplot2::ggplot_build(p)$data[[1]]

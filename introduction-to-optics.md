@@ -94,34 +94,33 @@ print(truth_detections_df)
 #> # i 2 more variables: bbox_width <dbl>, bbox_height <dbl>
 ```
 
-## 3. Summarizing Performance by Threshold
+## 3. Working with `OpticsDetections` Objects
 
-A key task is to evaluate how a model performs at different confidence thresholds. The `summarize_performance_by_threshold()` function automates this. It now operates on `OpticsDetections` S4 objects.
-
+Now, let's convert these sample data frames into the formal `OpticsDetections` S4 objects that the package uses for analysis.
 
 ``` r
-# Define the thresholds we want to test
-thresholds_to_test <- seq(0.5, 1.0, by = 0.1)
-
 # Create OpticsDetections objects for each model and for the truth data
 model_a_obj <- OpticsDetections(
   data = filter(model_detections_df, model_name == "Model A"),
   source_file = "manual", ingest_format = "manual"
 )
-#> Error in `OpticsDetections()`:
-#> ! could not find function "OpticsDetections"
 model_b_obj <- OpticsDetections(
   data = filter(model_detections_df, model_name == "Model B"),
   source_file = "manual", ingest_format = "manual"
 )
-#> Error in `OpticsDetections()`:
-#> ! could not find function "OpticsDetections"
 truth_obj <- OpticsDetections(
   data = truth_detections_df,
   source_file = "manual", ingest_format = "manual"
 )
-#> Error in `OpticsDetections()`:
-#> ! could not find function "OpticsDetections"
+```
+
+## 4. Summarizing Performance by Threshold
+
+A key task is to evaluate how a model performs at different confidence thresholds. The `summarize_performance_by_threshold()` function automates this.
+
+```r
+# Define the thresholds we want to test
+thresholds_to_test <- seq(0.5, 1.0, by = 0.1)
 
 # Analyze Model A
 perf_model_a <- summarize_performance_by_threshold(
@@ -130,8 +129,6 @@ perf_model_a <- summarize_performance_by_threshold(
   by = c("video_id", "category_name"),
   thresholds = thresholds_to_test
 ) %>% mutate(model_name = "Model A")
-#> Error:
-#> ! object 'truth_obj' not found
 
 # Analyze Model B
 perf_model_b <- summarize_performance_by_threshold(
@@ -140,20 +137,14 @@ perf_model_b <- summarize_performance_by_threshold(
   by = c("video_id", "category_name"),
   thresholds = thresholds_to_test
 ) %>% mutate(model_name = "Model B")
-#> Error:
-#> ! object 'truth_obj' not found
 
 # Combine into a single data frame
 performance_summary <- bind_rows(perf_model_a, perf_model_b)
-#> Error:
-#> ! object 'perf_model_a' not found
 
 print(performance_summary)
-#> Error:
-#> ! object 'performance_summary' not found
 ```
 
-## 4. Visualizing Performance
+## 5. Visualizing Performance
 
 With the summary data, we can now create plots to compare the models. The plotting functions are now S4 generics.
 
@@ -165,12 +156,12 @@ The `plot_performance_by_threshold()` function visualizes the trade-offs between
 ``` r
 plot_performance_by_threshold(
   performance_summary,
-  model_col = model_name,
+  model_col = "model_name",
   title = "Model Performance Comparison"
 )
-#> Error:
-#> ! object 'performance_summary' not found
 ```
+
+!Model Performance Comparison by Threshold
 
 ### Count Comparison Scatterplot
 
@@ -204,11 +195,44 @@ aligned_counts <- bind_rows(aligned_a, aligned_b)
 # Generate the plot
 plot_counts_scatterplot(
   aligned_counts,
-  model_col = model_name,
+  model_col = "model_name",
   title = "MaxN Counts at 0.8 Confidence"
 )
 ```
 
 ![Model vs. Truth MaxN counts at a 0.8 confidence threshold.](figure/plot-scatterplot-1.png)
+
+## 6. Advanced Usage: Confusion Matrix
+
+A confusion matrix helps diagnose classification errors. The `Optics` package provides `align_detections()` to match individual model predictions to ground truth objects and `plot_confusion_matrix()` to visualize the results. This is different from `align_counts()`, which works on aggregated data like MaxN.
+
+First, we align the raw detections from `Model A` against the ground truth at a specific confidence threshold.
+
+
+```r
+# Align individual detections at a 0.5 confidence threshold
+aligned_detections <- align_detections(
+  model_detections = model_a_obj,
+  truth_detections = truth_obj,
+  threshold = 0.5
+)
+
+# Generate and plot the confusion matrix
+plot_confusion_matrix(
+  aligned_detections,
+  title = "Confusion Matrix for Model A (Threshold = 0.5)"
+)
+```
+
+!Confusion Matrix for Model A at a 0.5 confidence threshold.
+
+### Interpreting the Confusion Matrix
+
+*   **Diagonal Cells (Blue):** These are correct classifications (True Positives). For example, the model correctly identified "Gadus morhua" twice.
+*   **Off-Diagonal Cells (Red):** These represent errors.
+    *   **Rows** show the ground truth. The "Gadus morhua" row has a "1" under the "Melanogrammus aeglefinus" column, meaning one true cod was misclassified as a haddock.
+    *   **Columns** show the model's predictions.
+*   **"False Positive" Column:** These are detections that did not match any ground truth object. The model predicted one "Pollachius virens" that wasn't actually there.
+*   **"False Negative" Row:** These are ground truth objects the model failed to detect. The model missed one "Urophycis tenuis" entirely.
 
 This vignette provides a basic overview of a standard workflow. The `Optics` package contains many other S4 methods for more in-depth analysis, including generating ROC curves, confusion matrices, and analyzing the drivers of model error.
