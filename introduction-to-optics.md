@@ -8,6 +8,15 @@ vignette: >
 ---
 
 
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+# Load all package functions to be available in the vignette
+devtools::load_all()
+```
+
 
 ## 1. Introduction
 
