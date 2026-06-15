@@ -2,37 +2,22 @@
 % Please edit documentation in R/visualizations.R
 \name{plot_bland_altman}
 \alias{plot_bland_altman}
-\title{Plot a Bland-Altman Plot for Agreement}
+\alias{plot_bland_altman,data.frame-method}
+\title{Plot a Bland-Altman Plot}
 \usage{
-plot_bland_altman(
+plot_bland_altman(aligned_df, ...)
+
+\S4method{plot_bland_altman}{data.frame}(
   aligned_df,
   title = "Bland-Altman Agreement Plot",
   model_col = NULL
 )
 }
 \arguments{
-\item{aligned_df}{A data frame or tibble containing aligned counts, typically
-the output of \code{align_counts()}. Must contain \code{model_count} and \code{truth_count}.}
+\item{aligned_df}{A data frame of aligned counts.}
 
-\item{title}{An optional title for the plot.}
-
-\item{model_col}{An optional unquoted column name that identifies the model
-or group. If provided, a separate plot panel will be generated for each
-unique value in this column.}
-}
-\value{
-A \code{ggplot} object representing the Bland-Altman plot.
+\item{...}{Additional arguments.}
 }
 \description{
-Creates a Bland-Altman plot to visualize the agreement between two
-quantitative measurements (model vs. truth counts).
-}
-\examples{
-aligned_data <- dplyr::tibble(
-  model_count = c(10, 1, 5, 2, 8, 20),
-  truth_count = c(12, 0, 2, 2, 8, 22)
-)
-
-plot_bland_altman(aligned_data)
-
+Plot a Bland-Altman Plot
 }

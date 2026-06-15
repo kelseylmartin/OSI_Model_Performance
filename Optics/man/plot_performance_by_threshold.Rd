@@ -2,44 +2,22 @@
 % Please edit documentation in R/visualizations.R
 \name{plot_performance_by_threshold}
 \alias{plot_performance_by_threshold}
+\alias{plot_performance_by_threshold,data.frame-method}
 \title{Plot Performance Metrics Across Confidence Thresholds}
 \usage{
-plot_performance_by_threshold(
+plot_performance_by_threshold(summary_df, ...)
+
+\S4method{plot_performance_by_threshold}{data.frame}(
   summary_df,
   model_col = NULL,
   title = "Performance by Confidence Threshold"
 )
 }
 \arguments{
-\item{summary_df}{A data frame containing performance metrics calculated at
-various thresholds, typically the output of \code{summarize_performance_by_threshold()}.
-Must contain \code{threshold}, \code{precision}, \code{recall}, \code{f1_score}, and optionally
-a column to identify different models.}
+\item{summary_df}{A data frame from \code{summarize_performance_by_threshold()}.}
 
-\item{model_col}{An optional unquoted column name that identifies the model
-or group (e.g., \code{model_name}). If provided, the plot will show separate
-lines for each model.}
-
-\item{title}{An optional title for the plot.}
-}
-\value{
-A \code{ggplot} object representing the performance comparison plot.
+\item{...}{Additional arguments.}
 }
 \description{
-Creates a line plot to visualize how Precision, Recall, and F1-Score change
-across a range of confidence thresholds. This is useful for comparing the
-performance of one or more models and selecting an optimal threshold.
-}
-\examples{
-# Create sample performance summary data
-perf_summary <- dplyr::tibble(
-  threshold = rep(seq(0.1, 0.9, 0.1), 2),
-  precision = c(runif(9, 0.6, 1), runif(9, 0.5, 0.9)),
-  recall = c(runif(9, 0.4, 1), runif(9, 0.3, 0.95)),
-  f1_score = (2 * precision * recall) / (precision + recall),
-  model_name = rep(c("Model A", "Model B"), each = 9)
-)
-
-plot_performance_by_threshold(perf_summary, model_col = model_name)
-
+Plot Performance Metrics Across Confidence Thresholds
 }

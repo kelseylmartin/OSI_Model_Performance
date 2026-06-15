@@ -10,13 +10,13 @@ read_kwcoco(file_path)
 \item{file_path}{The full path to the KWCOCO JSON file.}
 }
 \value{
-A \code{tibble} containing the flattened annotation data, conforming to
-the package's internal standard schema. Returns an empty tibble if the
-file is invalid, cannot be parsed, or contains no annotations.
+An \code{OpticsDetections} object containing the flattened annotation
+data. If the file is invalid or empty, the object's \code{data} slot will be
+an empty tibble.
 }
 \description{
-Ingests a KWCOCO-formatted JSON file and converts it into a standardized
-tibble where each row represents a single object detection.
+Ingests a KWCOCO-formatted JSON file and wraps the standardized data in an
+\code{OpticsDetections} S4 object.
 }
 \examples{
 \dontrun{
@@ -37,8 +37,8 @@ tibble where each row represents a single object detection.
   jsonlite::write_json(dummy_kwcoco, json_path, auto_unbox = TRUE)
 
   # Ingest the file
-  detections_df <- read_kwcoco(json_path)
-  print(detections_df)
+  detections_obj <- read_kwcoco(json_path)
+  print(detections_obj@data)
 
   # Clean up
   unlink(json_path)

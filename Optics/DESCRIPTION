@@ -24,3 +24,11 @@ Imports:
     readr,
     tidyr,
     tools
+Collate: 
+    'align.R'
+    'ingest.R'
+    'metrics.R'
+    'performance.R'
+    'theme.R'
+    'utils-pipe.R'
+    'visualizations.R'

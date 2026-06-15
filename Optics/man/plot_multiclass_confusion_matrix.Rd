@@ -2,32 +2,18 @@
 % Please edit documentation in R/visualizations.R
 \name{plot_multiclass_confusion_matrix}
 \alias{plot_multiclass_confusion_matrix}
+\alias{plot_multiclass_confusion_matrix,data.frame-method}
 \title{Plot a Multi-Class Confusion Matrix Heatmap}
 \usage{
-plot_multiclass_confusion_matrix(confusion_df, title = "Confusion Matrix")
+plot_multiclass_confusion_matrix(confusion_df, ...)
+
+\S4method{plot_multiclass_confusion_matrix}{data.frame}(confusion_df, title = "Confusion Matrix")
 }
 \arguments{
-\item{confusion_df}{A dataframe produced by \code{calculate_confusion_matrix()},
-containing \code{Truth}, \code{Prediction}, and \code{n} columns.}
+\item{confusion_df}{A data frame from \code{calculate_confusion_matrix()}.}
 
-\item{title}{A string for the plot title.}
-}
-\value{
-A \code{ggplot} object representing the confusion matrix plot.
+\item{...}{Additional arguments.}
 }
 \description{
-Visualizes a multi-class confusion matrix using a \code{ggplot2} heatmap. The plot
-shows true classes on the y-axis and predicted classes on the x-axis, which
-is ideal for understanding inter-class confusion.
-}
-\examples{
-\dontrun{
-  # First, calculate the confusion matrix data
-  model_data <- groundtruth_master \%>\%
-    dplyr::filter(year == 2022, Version == "v2", Confidence == 0.5)
-  confusion_data <- calculate_confusion_matrix(model_data)
-
-  # Now, plot it
-  plot_multiclass_confusion_matrix(confusion_data, title = "Confusion Matrix for Model v2")
-}
+Plot a Multi-Class Confusion Matrix Heatmap
 }

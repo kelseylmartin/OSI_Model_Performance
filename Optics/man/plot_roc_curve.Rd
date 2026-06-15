@@ -2,42 +2,18 @@
 % Please edit documentation in R/visualizations.R
 \name{plot_roc_curve}
 \alias{plot_roc_curve}
+\alias{plot_roc_curve,data.frame-method}
 \title{Plot a Receiver Operating Characteristic (ROC) Curve}
 \usage{
-plot_roc_curve(detection_df, title = "ROC Curve", model_col = NULL)
+plot_roc_curve(detection_df, ...)
+
+\S4method{plot_roc_curve}{data.frame}(detection_df, title = "ROC Curve", model_col = NULL)
 }
 \arguments{
-\item{detection_df}{A data frame where each row is a model detection. Must
-contain a \code{score} column with the model's confidence score, and a \code{status}
-column (e.g., "TP" or "FP") indicating if the detection was a true or false
-positive.}
+\item{detection_df}{A data frame of classified detections.}
 
-\item{title}{An optional title for the plot.}
-
-\item{model_col}{An optional unquoted column name that identifies the model
-or group. If provided, a separate ROC curve will be generated for each
-unique value in this column.}
-}
-\value{
-A \code{ggplot} object representing the ROC curve.
+\item{...}{Additional arguments.}
 }
 \description{
-Generates an ROC curve to evaluate model performance across all confidence
-thresholds.
-}
-\details{
-This function requires a data frame of model detections that have been
-classified as either true positives (TP) or false positives (FP). It uses
-the \code{pROC} package to calculate the curve and the Area Under the Curve (AUC).
-}
-\examples{
-# Create sample data of classified detections
-roc_data <- dplyr::tibble(
-  score = c(0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2),
-  # TPs have high scores, FPs have lower scores
-  status = c("TP", "TP", "FP", "TP", "FP", "FP", "TP", "FP")
-)
-
-plot_roc_curve(roc_data)
-
+Plot a Receiver Operating Characteristic (ROC) Curve
 }

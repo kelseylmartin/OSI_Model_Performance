@@ -2,37 +2,44 @@
 % Please edit documentation in R/metrics.R
 \name{calculate_frame_abundance}
 \alias{calculate_frame_abundance}
+\alias{calculate_frame_abundance,OpticsDetections-method}
+\alias{calculate_frame_abundance,data.frame-method}
 \title{Calculate Frame-by-Frame Abundance}
 \usage{
-calculate_frame_abundance(detections_df, group_cols = NULL)
+calculate_frame_abundance(object, ...)
+
+\S4method{calculate_frame_abundance}{OpticsDetections}(object, group_cols = NULL)
+
+\S4method{calculate_frame_abundance}{data.frame}(object, group_cols = NULL)
 }
 \arguments{
-\item{detections_df}{A standardized detections tibble, as produced by one of
-the \verb{read_*} ingestion functions. Must contain \code{video_id}, \code{frame_index},
-and \code{category_name}.}
+\item{object}{An object containing detection data.}
 
-\item{group_cols}{A character vector of additional column names from
-\code{detections_df} to group by.}
+\item{...}{Additional arguments passed to methods.}
+
+\item{group_cols}{A character vector of additional column names to group by.}
 }
 \value{
-A \code{tibble} with columns for each grouping variable (including
-\code{video_id}, \code{frame_index}, and \code{category_name}) and an \code{abundance} column
-containing the per-frame counts.
+A \code{tibble} with per-frame counts.
 }
 \description{
 Calculates the number of detections for each species category in every frame
-where they appear. This provides a time-series of counts.
+where they appear.
 }
 \examples{
-# Create a sample standardized data frame
+# Create a sample OpticsDetections object
 sample_df <- dplyr::tibble(
   video_id = c(rep("video1", 3)),
   frame_index = c(1, 1, 2),
-  category_name = c("FishA", "FishA", "FishB"),
-  annotation_id = 1:3
-) 
+  category_name = c("FishA", "FishA", "FishB")
+)
+detections_obj <- OpticsDetections(
+  data = sample_df,
+  source_file = "dummy_file.csv",
+  ingest_format = "dummy"
+)
 
 # Calculate frame-by-frame abundance
-calculate_frame_abundance(sample_df)
+calculate_frame_abundance(detections_obj)
 
 }

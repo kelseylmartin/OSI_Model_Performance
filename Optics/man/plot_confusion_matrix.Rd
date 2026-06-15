@@ -2,30 +2,18 @@
 % Please edit documentation in R/visualizations.R
 \name{plot_confusion_matrix}
 \alias{plot_confusion_matrix}
+\alias{plot_confusion_matrix,data.frame-method}
 \title{Plot a Confusion Matrix}
 \usage{
-plot_confusion_matrix(metrics_df, title = "Confusion Matrix", model_col = NULL)
+plot_confusion_matrix(metrics_df, ...)
+
+\S4method{plot_confusion_matrix}{data.frame}(metrics_df, title = "Confusion Matrix", model_col = NULL)
 }
 \arguments{
-\item{metrics_df}{A data frame containing performance metrics, typically the
-output of \code{calculate_binary_metrics()}. Must contain \code{tp}, \code{fp}, \code{fn}, and \code{tn}.
-If the data frame is grouped, only the first group's metrics will be plotted.}
+\item{metrics_df}{A data frame of metrics.}
 
-\item{title}{An optional title for the plot.}
-
-\item{model_col}{An optional unquoted column name that identifies the model
-or group. If provided, a separate plot panel will be generated for each
-unique value in this column.}
-}
-\value{
-A \code{ggplot} object representing the confusion matrix.
+\item{...}{Additional arguments.}
 }
 \description{
-Generates a heatmap visualization of a confusion matrix from performance
-metrics (TP, FP, TN, FN).
-}
-\examples{
-metrics <- dplyr::tibble(tp = 10, fp = 2, fn = 3, tn = 85)
-plot_confusion_matrix(metrics, "Model Performance")
-
+Plot a Confusion Matrix
 }

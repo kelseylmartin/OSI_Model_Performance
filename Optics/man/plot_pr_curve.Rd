@@ -2,48 +2,18 @@
 % Please edit documentation in R/visualizations.R
 \name{plot_pr_curve}
 \alias{plot_pr_curve}
+\alias{plot_pr_curve,data.frame-method}
 \title{Plot a Precision-Recall (PR) Curve}
 \usage{
-plot_pr_curve(detection_df, model_col = NULL, title = "Precision-Recall Curve")
+plot_pr_curve(detection_df, ...)
+
+\S4method{plot_pr_curve}{data.frame}(detection_df, model_col = NULL, title = "Precision-Recall Curve")
 }
 \arguments{
-\item{detection_df}{A data frame where each row is a model detection. Must
-contain a \code{score} column with the model's confidence score, and a \code{status}
-column (e.g., "TP" or "FP").}
+\item{detection_df}{A data frame of classified detections.}
 
-\item{model_col}{An optional unquoted column name that identifies the model
-or group. If provided, a separate PR curve will be generated for each
-unique value in this column.}
-
-\item{title}{An optional title for the plot.}
-}
-\value{
-A \code{ggplot} object representing the PR curve.
+\item{...}{Additional arguments.}
 }
 \description{
-Generates a PR curve to evaluate model performance, showing the trade-off
-between precision and recall across all confidence thresholds.
-}
-\details{
-This function uses the \code{PRROC} package to calculate the curve and the Area
-Under the Curve (AUC-PR). It requires a data frame of model detections that
-have been classified as either true positives (TP) or false positives (FP).
-}
-\examples{
-# Create sample data of classified detections
-pr_data <- dplyr::tibble(
-  score = c(0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2),
-  status = c("TP", "TP", "FP", "TP", "FP", "FP", "TP", "FP")
-)
-
-plot_pr_curve(pr_data)
-
-# Example with multiple models
-pr_data_multi <- dplyr::tibble(
-  score = runif(200),
-  status = sample(c("TP", "FP"), 200, replace = TRUE),
-  model_name = rep(c("Model A", "Model B"), each = 100)
-)
-plot_pr_curve(pr_data_multi, model_col = model_name)
-
+Plot a Precision-Recall (PR) Curve
 }

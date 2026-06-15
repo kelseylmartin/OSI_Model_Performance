@@ -2,9 +2,13 @@
 % Please edit documentation in R/performance.R
 \name{calculate_confusion_matrix}
 \alias{calculate_confusion_matrix}
-\title{Calculate a Confusion Matrix from Aligned Count Data}
+\alias{calculate_confusion_matrix,data.frame-method}
+\title{The rest of the functions are utilities that operate on generic data.frames.
+They are converted to S4 generics for consistency.}
 \usage{
-calculate_confusion_matrix(
+calculate_confusion_matrix(aligned_df, ...)
+
+\S4method{calculate_confusion_matrix}{data.frame}(
   aligned_df,
   group_vars,
   species_col = Species,
@@ -12,43 +16,7 @@ calculate_confusion_matrix(
   truth_col = truth_count
 )
 }
-\arguments{
-\item{aligned_df}{A dataframe containing aligned manual and model counts.
-Must contain columns for grouping, species, model counts, and truth counts.}
-
-\item{group_vars}{A character vector of column names that define the unit of
-analysis (e.g., \code{"Deployment"}).}
-
-\item{species_col}{The unquoted name of the column containing species names.
-Defaults to \code{Species}.}
-
-\item{model_col}{The unquoted name of the column with model counts. Defaults
-to \code{model_count}.}
-
-\item{truth_col}{The unquoted name of the column with truth counts. Defaults
-to \code{truth_count}.}
-}
-\value{
-A \code{tibble} in the format \verb{(Truth, Prediction, n)}, representing the
-confusion matrix. Also includes an "FN (No Prediction)" row for cases
-where the manual count was positive but the model made no prediction for
-any species in that deployment.
-}
 \description{
-This function transforms long-format aligned count data (manual vs. model)
-into a standard confusion matrix. It determines misclassifications by
-identifying where the model count is positive for one species while the
-manual count is positive for another within the same deployment.
-}
-\examples{
-\dontrun{
-  # Assuming 'groundtruth_master' is your aligned data from Part II
-  # and you want to analyze a specific model run:
-  model_data <- groundtruth_master \%>\%
-    dplyr::filter(year == 2022, Version == "v2", Confidence == 0.5) \%>\%
-    rename(model_count = VIAME_MaxN, truth_count = Manual)
-
-  confusion_data <- calculate_confusion_matrix(model_data, group_vars = "Deployment")
-  print(confusion_data)
-}
+The rest of the functions are utilities that operate on generic data.frames.
+They are converted to S4 generics for consistency.
 }

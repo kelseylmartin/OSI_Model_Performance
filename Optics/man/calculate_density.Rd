@@ -2,37 +2,30 @@
 % Please edit documentation in R/metrics.R
 \name{calculate_density}
 \alias{calculate_density}
+\alias{calculate_density,data.frame-method}
 \title{Calculate Density from Counts and Area}
 \usage{
-calculate_density(counts_df, count_col, area = NULL, area_col = NULL)
+calculate_density(object, ...)
+
+\S4method{calculate_density}{data.frame}(object, count_col, area = NULL, area_col = NULL)
 }
 \arguments{
-\item{counts_df}{A data frame containing counts and, optionally, area information.}
+\item{object}{A data frame or other object containing count data.}
 
-\item{count_col}{The unquoted name of the column in \code{counts_df} that contains
-the count data (e.g., \code{maxn}).}
+\item{...}{Additional arguments passed to methods.}
 
-\item{area}{A single numeric value representing the survey area.}
+\item{count_col}{The unquoted name of the column containing the count data.}
 
-\item{area_col}{An optional unquoted column name in \code{counts_df} that contains
-area values on a per-row basis.}
+\item{area}{A single numeric value for the survey area.}
+
+\item{area_col}{An optional unquoted column name for area values.}
 }
 \value{
-The input \code{counts_df} with an added \code{density} column.
+The input object with an added \code{density} column.
 }
 \description{
-Calculates a density metric (e.g., individuals per square meter) by dividing
-a count by a specified survey area.
-}
-\details{
-This function can operate in two ways:
-\enumerate{
-\item If a single numeric \code{area} is provided, it is applied to all rows.
-\item If an \code{area_col} is provided, the function uses the area values from that
-specific column for each row.
-}
-
-You must provide either \code{area} or \code{area_col}, but not both.
+Calculates density by dividing a count by an area. This generic function
+dispatches to methods based on the class of the input object.
 }
 \examples{
 count_data <- dplyr::tibble(
@@ -41,10 +34,9 @@ count_data <- dplyr::tibble(
   survey_area_m2 = c(5, 10)
 )
 
-# Using a fixed area for all sites
+# Using a fixed area
 calculate_density(count_data, count_col = maxn, area = 100)
 
 # Using a per-site area from a column
 calculate_density(count_data, count_col = maxn, area_col = survey_area_m2)
-
 }

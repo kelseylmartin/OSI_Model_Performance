@@ -2,45 +2,22 @@
 % Please edit documentation in R/performance.R
 \name{classify_detections}
 \alias{classify_detections}
+\alias{classify_detections,data.frame,data.frame-method}
 \title{Classify Detections as True/False Positives}
 \usage{
-classify_detections(raw_detections, validated_detections, detection_id)
+classify_detections(raw_detections, validated_detections, ...)
+
+\S4method{classify_detections}{data.frame,data.frame}(raw_detections, validated_detections, detection_id)
 }
 \arguments{
-\item{raw_detections}{A data frame of raw detections from the model.}
+\item{raw_detections}{An object of raw detections.}
 
-\item{validated_detections}{A data frame of human-validated detections.}
+\item{validated_detections}{An object of validated detections.}
 
-\item{detection_id}{The unquoted column name that serves as the unique
-identifier for each detection (e.g., \code{annotation_id}). This ID must be
-consistent between the raw and validated data frames.}
-}
-\value{
-The \code{raw_detections} data frame with a new \code{status} column, where
-each detection is labeled as either "TP" or "FP". This output is suitable
-for use with \code{plot_roc_curve()} and \code{plot_pr_curve()}.
+\item{...}{Additional arguments.}
+
+\item{detection_id}{The unquoted column name for the unique detection identifier.}
 }
 \description{
-Compares raw model detections against a human-validated set to classify each
-raw detection as either a True Positive (TP) or a False Positive (FP).
-}
-\details{
-This function is designed for workflows where human annotators review and
-correct the output of a model. It assumes that any raw detection that also
-exists in the validated set is a True Positive, and any raw detection that
-does not exist in the validated set was removed by a human and is therefore
-a False Positive.
-}
-\examples{
-raw <- dplyr::tibble(
-  detection_id = 1:4,
-  score = c(0.9, 0.7, 0.6, 0.4)
-)
-# Human keeps detections 1 & 3, deletes 2 & 4.
-validated <- dplyr::tibble(
-  detection_id = c(1, 3)
-)
-
-classify_detections(raw, validated, detection_id = detection_id)
-
+Classify Detections as True/False Positives
 }

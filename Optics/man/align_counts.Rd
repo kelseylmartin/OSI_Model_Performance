@@ -2,9 +2,12 @@
 % Please edit documentation in R/align.R
 \name{align_counts}
 \alias{align_counts}
+\alias{align_counts,data.frame,data.frame-method}
 \title{Align Model-derived Counts with Ground Truth Counts}
 \usage{
-align_counts(
+align_counts(model_counts, truth_counts, ...)
+
+\S4method{align_counts}{data.frame,data.frame}(
   model_counts,
   truth_counts,
   by,
@@ -13,15 +16,15 @@ align_counts(
 )
 }
 \arguments{
-\item{model_counts}{A data frame or tibble containing counts derived from
-the model's predictions.}
+\item{model_counts}{An object containing counts derived from the model's
+predictions (e.g., a data.frame or tibble).}
 
-\item{truth_counts}{A data frame or tibble containing counts from the
-human-annotated ground truth.}
+\item{truth_counts}{An object containing counts from the human-annotated
+ground truth.}
 
-\item{by}{A character vector of column names to join the two data frames on.
-These should be the columns that uniquely identify an observation group
-(e.g., \code{c("video_id", "category_name")}).}
+\item{...}{Additional arguments passed to methods.}
+
+\item{by}{A character vector of column names to join the two data frames on.}
 
 \item{model_col}{The unquoted name of the column in \code{model_counts} that
 contains the count/metric data. Defaults to \code{maxn}.}
@@ -30,21 +33,12 @@ contains the count/metric data. Defaults to \code{maxn}.}
 contains the count/metric data. Defaults to \code{maxn}.}
 }
 \value{
-A \code{tibble} containing the aligned data. It will include the \code{by}
-columns and two new columns, \code{model_count} and \code{truth_count}, with \code{NA}
-values replaced by 0.
+A \code{tibble} containing the aligned data.
 }
 \description{
-Performs a full join on model-derived and ground-truth count data frames
-to create a single, aligned data frame for performance evaluation.
-}
-\details{
-This function is designed to work with aggregated data, such as the output
-from \code{calculate_maxn()} or \code{calculate_frame_abundance()}. It aligns the two
-datasets using a specified set of grouping columns (e.g., \code{video_id},
-\code{category_name}). The resulting data frame will contain columns for both
-model and manual counts, with \code{NA} values replaced by 0 to represent
-false positives and false negatives correctly.
+This S4 generic performs a full join on model-derived and ground-truth
+count data frames to create a single, aligned data frame for performance
+evaluation.
 }
 \examples{
 model_df <- dplyr::tibble(

@@ -2,9 +2,12 @@
 % Please edit documentation in R/performance.R
 \name{summarize_performance_by_threshold}
 \alias{summarize_performance_by_threshold}
+\alias{summarize_performance_by_threshold,OpticsDetections,OpticsDetections-method}
 \title{Summarize Performance Metrics Across Confidence Thresholds}
 \usage{
-summarize_performance_by_threshold(
+summarize_performance_by_threshold(model_detections, truth_detections, ...)
+
+\S4method{summarize_performance_by_threshold}{OpticsDetections,OpticsDetections}(
   model_detections,
   truth_detections,
   by,
@@ -13,46 +16,18 @@ summarize_performance_by_threshold(
 )
 }
 \arguments{
-\item{model_detections}{A standardized detections tibble for the model,
-which must include a \code{score} column.}
+\item{model_detections}{An object containing model detections.}
 
-\item{truth_detections}{A standardized detections tibble for the ground truth.}
+\item{truth_detections}{An object containing truth detections.}
 
-\item{by}{A character vector of column names to join the model and truth counts on.}
+\item{...}{Additional arguments passed to methods.}
 
-\item{metric_function}{The function to use for aggregating counts (e.g.,
-\code{calculate_maxn} or \code{calculate_frame_abundance}). Defaults to \code{calculate_maxn}.}
+\item{by}{A character vector of column names to join on.}
 
-\item{thresholds}{A numeric vector of confidence thresholds to evaluate (e.g.,
-\code{seq(0.1, 0.9, 0.1)}).}
-}
-\value{
-A \code{tibble} with each row representing a confidence threshold and its
-corresponding performance metrics (TP, FP, FN, precision, recall, etc.).
+\item{metric_function}{The function to use for aggregation (e.g., \code{calculate_maxn}).}
+
+\item{thresholds}{A numeric vector of confidence thresholds.}
 }
 \description{
-Evaluates model performance over a range of confidence thresholds,
-generating metrics like precision, recall, and F1-score for each threshold.
-}
-\examples{
-# Create sample model and truth detection data
-model_dets <- dplyr::tibble(
-  video_id = "v1",
-  frame_index = c(1, 1, 2),
-  category_name = c("FishA", "FishA", "FishB"),
-  score = c(0.95, 0.85, 0.7)
-)
-truth_dets <- dplyr::tibble(
-  video_id = "v1",
-  frame_index = c(1, 3),
-  category_name = c("FishA", "FishC")
-)
-
-# Summarize performance using MaxN across several thresholds
-summarize_performance_by_threshold(
-  model_detections = model_dets,
-  truth_detections = truth_dets,
-  by = c("video_id", "category_name"),
-  thresholds = c(0.5, 0.8, 0.9)
-)
+Summarize Performance Metrics Across Confidence Thresholds
 }

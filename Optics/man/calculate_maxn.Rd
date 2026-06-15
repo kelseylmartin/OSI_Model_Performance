@@ -2,24 +2,26 @@
 % Please edit documentation in R/metrics.R
 \name{calculate_maxn}
 \alias{calculate_maxn}
+\alias{calculate_maxn,OpticsDetections-method}
+\alias{calculate_maxn,data.frame-method}
 \title{Calculate MaxN (Maximum Number of Individuals)}
 \usage{
-calculate_maxn(detections_df, group_cols = NULL)
+calculate_maxn(object, ...)
+
+\S4method{calculate_maxn}{OpticsDetections}(object, group_cols = NULL)
+
+\S4method{calculate_maxn}{data.frame}(object, group_cols = NULL)
 }
 \arguments{
-\item{detections_df}{A standardized detections tibble, as produced by one of
-the \verb{read_*} ingestion functions. Must contain \code{video_id}, \code{frame_index},
-and \code{category_name}.}
+\item{object}{An object containing detection data.}
 
-\item{group_cols}{A character vector of additional column names from
-\code{detections_df} to group by, besides \code{video_id} and \code{category_name}.
-This is useful for calculating metrics across different models or
-confidence thresholds (e.g., \code{c("version", "confidence")}).}
+\item{...}{Additional arguments passed to methods.}
+
+\item{group_cols}{A character vector of additional column names to group by.}
 }
 \value{
-A \code{tibble} with columns for each grouping variable (including
-\code{video_id} and \code{category_name}) and a \code{maxn} column containing the
-calculated MaxN value.
+A \code{tibble} with columns for each grouping variable and a \code{maxn}
+column containing the calculated MaxN value.
 }
 \description{
 Calculates the maximum number of individuals of each species category
@@ -27,15 +29,19 @@ observed in any single frame within each video. This is a standard metric
 for baited remote underwater video (BRUV) surveys.
 }
 \examples{
-# Create a sample standardized data frame
+# Create a sample OpticsDetections object
 sample_df <- dplyr::tibble(
   video_id = c(rep("video1", 4), rep("video2", 3)),
   frame_index = c(1, 1, 2, 2, 1, 1, 1),
-  category_name = c("FishA", "FishA", "FishA", "FishB", "FishA", "FishA", "FishA"),
-  annotation_id = 1:7
+  category_name = c("FishA", "FishA", "FishA", "FishB", "FishA", "FishA", "FishA")
+)
+detections_obj <- OpticsDetections(
+  data = sample_df,
+  source_file = "dummy_file.csv",
+  ingest_format = "dummy"
 )
 
 # Calculate MaxN for each video and species
-calculate_maxn(sample_df)
+calculate_maxn(detections_obj)
 
 }
