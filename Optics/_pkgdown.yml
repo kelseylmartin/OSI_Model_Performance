@@ -1,4 +1,71 @@
-url: ~
+url: https://your-package.org
+
 template:
   bootstrap: 5
 
+navbar:
+  structure:
+    left:  [intro, reference, articles]
+    right: [search, github]
+  components:
+    reference:
+      text: "Reference"
+      href: reference/index.html
+    articles:
+      text: "Articles"
+      menu:
+        - text: "Introduction to Optics"
+          href: articles/introduction-to-optics.html
+
+reference:
+  - title: "Data Ingestion & Representation"
+    desc:  "Functions for reading data from various sources and the main S4 class."
+    contents:
+      - OpticsDetections-class
+      - OpticsDetections
+      - read_kwcoco
+      - read_viame_csv
+
+  - title: "Alignment & Transformation"
+    desc:  "Functions for aligning model and ground truth data."
+    contents:
+      - align_counts
+      - classify_detections
+
+  - title: "Ecological Metrics"
+    desc:  "Functions for calculating standard ecological metrics like MaxN."
+    contents:
+      - calculate_maxn
+      - calculate_frame_abundance
+      - calculate_density
+
+  - title: "Performance Evaluation"
+    desc:  "Functions for assessing model performance."
+    contents:
+      - summarize_performance_by_threshold
+      - calculate_binary_metrics
+      - calculate_confusion_matrix
+      - get_disagreement_report
+      - analyze_reviewer_effort
+      - analyze_performance_drivers
+
+  - title: "Visualizations"
+    desc:  "Functions for plotting and visualizing results."
+    contents:
+      - plot_counts_scatterplot
+      - plot_bland_altman
+      - plot_pr_curve
+      - plot_roc_curve
+      - plot_confusion_matrix
+      - plot_multiclass_confusion_matrix
+      - plot_performance_by_threshold
+
+  - title: "Plot Theming"
+    desc: "Custom `ggplot2` theme for consistent branding."
+    contents:
+      - theme_optics
+
+  - title: "Utilities"
+    desc: "Other exported operators and utilities."
+    contents:
+      - '%>%'

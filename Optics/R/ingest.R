@@ -34,6 +34,7 @@ setClass("OpticsDetections",
 
 #' Validity check for OpticsDetections objects
 #'
+#' @rdname OpticsDetections-class
 #' @importFrom dplyr all_of
 setValidity("OpticsDetections", function(object) {
   errors <- character()

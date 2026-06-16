@@ -186,6 +186,8 @@ setMethod("calculate_confusion_matrix", "data.frame", function(aligned_df, group
     dplyr::summarize(n = dplyr::n(), .groups = 'drop')
 })
 
+#' Analyze Reviewer Effort
+#'
 #' @rdname analyze_reviewer_effort
 #' @export
 setGeneric("analyze_reviewer_effort", function(raw_df, validated_df, ...) standardGeneric("analyze_reviewer_effort"))
@@ -222,6 +224,8 @@ setMethod("analyze_reviewer_effort", signature(raw_df = "data.frame", validated_
     )
 })
 
+#' Get a Report of Disagreements
+#'
 #' @rdname get_disagreement_report
 #' @export
 setGeneric("get_disagreement_report", function(aligned_df, ...) standardGeneric("get_disagreement_report"))
@@ -244,6 +248,8 @@ setMethod("get_disagreement_report", "data.frame", function(aligned_df, group_va
     dplyr::slice_head(n = top_n)
 })
 
+#' Analyze Performance Drivers
+#'
 #' @rdname analyze_performance_drivers
 #' @export
 setGeneric("analyze_performance_drivers", function(aligned_df, ...) standardGeneric("analyze_performance_drivers"))
