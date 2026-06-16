@@ -1,0 +1,58 @@
+/* Custom CSS for the Optics pkgdown site */
+
+:root {
+  --noaa-deep-blue: #003366;
+  --noaa-medium-blue: #336699;
+  --noaa-light-blue: #E0E8F0;
+  --noaa-sea-green: #339999;
+  --noaa-sandy-brown: #CC9966;
+}
+
+body {
+  background-color: var(--noaa-light-blue);
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #333;
+}
+
+.navbar {
+  background-color: var(--noaa-deep-blue) !important;
+}
+
+.navbar .nav-link {
+  color: white !important;
+}
+
+.navbar .nav-link:hover {
+  color: var(--noaa-sandy-brown) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--noaa-deep-blue);
+}
+
+a {
+  color: var(--noaa-medium-blue);
+}
+
+a:hover {
+  color: var(--noaa-sea-green);
+}
+
+.page-header {
+  background-color: var(--noaa-deep-blue);
+  color: white;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border-radius: 0.3rem;
+  text-align: center;
+}
+
+.page-header h1 {
+  color: white;
+  font-size: 2.5rem;
+}
+
+.page-header .vehicle-icons {
+  font-size: 2rem;
+  margin-top: 1rem;
+}

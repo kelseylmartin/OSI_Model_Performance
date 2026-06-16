@@ -2,6 +2,8 @@ url: https://your-package.org
 
 template:
   bootstrap: 5
+  includes:
+    before_body: pkgdown/_navbar.html
 
 navbar:
   structure:
