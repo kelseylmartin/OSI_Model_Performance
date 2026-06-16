@@ -9,6 +9,30 @@ NULL
 #' @param ... Additional arguments passed to methods.
 #' @export
 #' @rdname calculate_binary_metrics
+#' @examples
+#' \dontrun{
+#' # For Erin's ice seal survey, to compare raw vs. validated data
+#' erin_raw_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_ir_detections.csv", package = "Optics")
+#' raw_detections <- read_viame_csv(erin_raw_csv)
+#' 
+#' erin_truth_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+#' truth_detections <- read_viame_csv(erin_truth_csv)
+#' 
+#' raw_counts <- calculate_maxn(raw_detections)
+#' truth_counts <- calculate_maxn(truth_detections)
+#' 
+#' aligned_df <- align_counts(
+#'  raw_counts, 
+#'  truth_counts,
+#'  by = c("video_id", "category_name"),
+#'  model_col = maxn,
+#'  truth_col = maxn
+#' )
+#' 
+#' binary_metrics <- calculate_binary_metrics(aligned_df)
+#' }
 setGeneric("calculate_binary_metrics", function(aligned_df, ...) {
   standardGeneric("calculate_binary_metrics")
 })
@@ -77,6 +101,23 @@ setMethod("calculate_binary_metrics", "data.frame",
 #' @param ... Additional arguments passed to methods.
 #' @export
 #' @rdname summarize_performance_by_threshold
+#' @examples
+#' \dontrun{
+#' # For Erin's ice seal survey, to evaluate performance by species
+#' erin_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' model_detections <- read_viame_csv(erin_csv)
+#' 
+#' erin_truth_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+#' truth_detections <- read_viame_csv(erin_truth_csv)
+#' 
+#' performance_summary <- summarize_performance_by_threshold(
+#' model_detections = model_detections,
+#' truth_detections = truth_detections,
+#' by = c("video_id", "category_name")
+#' )
+#' }
 setGeneric("summarize_performance_by_threshold", function(model_detections, truth_detections, ...) {
   standardGeneric("summarize_performance_by_threshold")
 })
@@ -136,6 +177,23 @@ setMethod("summarize_performance_by_threshold",
 #' @param ... Additional arguments.
 #' @export
 #' @rdname classify_detections
+#' @examples
+#' \dontrun{
+#' # For Erin's ice seal survey
+#' erin_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' raw_detections <- read_viame_csv(erin_csv)
+#' 
+#' erin_truth_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+#' validated_detections <- read_viame_csv(erin_truth_csv)
+#' 
+#' classified_detections <- classify_detections(
+#' raw_detections = raw_detections@data,
+#' validated_detections = validated_detections@data,
+#' detection_id = annotation_id
+#' )
+#' }
 setGeneric("classify_detections", function(raw_detections, validated_detections, ...) {
   standardGeneric("classify_detections")
 })
@@ -168,6 +226,29 @@ setMethod("classify_detections",
 
 #' @rdname calculate_confusion_matrix
 #' @export
+#' @examples
+#' \dontrun{
+#' # For Abi's AUV data
+#' kwcoco_file <- system.file("extdata", "AUV_viame_test_detections.coco.json", package = "Optics")
+#' detections <- read_kwcoco(kwcoco_file)
+#' 
+#' # This is a placeholder for truth data
+#' truth_detections <- detections 
+#' 
+#' model_counts <- calculate_maxn(detections)
+#' truth_counts <- calculate_maxn(truth_detections)
+#' 
+#' aligned_df <- align_counts(
+#'  model_counts, 
+#'  truth_counts,
+#'  by = c("video_id", "category_name"),
+#'  model_col = maxn,
+#'  truth_col = maxn
+#' )
+#' 
+#' conf_matrix <- calculate_confusion_matrix(aligned_df, 
+#' group_vars = c("video_id"), species_col = category_name)
+#' }
 setGeneric("calculate_confusion_matrix", function(aligned_df, ...) standardGeneric("calculate_confusion_matrix"))
 #' @rdname calculate_confusion_matrix
 #' @export
@@ -190,6 +271,19 @@ setMethod("calculate_confusion_matrix", "data.frame", function(aligned_df, group
 #'
 #' @rdname analyze_reviewer_effort
 #' @export
+#' @examples
+#' \dontrun{
+#' # For Erin's ice seal survey
+#' erin_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' raw_df <- read_viame_csv(erin_csv)@data
+#' 
+#' erin_truth_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+#' validated_df <- read_viame_csv(erin_truth_csv)@data
+#' 
+#' effort_analysis <- analyze_reviewer_effort(raw_df, validated_df)
+#' }
 setGeneric("analyze_reviewer_effort", function(raw_df, validated_df, ...) standardGeneric("analyze_reviewer_effort"))
 #' @rdname analyze_reviewer_effort
 #' @export
@@ -226,8 +320,15 @@ setMethod("analyze_reviewer_effort", signature(raw_df = "data.frame", validated_
 
 #' Get a Report of Disagreements
 #'
-#' @rdname get_disagreement_report
+' @rdname get_disagreement_report
 #' @export
+#' @examples
+#' \dontrun{
+#' # For Tom & Michael's coral survey
+#' # Assuming 'aligned_df' is created from align_counts()
+#' disagreement_report <- get_disagreement_report(aligned_df, 
+#' group_vars = c("video_id", "category_name"))
+#' }
 setGeneric("get_disagreement_report", function(aligned_df, ...) standardGeneric("get_disagreement_report"))
 #' @rdname get_disagreement_report
 #' @export
@@ -252,6 +353,13 @@ setMethod("get_disagreement_report", "data.frame", function(aligned_df, group_va
 #'
 #' @rdname analyze_performance_drivers
 #' @export
+#' @examples
+#' \dontrun{
+#' # For Tom & Michael's coral survey
+#' # Assuming 'aligned_df' is created from align_counts()
+#' performance_drivers <- analyze_performance_drivers(aligned_df, 
+#' group_vars = c("video_id", "category_name"))
+#' }
 setGeneric("analyze_performance_drivers", function(aligned_df, ...) standardGeneric("analyze_performance_drivers"))
 #' @rdname analyze_performance_drivers
 #' @export

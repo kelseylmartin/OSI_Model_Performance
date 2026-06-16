@@ -6,6 +6,29 @@ NULL
 #' @param ... Additional arguments.
 #' @export
 #' @rdname plot_counts_scatterplot
+#' @examples
+#' \dontrun{
+#' erin_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' model_detections <- read_viame_csv(erin_csv)
+#' 
+#' erin_truth_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+#' truth_detections <- read_viame_csv(erin_truth_csv)
+#' 
+#' model_counts <- calculate_maxn(model_detections)
+#' truth_counts <- calculate_maxn(truth_detections)
+#' 
+#' aligned_df <- align_counts(
+#'  model_counts, 
+#'  truth_counts,
+#'  by = c("video_id", "category_name"),
+#'  model_col = maxn,
+#'  truth_col = maxn
+#'  )
+#' 
+#' plot_counts_scatterplot(aligned_df)
+#' }
 setGeneric("plot_counts_scatterplot", function(aligned_df, ...) standardGeneric("plot_counts_scatterplot"))
 
 #' @param title An optional title for the plot.
@@ -38,6 +61,25 @@ setMethod("plot_counts_scatterplot", "data.frame",
 #' @param ... Additional arguments.
 #' @export
 #' @rdname plot_pr_curve
+#' @examples
+#' \dontrun{
+#' # For Erin's ice seal survey
+#' erin_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' raw_detections <- read_viame_csv(erin_csv)
+#' 
+#' erin_truth_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+#' validated_detections <- read_viame_csv(erin_truth_csv)
+#' 
+#' classified_detections <- classify_detections(
+#' raw_detections = raw_detections@data,
+#' validated_detections = validated_detections@data,
+#' detection_id = annotation_id
+#' )
+#' 
+#' plot_pr_curve(classified_detections)
+#' }
 setGeneric("plot_pr_curve", function(detection_df, ...) standardGeneric("plot_pr_curve"))
 
 #' @rdname plot_pr_curve
@@ -82,6 +124,29 @@ setMethod("plot_pr_curve", "data.frame",
 #' @param ... Additional arguments.
 #' @export
 #' @rdname plot_bland_altman
+#' @examples
+#' \dontrun{
+#' erin_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' model_detections <- read_viame_csv(erin_csv)
+#' 
+#' erin_truth_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+#' truth_detections <- read_viame_csv(erin_truth_csv)
+#' 
+#' model_counts <- calculate_maxn(model_detections)
+#' truth_counts <- calculate_maxn(truth_detections)
+#' 
+#' aligned_df <- align_counts(
+#'  model_counts, 
+#'  truth_counts,
+#'  by = c("video_id", "category_name"),
+#'  model_col = maxn,
+#'  truth_col = maxn
+#'  )
+#' 
+#' plot_bland_altman(aligned_df)
+#' }
 setGeneric("plot_bland_altman", function(aligned_df, ...) standardGeneric("plot_bland_altman"))
 
 #' @rdname plot_bland_altman
@@ -125,6 +190,31 @@ setMethod("plot_bland_altman", "data.frame",
 #' @param ... Additional arguments.
 #' @export
 #' @rdname plot_confusion_matrix
+#' @examples
+#' \dontrun{
+#' erin_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' model_detections <- read_viame_csv(erin_csv)
+#' 
+#' erin_truth_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+#' truth_detections <- read_viame_csv(erin_truth_csv)
+#' 
+#' model_counts <- calculate_maxn(model_detections)
+#' truth_counts <- calculate_maxn(truth_detections)
+#' 
+#' aligned_df <- align_counts(
+#'  model_counts, 
+#'  truth_counts,
+#'  by = c("video_id", "category_name"),
+#'  model_col = maxn,
+#'  truth_col = maxn
+#'  )
+#' 
+#' metrics_df <- calculate_binary_metrics(aligned_df)
+#' 
+#' plot_confusion_matrix(metrics_df)
+#' }
 setGeneric("plot_confusion_matrix", function(metrics_df, ...) standardGeneric("plot_confusion_matrix"))
 
 #' @rdname plot_confusion_matrix
@@ -159,6 +249,23 @@ setMethod("plot_confusion_matrix", "data.frame",
 #' @param ... Additional arguments.
 #' @export
 #' @rdname plot_roc_curve
+#' @examples
+#' \dontrun{
+#' # For Abi's AUV data
+#' kwcoco_file <- system.file("extdata", "AUV_viame_test_detections.coco.json", package = "Optics")
+#' detections <- read_kwcoco(kwcoco_file)
+#' 
+#' # This is a placeholder for truth data
+#' truth_detections <- detections 
+#' 
+#' classified_detections <- classify_detections(
+#' raw_detections = detections@data,
+#' validated_detections = truth_detections@data,
+#' detection_id = annotation_id
+#' )
+#' 
+#' plot_roc_curve(classified_detections)
+#' }
 setGeneric("plot_roc_curve", function(detection_df, ...) standardGeneric("plot_roc_curve"))
 
 #' @rdname plot_roc_curve
@@ -198,6 +305,31 @@ setMethod("plot_roc_curve", "data.frame",
 #' @param ... Additional arguments.
 #' @export
 #' @rdname plot_multiclass_confusion_matrix
+#' @examples
+#' \dontrun{
+#' # For Tom & Michael's coral survey
+#' kwcoco_file <- system.file("extdata", "AUV_viame_test_detections.coco.json", package = "Optics")
+#' detections <- read_kwcoco(kwcoco_file)
+#' 
+#' # This is a placeholder for truth data
+#' truth_detections <- detections 
+#' 
+#' model_counts <- calculate_maxn(detections)
+#' truth_counts <- calculate_maxn(truth_detections)
+#' 
+#' aligned_df <- align_counts(
+#'  model_counts, 
+#'  truth_counts,
+#'  by = c("video_id", "category_name"),
+#'  model_col = maxn,
+#'  truth_col = maxn
+#'  )
+#' 
+#' confusion_df <- calculate_confusion_matrix(aligned_df, 
+#' group_vars = "video_id", species_col = category_name)
+#' 
+#' plot_multiclass_confusion_matrix(confusion_df)
+#' }
 setGeneric("plot_multiclass_confusion_matrix", function(confusion_df, ...) standardGeneric("plot_multiclass_confusion_matrix"))
 
 #' @rdname plot_multiclass_confusion_matrix
@@ -230,6 +362,25 @@ setMethod("plot_multiclass_confusion_matrix", "data.frame",
 #' @param ... Additional arguments.
 #' @export
 #' @rdname plot_performance_by_threshold
+#' @examples
+#' \dontrun{
+#' # For Erin's ice seal survey
+#' erin_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' model_detections <- read_viame_csv(erin_csv)
+#' 
+#' erin_truth_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+#' truth_detections <- read_viame_csv(.erin_truth_csv)
+#' 
+#' performance_summary <- summarize_performance_by_threshold(
+#' model_detections = model_detections,
+#' truth_detections = truth_detections,
+#' by = c("video_id", "category_name")
+#' )
+#' 
+#' plot_performance_by_threshold(performance_summary)
+#' }
 setGeneric("plot_performance_by_threshold", function(summary_df, ...) standardGeneric("plot_performance_by_threshold"))
 
 #' @rdname plot_performance_by_threshold

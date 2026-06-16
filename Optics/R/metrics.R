@@ -41,6 +41,25 @@ setGeneric("calculate_maxn", function(object, ...) {
 #'
 #' # Calculate MaxN for each video and species
 #' calculate_maxn(detections_obj)
+#' 
+#' \dontrun{
+#' # For Erin's ice seal survey, calculate MaxN by camera view
+#' erin_csv_c <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' detections_c <- read_viame_csv(erin_csv_c, video_id = "center")
+#' 
+#' erin_csv_l <- system.file("extdata", 
+#' "ice_seals_2025_fl223_L_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' detections_l <- read_viame_csv(erin_csv_l, video_id = "left")
+#' 
+#' erin_csv_r <- system.file("extdata", 
+#' "ice_seals_2025_fl223_R_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' detections_r <- read_viame_csv(erin_csv_r, video_id = "right")
+#' 
+#' all_detections <- rbind(detections_c@data, detections_l@data, detections_r@data)
+#' 
+#' maxn <- calculate_maxn(all_detections, group_cols = "video_id")
+#' }
 #'
 setMethod("calculate_maxn", "OpticsDetections",
           function(object, group_cols = NULL) {
@@ -131,6 +150,13 @@ setGeneric("calculate_frame_abundance", function(object, ...) {
 #' # Calculate frame-by-frame abundance
 #' calculate_frame_abundance(detections_obj)
 #'
+#' \dontrun{
+#' # For Erin's ice seal survey
+#' erin_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' detections <- read_viame_csv(erin_csv)
+#' fba <- calculate_frame_abundance(detections)
+#' }
 setMethod("calculate_frame_abundance", "OpticsDetections",
           function(object, group_cols = NULL) {
             
@@ -212,6 +238,17 @@ setGeneric("calculate_density", function(object, ...) {
 #'
 #' # Using a per-site area from a column
 #' calculate_density(count_data, count_col = maxn, area_col = survey_area_m2)
+#' 
+#' \dontrun{
+#' # For Tom & Michael's coral survey
+#' # Assuming you have a data frame with counts per taxon
+#' coral_counts <- dplyr::tibble(
+#'  taxon = c("Acropora", "Pocillopora"),
+#'  count = c(50, 25)
+#'  )
+#' # Calculate density with a fixed sampling area
+#' density <- calculate_density(coral_counts, count_col = count, area = 500)
+#' }
 setMethod("calculate_density", "data.frame",
           function(object, count_col, area = NULL, area_col = NULL) {
             count_col_quo <- rlang::enquo(count_col)
@@ -231,3 +268,4 @@ setMethod("calculate_density", "data.frame",
               return(dplyr::mutate(object, density = !!count_col_quo / !!area_col_quo))
             }
           })
+

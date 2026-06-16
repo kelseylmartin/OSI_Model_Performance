@@ -129,6 +129,11 @@ OpticsDetections <- function(data, source_file, ingest_format) {
 #'   # Clean up
 #'   unlink(json_path)
 #' }
+#' \dontrun{
+#' # For Abi's AUV platform data
+#' kwcoco_file <- system.file("extdata", "AUV_viame_test_detections.coco.json", package = "Optics")
+#' detections <- read_kwcoco(kwcoco_file)
+#' }
 read_kwcoco <- function(file_path) {
 
   # --- 1. Input Validation and Reading ---
@@ -221,6 +226,13 @@ read_kwcoco <- function(file_path) {
 #' @importFrom readr read_csv cols
 #' @importFrom dplyr tibble rename mutate select across
 #' @importFrom tools file_path_sans_ext
+#' @examples
+#' \dontrun{
+#' # For Erin's ice seal survey
+#' erin_csv <- system.file("extdata", 
+#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+#' detections <- read_viame_csv(erin_csv)
+#' }
 read_viame_csv <- function(file_path, video_id = NULL) {
 
   # --- 1. Input Validation ---
