@@ -2,7 +2,8 @@ Package: Optics
 Title: Optics Package Guide
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "Kelsey", family = "Martin", role = c("aut", "cre"),
+    person(given = "Kelsey", family = "Martin", role = c("aut", "cre", "mnt"),
+           email = "kelsey.martin@example.com",
            comment = c(ORCID = "0000-0002-1825-0097"))
 Description: An R package for processing, analyzing, and visualizing marine ecology data from AI-generated detections.
 URL: https://your-package.org
