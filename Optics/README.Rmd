@@ -20,12 +20,19 @@ knitr::opts_chunk$set(
 
 The `Optics` package provides a standardized toolkit for evaluating the performance of machine learning models on optical survey data. This vignette demonstrates a complete workflow, from ingesting raw model output to generating final performance metrics and visualizations.
 
+<center>
+`r fontawesome::fa("ship", fill = "steelblue", height = "6em")`
+`r fontawesome::fa("plane", fill = "firebrick", height = "6em")`
+`r fontawesome::fa("robot", fill = "darkgreen", height = "6em")`
+</center>
+
 First, let's load the `Optics` package and other useful libraries like `dplyr`.
 
 ```{r setup}
 library(Optics)
 library(dplyr)
 library(ggplot2)
+library(fontawesome)
 ```
 
 ## 2. Creating Sample Data
@@ -161,4 +168,4 @@ plot_counts_scatterplot(
 )
 ```
 
-This vignette provides a a basic overview of a standard workflow. The `Optics` package contains many other S4 methods for more in-depth analysis, including generating ROC curves, confusion matrices, and analyzing the drivers of model error.
+This vignette provides a basic overview of a standard workflow. The `Optics` package contains many other S4 methods for more in-depth analysis, including generating ROC curves, confusion matrices, and analyzing the drivers of model error.

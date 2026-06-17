@@ -1,5 +1,5 @@
-# Please update this URL with your actual site URL
-url: https://your-package.org
+url: https://NOAA-NMFS-SWFSC.github.io/Optics
+
 title: "Optics Package Guide"
 
 template:
@@ -8,7 +8,7 @@ template:
     before_body: pkgdown/_navbar.html
 
 bslib:
-  theme: superhero
+  theme: sketchy
 
 footer:
   left: "Developer: Kelsey Martin"
