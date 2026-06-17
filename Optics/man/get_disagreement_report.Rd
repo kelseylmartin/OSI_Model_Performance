@@ -12,3 +12,11 @@ get_disagreement_report(aligned_df, ...)
 \description{
 Get a Report of Disagreements
 }
+\examples{
+\dontrun{
+# For Tom & Michael's coral survey
+# Assuming 'aligned_df' is created from align_counts()
+disagreement_report <- get_disagreement_report(aligned_df, 
+group_vars = c("video_id", "category_name"))
+}
+}

@@ -21,3 +21,27 @@ plot_bland_altman(aligned_df, ...)
 \description{
 Plot a Bland-Altman Plot
 }
+\examples{
+\dontrun{
+erin_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+model_detections <- read_viame_csv(erin_csv)
+
+erin_truth_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+truth_detections <- read_viame_csv(erin_truth_csv)
+
+model_counts <- calculate_maxn(model_detections)
+truth_counts <- calculate_maxn(truth_detections)
+
+aligned_df <- align_counts(
+ model_counts, 
+ truth_counts,
+ by = c("video_id", "category_name"),
+ model_col = maxn,
+ truth_col = maxn
+ )
+
+plot_bland_altman(aligned_df)
+}
+}

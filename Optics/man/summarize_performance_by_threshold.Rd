@@ -31,3 +31,21 @@ summarize_performance_by_threshold(model_detections, truth_detections, ...)
 \description{
 Summarize Performance Metrics Across Confidence Thresholds
 }
+\examples{
+\dontrun{
+# For Erin's ice seal survey, to evaluate performance by species
+erin_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+model_detections <- read_viame_csv(erin_csv)
+
+erin_truth_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+truth_detections <- read_viame_csv(erin_truth_csv)
+
+performance_summary <- summarize_performance_by_threshold(
+model_detections = model_detections,
+truth_detections = truth_detections,
+by = c("video_id", "category_name")
+)
+}
+}

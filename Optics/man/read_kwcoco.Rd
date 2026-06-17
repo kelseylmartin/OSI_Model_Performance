@@ -43,4 +43,9 @@ Ingests a KWCOCO-formatted JSON file and wraps the standardized data in an
   # Clean up
   unlink(json_path)
 }
+\dontrun{
+# For Abi's AUV platform data
+kwcoco_file <- system.file("extdata", "AUV_viame_test_detections.coco.json", package = "Optics")
+detections <- read_kwcoco(kwcoco_file)
+}
 }

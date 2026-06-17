@@ -12,3 +12,17 @@ analyze_reviewer_effort(raw_df, validated_df, ...)
 \description{
 Analyze Reviewer Effort
 }
+\examples{
+\dontrun{
+# For Erin's ice seal survey
+erin_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+raw_df <- read_viame_csv(erin_csv)@data
+
+erin_truth_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+validated_df <- read_viame_csv(erin_truth_csv)@data
+
+effort_analysis <- analyze_reviewer_effort(raw_df, validated_df)
+}
+}

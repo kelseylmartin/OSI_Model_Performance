@@ -20,3 +20,11 @@ the object's \code{data} slot will be an empty tibble.
 Ingests a CSV file from VIAME and wraps the standardized data in an
 \code{OpticsDetections} S4 object.
 }
+\examples{
+\dontrun{
+# For Erin's ice seal survey
+erin_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+detections <- read_viame_csv(erin_csv)
+}
+}

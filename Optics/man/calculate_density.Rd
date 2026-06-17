@@ -39,4 +39,15 @@ calculate_density(count_data, count_col = maxn, area = 100)
 
 # Using a per-site area from a column
 calculate_density(count_data, count_col = maxn, area_col = survey_area_m2)
+
+\dontrun{
+# For Tom & Michael's coral survey
+# Assuming you have a data frame with counts per taxon
+coral_counts <- dplyr::tibble(
+ taxon = c("Acropora", "Pocillopora"),
+ count = c(50, 25)
+ )
+# Calculate density with a fixed sampling area
+density <- calculate_density(coral_counts, count_col = count, area = 500)
+}
 }

@@ -25,3 +25,28 @@ calculate_binary_metrics(aligned_df, ...)
 \description{
 Calculate Binary Classification Metrics
 }
+\examples{
+\dontrun{
+# For Erin's ice seal survey, to compare raw vs. validated data
+erin_raw_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_ir_detections.csv", package = "Optics")
+raw_detections <- read_viame_csv(erin_raw_csv)
+
+erin_truth_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+truth_detections <- read_viame_csv(erin_truth_csv)
+
+raw_counts <- calculate_maxn(raw_detections)
+truth_counts <- calculate_maxn(truth_detections)
+
+aligned_df <- align_counts(
+ raw_counts, 
+ truth_counts,
+ by = c("video_id", "category_name"),
+ model_col = maxn,
+ truth_col = maxn
+)
+
+binary_metrics <- calculate_binary_metrics(aligned_df)
+}
+}

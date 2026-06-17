@@ -12,3 +12,11 @@ analyze_performance_drivers(aligned_df, ...)
 \description{
 Analyze Performance Drivers
 }
+\examples{
+\dontrun{
+# For Tom & Michael's coral survey
+# Assuming 'aligned_df' is created from align_counts()
+performance_drivers <- analyze_performance_drivers(aligned_df, 
+group_vars = c("video_id", "category_name"))
+}
+}

@@ -42,4 +42,11 @@ detections_obj <- OpticsDetections(
 # Calculate frame-by-frame abundance
 calculate_frame_abundance(detections_obj)
 
+\dontrun{
+# For Erin's ice seal survey
+erin_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+detections <- read_viame_csv(erin_csv)
+fba <- calculate_frame_abundance(detections)
+}
 }

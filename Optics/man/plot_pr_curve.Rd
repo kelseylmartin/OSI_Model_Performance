@@ -17,3 +17,23 @@ plot_pr_curve(detection_df, ...)
 \description{
 Plot a Precision-Recall (PR) Curve
 }
+\examples{
+\dontrun{
+# For Erin's ice seal survey
+erin_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
+raw_detections <- read_viame_csv(erin_csv)
+
+erin_truth_csv <- system.file("extdata", 
+"ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+validated_detections <- read_viame_csv(erin_truth_csv)
+
+classified_detections <- classify_detections(
+raw_detections = raw_detections@data,
+validated_detections = validated_detections@data,
+detection_id = annotation_id
+)
+
+plot_pr_curve(classified_detections)
+}
+}
