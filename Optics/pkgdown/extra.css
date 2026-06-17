@@ -16,10 +16,12 @@ body {
 
 .navbar {
   background-color: var(--noaa-deep-blue) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .navbar .nav-link {
   color: white !important;
+  transition: color 0.3s ease;
 }
 
 .navbar .nav-link:hover {
@@ -32,6 +34,7 @@ h1, h2, h3, h4, h5, h6 {
 
 a {
   color: var(--noaa-medium-blue);
+  transition: color 0.3s ease;
 }
 
 a:hover {
@@ -45,6 +48,7 @@ a:hover {
   margin-bottom: 2rem;
   border-radius: 0.3rem;
   text-align: center;
+  overflow: hidden;
 }
 
 .page-header h1 {
@@ -55,4 +59,22 @@ a:hover {
 .page-header .vehicle-icons {
   font-size: 2rem;
   margin-top: 1rem;
+}
+
+.page-header .vehicle-icons span {
+  display: inline-block;
+  animation: float 6s ease-in-out infinite;
+  padding: 0 0.5rem;
+}
+
+/* Stagger the animation for each icon */
+.page-header .vehicle-icons span:nth-child(2) { animation-delay: 1s; }
+.page-header .vehicle-icons span:nth-child(3) { animation-delay: 2.5s; }
+.page-header .vehicle-icons span:nth-child(4) { animation-delay: 4s; }
+
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
 }

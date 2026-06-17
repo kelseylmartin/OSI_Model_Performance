@@ -5,13 +5,20 @@ template:
   includes:
     before_body: pkgdown/_navbar.html
 
+bslib:
+  theme: yeti
+
+footer:
+  left: "Developer: Kelsey Martin"
+  right: "Site built with {pkgdown}."
+
 navbar:
   structure:
-    left:  [intro, reference, articles]
+    left:  [reference, articles]
     right: [search, github]
   components:
     reference:
-      text: "Reference"
+      text: "Functions"
       href: reference/index.html
     articles:
       text: "Articles"
