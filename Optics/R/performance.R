@@ -320,7 +320,7 @@ setMethod("analyze_reviewer_effort", signature(raw_df = "data.frame", validated_
 
 #' Get a Report of Disagreements
 #'
-' @rdname get_disagreement_report
+#' @rdname get_disagreement_report
 #' @export
 #' @examples
 #' \dontrun{
