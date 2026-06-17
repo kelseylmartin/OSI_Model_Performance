@@ -105,35 +105,32 @@ OpticsDetections <- function(data, source_file, ingest_format) {
 #' @importFrom dplyr tibble inner_join select any_of bind_rows bind_cols rename
 #' @importFrom tidyr hoist
 #' @examples
-#' \dontrun{
-#'   # Create a dummy KWCOCO file for demonstration
-#'   dummy_kwcoco <- list(
-#'     videos = list(list(id = 1, name = "video_1")),
-#'     images = list(
-#'       list(id = 101, video_id = 1, file_name = "frame_001.jpg", frame_index = 1),
-#'       list(id = 102, video_id = 1, file_name = "frame_002.jpg", frame_index = 2)
-#'     ),
-#'     annotations = list(
-#'       list(id = 1, image_id = 101, category_id = 1, track_id = 1,
-#'            bbox = c(10, 20, 30, 40), score = 0.95, area = 1200)
-#'     ),
-#'     categories = list(list(id = 1, name = "Gadus morhua"))
-#'   )
-#'   json_path <- tempfile(fileext = ".json")
-#'   jsonlite::write_json(dummy_kwcoco, json_path, auto_unbox = TRUE)
+#' # Example with a temporary KWCOCO JSON file based on Abi's AUV data.
+#' kwcoco_json_string <- '{
+#'   "info": [{"date_created": "2024-01-01", "description": "Sample from Abi AUV data"}],
+#'   "videos": [{"id": 1, "name": "AUV_video_1"}],
+#'   "images": [
+#'     {"id": 1, "video_id": 1, "frame_index": 1, "file_name": "frame0001.jpg"},
+#'     {"id": 2, "video_id": 1, "frame_index": 2, "file_name": "frame0002.jpg"}
+#'   ],
+#'   "annotations": [
+#'     {"id": 1, "image_id": 1, "category_id": 1, "bbox": [10, 20, 30, 40], "score": 0.9},
+#'     {"id": 2, "image_id": 2, "category_id": 2, "bbox": [50, 60, 70, 80], "score": 0.95}
+#'   ],
+#'   "categories": [
+#'     {"id": 1, "name": "sea_star"},
+#'     {"id": 2, "name": "sea_anemone"}
+#'   ]
+#' }'
+#' temp_json_path <- tempfile(fileext = ".json")
+#' writeLines(kwcoco_json_string, temp_json_path)
 #'
-#'   # Ingest the file
-#'   detections_obj <- read_kwcoco(json_path)
-#'   print(detections_obj@data)
+#' # Ingest the data
+#' detections_obj <- read_kwcoco(temp_json_path)
+#' print(detections_obj)
 #'
-#'   # Clean up
-#'   unlink(json_path)
-#' }
-#' \dontrun{
-#' # For Abi's AUV platform data
-#' kwcoco_file <- system.file("extdata", "AUV_viame_test_detections.coco.json", package = "Optics")
-#' detections <- read_kwcoco(kwcoco_file)
-#' }
+#' # Clean up
+#' unlink(temp_json_path)
 read_kwcoco <- function(file_path) {
 
   # --- 1. Input Validation and Reading ---
@@ -227,12 +224,23 @@ read_kwcoco <- function(file_path) {
 #' @importFrom dplyr tibble rename mutate select across
 #' @importFrom tools file_path_sans_ext
 #' @examples
-#' \dontrun{
-#' # For Erin's ice seal survey
-#' erin_csv <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-#' detections <- read_viame_csv(erin_csv)
-#' }
+#' # Example with a temporary VIAME CSV file based on Erin's ice seal data.
+#' # This simulates reading a processed detections file.
+#' erin_csv_data <- c(
+#'   "1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1",
+#'   "2,video1,15,150,150,250,250,1,0.90,"bearded_seal",1"
+#' )
+#' temp_csv_path <- tempfile(fileext = ".csv")
+#' # Write the data to a temp file, making sure to add the two header lines
+#' # that read_viame_csv expects to skip.
+#' writeLines(c("# 1: Track-id ...", "# 2: Video or Image ...", erin_csv_data), temp_csv_path)
+#'
+#' # Ingest the data
+#' detections_obj <- read_viame_csv(temp_csv_path, video_id = "erin_ice_seals")
+#' print(detections_obj)
+#'
+#' # Clean up the temporary file
+#' unlink(temp_csv_path)
 read_viame_csv <- function(file_path, video_id = NULL) {
 
   # --- 1. Input Validation ---

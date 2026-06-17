@@ -30,25 +30,43 @@ setGeneric("align_counts", function(model_counts, truth_counts, ...) {
 #' @importFrom rlang enquo as_name
 #' @importFrom magrittr %>%
 #' @examples
-#' model_df <- dplyr::tibble(
-#'   video_id = c("v1", "v1", "v2"),
-#'   category_name = c("FishA", "FishB", "FishA"),
-#'   model_maxn = c(10, 1, 5)
+#' # Example using Erin's ice seal data to align model and truth counts.
+#'
+#' # 1. Create temporary VIAME CSV files for model and truth data.
+#' model_csv_data <- c(
+#'   "1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1",
+#'   "2,video1,15,150,150,250,250,1,0.90,"bearded_seal",1"
+#' )
+#' truth_csv_data <- c(
+#'   "1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1",
+#'   "3,video1,20,300,300,400,400,1,1.0,"ringed_seal",1"
 #' )
 #'
-#' truth_df <- dplyr::tibble(
-#'   video_id = c("v1", "v1", "v3"),
-#'   category_name = c("FishA", "FishC", "FishA"),
-#'   truth_maxn = c(12, 2, 8)
-#' )
+#' model_csv_path <- tempfile(fileext = ".csv")
+#' truth_csv_path <- tempfile(fileext = ".csv")
 #'
-#' align_counts(
-#'   model_counts = model_df,
-#'   truth_counts = truth_df,
-#'   by = c("video_id", "category_name"),
-#'   model_col = model_maxn,
-#'   truth_col = truth_maxn
+#' writeLines(c("# header 1", "# header 2", model_csv_data), model_csv_path)
+#' writeLines(c("# header 1", "# header 2", truth_csv_data), truth_csv_path)
+#'
+#' # 2. Ingest the data.
+#' model_detections <- read_viame_csv(model_csv_path)
+#' truth_detections <- read_viame_csv(truth_csv_path)
+#'
+#' # 3. Calculate MaxN counts for both.
+#' model_counts <- calculate_maxn(model_detections)
+#' truth_counts <- calculate_maxn(truth_detections)
+#'
+#' # 4. Align the counts.
+#' aligned_df <- align_counts(
+#'   model_counts = model_counts,
+#'   truth_counts = truth_counts,
+#'   by = c("video_id", "category_name")
 #' )
+#' print(aligned_df)
+#'
+#' # Clean up the temporary files.
+#' unlink(model_csv_path)
+#' unlink(truth_csv_path)
 setMethod("align_counts",
           signature(model_counts = "data.frame", truth_counts = "data.frame"),
           function(model_counts, truth_counts, by, model_col = maxn, truth_col = maxn) {

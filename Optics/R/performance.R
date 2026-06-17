@@ -10,29 +10,33 @@ NULL
 #' @export
 #' @rdname calculate_binary_metrics
 #' @examples
-#' \dontrun{
-#' # For Erin's ice seal survey, to compare raw vs. validated data
-#' erin_raw_csv <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_ir_detections.csv", package = "Optics")
-#' raw_detections <- read_viame_csv(erin_raw_csv)
-#' 
-#' erin_truth_csv <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-#' truth_detections <- read_viame_csv(erin_truth_csv)
-#' 
-#' raw_counts <- calculate_maxn(raw_detections)
-#' truth_counts <- calculate_maxn(truth_detections)
-#' 
-#' aligned_df <- align_counts(
-#'  raw_counts, 
-#'  truth_counts,
-#'  by = c("video_id", "category_name"),
-#'  model_col = maxn,
-#'  truth_col = maxn
+#' # Example using Erin's ice seal data.
+#' # 1. Create temporary VIAME CSV files for model and truth data.
+#' model_csv_data <- c(
+#'   "1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1",
+#'   "2,video1,15,150,150,250,250,1,0.90,"bearded_seal",1"
 #' )
-#' 
+#' truth_csv_data <- c(
+#'   "1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1",
+#'   "3,video1,20,300,300,400,400,1,1.0,"ringed_seal",1"
+#' )
+#' model_csv_path <- tempfile(fileext = ".csv")
+#' truth_csv_path <- tempfile(fileext = ".csv")
+#' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
+#' writeLines(c("# h1", "# h2", truth_csv_data), truth_csv_path)
+#'
+#' # 2. Ingest and align data.
+#' model_detections <- read_viame_csv(model_csv_path)
+#' truth_detections <- read_viame_csv(truth_csv_path)
+#' aligned_df <- align_counts(calculate_maxn(model_detections), calculate_maxn(truth_detections), by = c("video_id", "category_name"))
+#'
+#' # 3. Calculate binary metrics.
 #' binary_metrics <- calculate_binary_metrics(aligned_df)
-#' }
+#' print(binary_metrics)
+#'
+#' # Clean up.
+#' unlink(model_csv_path)
+#' unlink(truth_csv_path)
 setGeneric("calculate_binary_metrics", function(aligned_df, ...) {
   standardGeneric("calculate_binary_metrics")
 })
@@ -102,22 +106,26 @@ setMethod("calculate_binary_metrics", "data.frame",
 #' @export
 #' @rdname summarize_performance_by_threshold
 #' @examples
-#' \dontrun{
-#' # For Erin's ice seal survey, to evaluate performance by species
-#' erin_csv <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-#' model_detections <- read_viame_csv(erin_csv)
-#' 
-#' erin_truth_csv <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-#' truth_detections <- read_viame_csv(erin_truth_csv)
-#' 
+#' # Example using Erin's ice seal data.
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
+#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1")
+#' model_csv_path <- tempfile(fileext = ".csv")
+#' truth_csv_path <- tempfile(fileext = ".csv")
+#' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
+#' writeLines(c("# h1", "# h2", truth_csv_data), truth_csv_path)
+#'
+#' model_detections <- read_viame_csv(model_csv_path)
+#' truth_detections <- read_viame_csv(truth_csv_path)
+#'
 #' performance_summary <- summarize_performance_by_threshold(
-#' model_detections = model_detections,
-#' truth_detections = truth_detections,
-#' by = c("video_id", "category_name")
+#'   model_detections = model_detections,
+#'   truth_detections = truth_detections,
+#'   by = c("video_id", "category_name")
 #' )
-#' }
+#' print(performance_summary)
+#' 
+#' unlink(model_csv_path)
+#' unlink(truth_csv_path)
 setGeneric("summarize_performance_by_threshold", function(model_detections, truth_detections, ...) {
   standardGeneric("summarize_performance_by_threshold")
 })
@@ -178,22 +186,26 @@ setMethod("summarize_performance_by_threshold",
 #' @export
 #' @rdname classify_detections
 #' @examples
-#' \dontrun{
-#' # For Erin's ice seal survey
-#' erin_csv <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-#' raw_detections <- read_viame_csv(erin_csv)
-#' 
-#' erin_truth_csv <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-#' validated_detections <- read_viame_csv(erin_truth_csv)
-#' 
+#' # Example using Erin's ice seal data.
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
+#' truth_csv_data <- c("2,video1,10,110,110,210,210,1,1.0,"ringed_seal",1")
+#' model_csv_path <- tempfile(fileext = ".csv")
+#' truth_csv_path <- tempfile(fileext = ".csv")
+#' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
+#' writeLines(c("# h1", "# h2", truth_csv_data), truth_csv_path)
+#'
+#' raw_detections <- read_viame_csv(model_csv_path)
+#' validated_detections <- read_viame_csv(truth_csv_path)
+#'
 #' classified_detections <- classify_detections(
-#' raw_detections = raw_detections@data,
-#' validated_detections = validated_detections@data,
-#' detection_id = annotation_id
+#'   raw_detections = raw_detections@data,
+#'   validated_detections = validated_detections@data,
+#'   detection_id = annotation_id
 #' )
-#' }
+#' print(classified_detections)
+#' 
+#' unlink(model_csv_path)
+#' unlink(truth_csv_path)
 setGeneric("classify_detections", function(raw_detections, validated_detections, ...) {
   standardGeneric("classify_detections")
 })
@@ -227,28 +239,29 @@ setMethod("classify_detections",
 #' @rdname calculate_confusion_matrix
 #' @export
 #' @examples
-#' \dontrun{
-#' # For Abi's AUV data
-#' kwcoco_file <- system.file("extdata", "AUV_viame_test_detections.coco.json", package = "Optics")
-#' detections <- read_kwcoco(kwcoco_file)
+#' # Example using Abi's AUV data
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"sea_star",1")
+#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"sea_anemone",1")
+#' model_csv_path <- tempfile(fileext = ".csv")
+#' truth_csv_path <- tempfile(fileext = ".csv")
+#' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
+#' writeLines(c("# h1", "# h2", truth_csv_data), truth_csv_path)
 #' 
-#' # This is a placeholder for truth data
-#' truth_detections <- detections 
-#' 
-#' model_counts <- calculate_maxn(detections)
-#' truth_counts <- calculate_maxn(truth_detections)
+#' model_detections <- read_viame_csv(model_csv_path)
+#' truth_detections <- read_viame_csv(truth_csv_path)
 #' 
 #' aligned_df <- align_counts(
-#'  model_counts, 
-#'  truth_counts,
-#'  by = c("video_id", "category_name"),
-#'  model_col = maxn,
-#'  truth_col = maxn
+#'  calculate_maxn(model_detections), 
+#'  calculate_maxn(truth_detections),
+#'  by = c("video_id", "category_name")
 #' )
 #' 
 #' conf_matrix <- calculate_confusion_matrix(aligned_df, 
 #' group_vars = c("video_id"), species_col = category_name)
-#' }
+#' print(conf_matrix)
+#' 
+#' unlink(model_csv_path)
+#' unlink(truth_csv_path)
 setGeneric("calculate_confusion_matrix", function(aligned_df, ...) standardGeneric("calculate_confusion_matrix"))
 #' @rdname calculate_confusion_matrix
 #' @export
@@ -272,18 +285,22 @@ setMethod("calculate_confusion_matrix", "data.frame", function(aligned_df, group
 #' @rdname analyze_reviewer_effort
 #' @export
 #' @examples
-#' \dontrun{
-#' # For Erin's ice seal survey
-#' erin_csv <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-#' raw_df <- read_viame_csv(erin_csv)@data
+#' # Example using Erin's ice seal data
+#' raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
+#' validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"harbor_seal",1")
+#' raw_csv_path <- tempfile(fileext = ".csv")
+#' validated_csv_path <- tempfile(fileext = ".csv")
+#' writeLines(c("# h1", "# h2", raw_csv_data), raw_csv_path)
+#' writeLines(c("# h1", "# h2", validated_csv_data), validated_csv_path)
 #' 
-#' erin_truth_csv <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-#' validated_df <- read_viame_csv(erin_truth_csv)@data
+#' raw_df <- read_viame_csv(raw_csv_path)@data
+#' validated_df <- read_viame_csv(validated_csv_path)@data
 #' 
 #' effort_analysis <- analyze_reviewer_effort(raw_df, validated_df)
-#' }
+#' print(effort_analysis)
+#' 
+#' unlink(raw_csv_path)
+#' unlink(validated_csv_path)
 setGeneric("analyze_reviewer_effort", function(raw_df, validated_df, ...) standardGeneric("analyze_reviewer_effort"))
 #' @rdname analyze_reviewer_effort
 #' @export
@@ -323,12 +340,13 @@ setMethod("analyze_reviewer_effort", signature(raw_df = "data.frame", validated_
 #' @rdname get_disagreement_report
 #' @export
 #' @examples
-#' \dontrun{
-#' # For Tom & Michael's coral survey
-#' # Assuming 'aligned_df' is created from align_counts()
+#' # Example using Tom & Michael's coral survey data
+#' aligned_df <- dplyr::tibble(
+#'   video_id = "v1", category_name = "Acropora", model_count = 5, truth_count = 10
+#' )
 #' disagreement_report <- get_disagreement_report(aligned_df, 
 #' group_vars = c("video_id", "category_name"))
-#' }
+#' print(disagreement_report)
 setGeneric("get_disagreement_report", function(aligned_df, ...) standardGeneric("get_disagreement_report"))
 #' @rdname get_disagreement_report
 #' @export
@@ -356,7 +374,10 @@ setMethod("get_disagreement_report", "data.frame", function(aligned_df, group_va
 #' @examples
 #' \dontrun{
 #' # For Tom & Michael's coral survey
-#' # Assuming 'aligned_df' is created from align_counts()
+#' aligned_df <- dplyr::tibble(
+#'  video_id = "v1", Species = "Acropora", model_count = 5, truth_count = 10,
+#'  n_species_truth = 1, total_individuals_truth = 10
+#' )
 #' performance_drivers <- analyze_performance_drivers(aligned_df, 
 #' group_vars = c("video_id", "category_name"))
 #' }

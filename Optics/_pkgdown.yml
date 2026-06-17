@@ -1,9 +1,6 @@
+# Please update this URL with your actual site URL
 url: https://your-package.org
-
-home:
-  title: "Optics Package Guide"
-  description: "A guide to the Optics R package for processing AI-generated detection data in marine ecology."
-  filename: vignettes/introduction-to-optics.Rmd
+title: "Optics Package Guide"
 
 template:
   bootstrap: 5
@@ -11,7 +8,7 @@ template:
     before_body: pkgdown/_navbar.html
 
 bslib:
-  theme: yeti
+  theme: superhero
 
 footer:
   left: "Developer: Kelsey Martin"
@@ -19,17 +16,12 @@ footer:
 
 navbar:
   structure:
-    left:  [reference, articles]
+    left:  [reference]
     right: [search, github]
   components:
     reference:
       text: "Functions"
       href: reference/index.html
-    articles:
-      text: "Articles"
-      menu:
-        - text: "Introduction to Optics"
-          href: articles/introduction-to-optics.html
 
 reference:
   - title: "Data Ingestion & Representation"

@@ -27,40 +27,25 @@ setGeneric("calculate_maxn", function(object, ...) {
 #' @importFrom rlang .data syms
 #' @importFrom magrittr %>%
 #' @examples
-#' # Create a sample OpticsDetections object
-#' sample_df <- dplyr::tibble(
-#'   video_id = c(rep("video1", 4), rep("video2", 3)),
-#'   frame_index = c(1, 1, 2, 2, 1, 1, 1),
-#'   category_name = c("FishA", "FishA", "FishA", "FishB", "FishA", "FishA", "FishA")
+#' # Example using a sample of GFISHER data to calculate MaxN.
+#' gfisher_csv_data <- c(
+#'   "1,video1,10,100,100,200,200,1,0.95,"Gadus morhua",1",
+#'   "1,video1,10,150,150,250,250,1,0.90,"Gadus morhua",1",
+#'   "2,video1,10,300,300,400,400,1,0.85,"Melanogrammus aeglefinus",1",
+#'   "1,video1,11,100,100,200,200,1,0.92,"Gadus morhua",1"
 #' )
-#' detections_obj <- OpticsDetections(
-#'   data = sample_df,
-#'   source_file = "dummy_file.csv",
-#'   ingest_format = "dummy"
-#' )
+#' temp_csv_path <- tempfile(fileext = ".csv")
+#' writeLines(c("# header 1", "# header 2", gfisher_csv_data), temp_csv_path)
 #'
-#' # Calculate MaxN for each video and species
-#' calculate_maxn(detections_obj)
-#' 
-#' \dontrun{
-#' # For Erin's ice seal survey, calculate MaxN by camera view
-#' erin_csv_c <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-#' detections_c <- read_viame_csv(erin_csv_c, video_id = "center")
-#' 
-#' erin_csv_l <- system.file("extdata", 
-#' "ice_seals_2025_fl223_L_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-#' detections_l <- read_viame_csv(erin_csv_l, video_id = "left")
-#' 
-#' erin_csv_r <- system.file("extdata", 
-#' "ice_seals_2025_fl223_R_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-#' detections_r <- read_viame_csv(erin_csv_r, video_id = "right")
-#' 
-#' all_detections <- rbind(detections_c@data, detections_l@data, detections_r@data)
-#' 
-#' maxn <- calculate_maxn(all_detections, group_cols = "video_id")
-#' }
+#' # Ingest the data
+#' detections_obj <- read_viame_csv(temp_csv_path)
 #'
+#' # Calculate MaxN
+#' maxn_df <- calculate_maxn(detections_obj)
+#' print(maxn_df)
+#'
+#' # Clean up the temporary file
+#' unlink(temp_csv_path)
 setMethod("calculate_maxn", "OpticsDetections",
           function(object, group_cols = NULL) {
             
@@ -135,28 +120,25 @@ setGeneric("calculate_frame_abundance", function(object, ...) {
 #' @importFrom rlang syms
 #' @importFrom magrittr %>%
 #' @examples
-#' # Create a sample OpticsDetections object
-#' sample_df <- dplyr::tibble(
-#'   video_id = c(rep("video1", 3)),
-#'   frame_index = c(1, 1, 2),
-#'   category_name = c("FishA", "FishA", "FishB")
+#' # Example using a sample of GFISHER data to calculate per-frame abundance.
+#' # This simulates reading a VIAME CSV output from a GFISHER survey.
+#' gfisher_csv_data <- c(
+#'   "1,video1,10,100,100,200,200,1,0.95,"Gadus morhua",1",
+#'   "1,video1,10,150,150,250,250,1,0.90,"Gadus morhua",1",
+#'   "2,video1,10,300,300,400,400,1,0.85,"Melanogrammus aeglefinus",1",
+#'   "1,video1,11,100,100,200,200,1,0.92,"Gadus morhua",1"
 #' )
-#' detections_obj <- OpticsDetections(
-#'   data = sample_df,
-#'   source_file = "dummy_file.csv",
-#'   ingest_format = "dummy"
-#' )
+#' temp_csv_path <- tempfile(fileext = ".csv")
+#' writeLines(c("# header 1", "# header 2", gfisher_csv_data), temp_csv_path)
 #'
-#' # Calculate frame-by-frame abundance
+#' # Ingest the data
+#' detections_obj <- read_viame_csv(temp_csv_path, model_name = "GFISHER-model")
+#'
+#' # Calculate abundance per frame
 #' calculate_frame_abundance(detections_obj)
 #'
-#' \dontrun{
-#' # For Erin's ice seal survey
-#' erin_csv <- system.file("extdata", 
-#' "ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-#' detections <- read_viame_csv(erin_csv)
-#' fba <- calculate_frame_abundance(detections)
-#' }
+#' # Clean up the temporary file
+#' unlink(temp_csv_path)
 setMethod("calculate_frame_abundance", "OpticsDetections",
           function(object, group_cols = NULL) {
             
@@ -227,28 +209,30 @@ setGeneric("calculate_density", function(object, ...) {
 #' @importFrom dplyr mutate
 #' @importFrom rlang enquo quo_is_null
 #' @examples
-#' count_data <- dplyr::tibble(
-#'   site = c("A", "B"),
-#'   maxn = c(10, 25),
-#'   survey_area_m2 = c(5, 10)
+#' # Example for Tom & Michael's coral survey data.
+#' # Create a data frame with coral counts per site.
+#' coral_counts_df <- dplyr::tibble(
+#'   site = c("site1", "site1", "site2"),
+#'   taxon = c("Acropora", "Pocillopora", "Acropora"),
+#'   count = c(50, 25, 30),
+#'   survey_area_m2 = c(10, 10, 8)
 #' )
 #'
-#' # Using a fixed area
-#' calculate_density(count_data, count_col = maxn, area = 100)
+#' # Calculate density using a fixed area for all sites.
+#' density_fixed_area <- calculate_density(
+#'   coral_counts_df,
+#'   count_col = count,
+#'   area = 100
+#' )
+#' print(density_fixed_area)
 #'
-#' # Using a per-site area from a column
-#' calculate_density(count_data, count_col = maxn, area_col = survey_area_m2)
-#' 
-#' \dontrun{
-#' # For Tom & Michael's coral survey
-#' # Assuming you have a data frame with counts per taxon
-#' coral_counts <- dplyr::tibble(
-#'  taxon = c("Acropora", "Pocillopora"),
-#'  count = c(50, 25)
-#'  )
-#' # Calculate density with a fixed sampling area
-#' density <- calculate_density(coral_counts, count_col = count, area = 500)
-#' }
+#' # Calculate density using a per-site area from a column.
+#' density_per_site_area <- calculate_density(
+#'   coral_counts_df,
+#'   count_col = count,
+#'   area_col = survey_area_m2
+#' )
+#' print(density_per_site_area)
 setMethod("calculate_density", "data.frame",
           function(object, count_col, area = NULL, area_col = NULL) {
             count_col_quo <- rlang::enquo(count_col)
@@ -268,4 +252,3 @@ setMethod("calculate_density", "data.frame",
               return(dplyr::mutate(object, density = !!count_col_quo / !!area_col_quo))
             }
           })
-
