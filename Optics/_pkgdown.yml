@@ -1,5 +1,10 @@
 url: https://your-package.org
 
+home:
+  title: "Optics Package Guide"
+  description: "A guide to the Optics R package for processing AI-generated detection data in marine ecology."
+  filename: vignettes/introduction-to-optics.Rmd
+
 template:
   bootstrap: 5
   includes:
