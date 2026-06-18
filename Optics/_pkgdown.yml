@@ -3,6 +3,10 @@
 url: https://NOAA-NMFS-SWFSC.github.io/Optics
 title: "Optics: A Tool for Optical Survey Model Performance"
 
+homepage:
+  path: vignettes/introduction-to-optics.Rmd
+  sidebar: false
+
 template:
   bootstrap: 5
   bootswatch: cosmo
@@ -12,7 +16,7 @@ template:
 
 navbar:
   structure:
-    left:  [home, reference, articles]
+    left:  [home, reference]
     right: [search, github]
   components:
     home:
@@ -21,11 +25,7 @@ navbar:
     reference:
       text: "Functions"
       href: reference/index.html
-    articles:
-      text: "Articles"
-      menu:
-        - text: "Introduction to Optics"
-          href: articles/introduction-to-optics.html
+
     github:
       icon: fab fa-github fa-lg
       href: https://github.com/NOAA-NMFS-SWFSC/Optics
