@@ -12,26 +12,20 @@ template:
 
 navbar:
   structure:
-    left:  [home, intro, reference, articles, news]
+    left:  [home, reference, articles]
     right: [search, github]
   components:
     home:
       text: "Home"
       href: index.html
-    intro:
-      text: "Introduction"
-      href: articles/introduction-to-optics.html
     reference:
-      text: "Reference"
+      text: "Functions"
       href: reference/index.html
     articles:
       text: "Articles"
       menu:
         - text: "Introduction to Optics"
           href: articles/introduction-to-optics.html
-    news:
-      text: "Changelog"
-      href: news/index.html
     github:
       icon: fab fa-github fa-lg
       href: https://github.com/NOAA-NMFS-SWFSC/Optics

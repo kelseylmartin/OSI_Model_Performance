@@ -23,7 +23,7 @@ The `Optics` package provides a standardized toolkit for evaluating the performa
 <div class="vehicle-icons">
 <span><i class="fa-solid fa-ship" style="font-size: 6em;"></i></span>
 <span><i class="fa-solid fa-plane" style="font-size: 6em;"></i></span>
-<span><i class="fa-solid fa-robot" style="font-size: 6em;"></i></span>
+<span><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/REMUS_100_unmanned_underwater_vehicle.jpg/640px-REMUS_100_unmanned_underwater_vehicle.jpg" alt="Autonomous Underwater Vehicle" style="height: 5em; width: auto; vertical-align: middle; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1rem;"/></span>
 </div>
 
 First, let's load the `Optics` package and other useful libraries like `dplyr`.
