@@ -5,7 +5,9 @@ title: "Optics: A Tool for Optical Survey Model Performance"
 
 homepage:
   path: vignettes/introduction-to-optics.Rmd
-  sidebar: false
+  sidebar:
+    components:
+      - toc
 
 template:
   bootstrap: 5
