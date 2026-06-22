@@ -71,8 +71,10 @@ setMethod("calculate_binary_metrics", "data.frame",
               dplyr::mutate(
                 precision = .data$tp / (.data$tp + .data$fp),
                 recall = .data$tp / (.data$tp + .data$fn),
-                f1_score = 2 * (.data$precision * .data$recall) / (.data$precision + .data$recall)
-              ) 
+                f1_score = 2 * (.data$precision * .data$recall) / (.data$precision + .data$recall),
+                precision = ifelse(is.na(.data$precision), 0, .data$precision),
+                f1_score = ifelse(is.na(.data$f1_score), 0, .data$f1_score)
+              )
             
             if (!is.null(total_comparisons)) {
               metrics_df <- metrics_df %>%
