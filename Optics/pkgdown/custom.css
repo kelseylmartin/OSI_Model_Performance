@@ -1,0 +1,43 @@
+/* Custom CSS for Optics pkgdown site */
+
+:root {
+  --bs-primary: #008080; /* Teal */
+  --bs-secondary: #003f5c; /* Dark Blue */
+  --bs-info: #7aadd4; /* Light Blue */
+  --bs-dark: #343a40; /* Dark Gray for text */
+  --bs-light: #f8f9fa; /* Light Gray for background */
+}
+
+body {
+  color: var(--bs-dark);
+  background-color: var(--bs-light);
+  font-family: sans-serif;
+}
+
+.navbar {
+  background-color: var(--bs-secondary) !important;
+}
+
+.navbar .navbar-brand, .navbar .nav-link {
+  color: white !important;
+}
+
+.navbar .nav-link:hover {
+  color: var(--bs-info) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--bs-primary);
+}
+
+a {
+  color: var(--bs-primary);
+}
+
+a:hover {
+  color: var(--bs-secondary);
+}
+
+.sidebar {
+  background-color: #ffffff;
+}
