@@ -12,12 +12,12 @@ template:
 
 navbar:
   structure:
-    left:  [welcome, reference]
+    left:  [home, reference]
     right: [search, github]
   components:
-    welcome:
-      text: "Welcome"
-      href: articles/introduction-to-optics.html
+    home:
+      text: "Home"
+      href: index.html
     reference:
       text: "Functions"
       href: reference/index.html
