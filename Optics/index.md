@@ -1,7 +1,11 @@
 ---
-output: github_document
+title: "Introduction to the Optics Package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to the Optics Package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
-
 
 
 
@@ -9,12 +13,26 @@ output: github_document
 
 The `Optics` package provides a standardized toolkit for evaluating the performance of machine learning models on optical survey data. This vignette demonstrates a complete workflow, from ingesting raw model output to generating final performance metrics and visualizations.
 
+<div class="vehicle-icons">
+<span><i class="fa-solid fa-ship" style="font-size: 6em;"></i></span>
+<span><i class="fa-solid fa-plane" style="font-size: 6em;"></i></span>
+<span><img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" style="height: 5em; width: auto; vertical-align: middle; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1rem;"/></span>
+</div>
+
 First, let's load the `Optics` package and other useful libraries like `dplyr`.
 
 
 ``` r
 library(Optics)
 library(dplyr)
+#> 
+#> Attaching package: 'dplyr'
+#> The following objects are masked from 'package:stats':
+#> 
+#>     filter, lag
+#> The following objects are masked from 'package:base':
+#> 
+#>     intersect, setdiff, setequal, union
 library(ggplot2)
 ```
 
@@ -50,17 +68,44 @@ truth_detections_df <- tibble(
 )
 
 print("Model Detections:")
+#> [1] "Model Detections:"
 print(model_detections_df)
+#> # A tibble: 8 x 11
+#>   video_id image_id annotation_id category_name     score frame_index model_name
+#>   <chr>    <chr>            <int> <chr>             <dbl>       <dbl> <chr>     
+#> 1 vid01    img01                1 Gadus morhua       0.95          10 Model A   
+#> 2 vid01    img01                2 Gadus morhua       0.85          10 Model A   
+#> 3 vid01    img01                3 Melanogrammus ae~  0.8           15 Model A   
+#> 4 vid01    img01                4 Gadus morhua       0.65          20 Model A   
+#> 5 vid01    img01                5 Pollachius virens  0.5           20 Model A   
+#> 6 vid01    img01                6 Gadus morhua       0.92          10 Model B   
+#> 7 vid01    img01                7 Melanogrammus ae~  0.75          15 Model B   
+#> 8 vid01    img01                8 Melanogrammus ae~  0.6           15 Model B   
+#> # i 4 more variables: bbox_x <dbl>, bbox_y <dbl>, bbox_width <dbl>,
+#> #   bbox_height <dbl>
 
 print("Truth Detections:")
+#> [1] "Truth Detections:"
 print(truth_detections_df)
+#> # A tibble: 4 x 10
+#>   video_id image_id annotation_id category_name  frame_index score bbox_x bbox_y
+#>   <chr>    <chr>            <int> <chr>                <dbl> <dbl>  <dbl>  <dbl>
+#> 1 vid01    img01                9 Gadus morhua            10     1      0      0
+#> 2 vid01    img01               10 Gadus morhua            10     1      0      0
+#> 3 vid01    img01               11 Gadus morhua            20     1      0      0
+#> 4 vid01    img01               12 Urophycis ten~          30     1      0      0
+#> # i 2 more variables: bbox_width <dbl>, bbox_height <dbl>
 ```
 
-## 3. Working with `OpticsDetections` Objects
+## 3. Summarizing Performance by Threshold
 
-Now, let's convert these sample data frames into the formal `OpticsDetections` S4 objects that the package uses for analysis.
+A key task is to evaluate how a model performs at different confidence thresholds. The `summarize_performance_by_threshold()` function automates this. It now operates on `OpticsDetections` S4 objects.
+
 
 ``` r
+# Define the thresholds we want to test
+thresholds_to_test <- seq(0.5, 1.0, by = 0.1)
+
 # Create OpticsDetections objects for each model and for the truth data
 model_a_obj <- OpticsDetections(
   data = filter(model_detections_df, model_name == "Model A"),
@@ -74,15 +119,6 @@ truth_obj <- OpticsDetections(
   data = truth_detections_df,
   source_file = "manual", ingest_format = "manual"
 )
-```
-
-## 4. Summarizing Performance by Threshold
-
-A key task is to evaluate how a model performs at different confidence thresholds. The `summarize_performance_by_threshold()` function automates this.
-
-```r
-# Define the thresholds we want to test
-thresholds_to_test <- seq(0.5, 1.0, by = 0.1)
 
 # Analyze Model A
 perf_model_a <- summarize_performance_by_threshold(
@@ -104,9 +140,26 @@ perf_model_b <- summarize_performance_by_threshold(
 performance_summary <- bind_rows(perf_model_a, perf_model_b)
 
 print(performance_summary)
+#> # A tibble: 12 x 17
+#>       tp    fp    fn precision recall f1_score    tn accuracy   fpr   fnr
+#>    <dbl> <dbl> <int>     <dbl>  <dbl>    <dbl> <int>    <dbl> <dbl> <dbl>
+#>  1     1     2     1     0.333    0.5    0.4       0    0.25    1     0.5
+#>  2     1     1     1     0.5      0.5    0.5       1    0.5     0.5   0.5
+#>  3     1     1     1     0.5      0.5    0.5       1    0.5     0.5   0.5
+#>  4     1     1     1     0.5      0.5    0.5       1    0.5     0.5   0.5
+#>  5     1     0     1     1        0.5    0.667     2    0.75    0     0.5
+#>  6     0     0     2    NA        0     NA        NA   NA      NA    NA  
+#>  7     1     1     1     0.5      0.5    0.5       0    0.333   1     0.5
+#>  8     1     1     1     0.5      0.5    0.5       0    0.333   1     0.5
+#>  9     1     1     1     0.5      0.5    0.5       0    0.333   1     0.5
+#> 10     1     0     1     1        0.5    0.667     1    0.667   0     0.5
+#> 11     1     0     1     1        0.5    0.667     1    0.667   0     0.5
+#> 12     0     0     2    NA        0     NA        NA   NA      NA    NA  
+#> # i 7 more variables: false_positive_ratio <dbl>, false_negative_ratio <dbl>,
+#> #   mcc_num <dbl>, mcc_den <dbl>, mcc <dbl>, threshold <dbl>, model_name <chr>
 ```
 
-## 5. Visualizing Performance
+## 4. Visualizing Performance
 
 With the summary data, we can now create plots to compare the models. The plotting functions are now S4 generics.
 
@@ -118,10 +171,16 @@ The `plot_performance_by_threshold()` function visualizes the trade-offs between
 ``` r
 plot_performance_by_threshold(
   performance_summary,
-  model_col = "model_name",
+  model_col = model_name,
   title = "Model Performance Comparison"
 )
+#> Warning: Removed 4 rows containing missing values or values outside the scale range
+#> (`geom_line()`).
+#> Warning: Removed 4 rows containing missing values or values outside the scale range
+#> (`geom_point()`).
 ```
+
+![Precision, Recall, and F1-Score for Model A and Model B across different confidence thresholds.](figure/plot-performance-1.png)
 
 ### Count Comparison Scatterplot
 
@@ -155,40 +214,11 @@ aligned_counts <- bind_rows(aligned_a, aligned_b)
 # Generate the plot
 plot_counts_scatterplot(
   aligned_counts,
-  model_col = "model_name",
+  model_col = model_name,
   title = "MaxN Counts at 0.8 Confidence"
 )
 ```
 
-## 6. Advanced Usage: Confusion Matrix
-
-A confusion matrix helps diagnose classification errors. The `Optics` package provides `align_detections()` to match individual model predictions to ground truth objects and `plot_confusion_matrix()` to visualize the results. This is different from `align_counts()`, which works on aggregated data like MaxN.
-
-First, we align the raw detections from `Model A` against the ground truth at a specific confidence threshold.
-
-
-```r
-# Align individual detections at a 0.5 confidence threshold
-aligned_detections <- align_detections(
-  model_detections = model_a_obj,
-  truth_detections = truth_obj,
-  threshold = 0.5
-)
-
-# Generate and plot the confusion matrix
-plot_confusion_matrix(
-  aligned_detections,
-  title = "Confusion Matrix for Model A (Threshold = 0.5)"
-)
-```
-
-### Interpreting the Confusion Matrix
-
-*   **Diagonal Cells (Blue):** These are correct classifications (True Positives). For example, the model correctly identified "Gadus morhua" twice.
-*   **Off-Diagonal Cells (Red):** These represent errors.
-    *   **Rows** show the ground truth. The "Gadus morhua" row has a "1" under the "Melanogrammus aeglefinus" column, meaning one true cod was misclassified as a haddock.
-    *   **Columns** show the model's predictions.
-*   **"False Positive" Column:** These are detections that did not match any ground truth object. The model predicted one "Pollachius virens" that wasn't actually there.
-*   **"False Negative" Row:** These are ground truth objects the model failed to detect. The model missed one "Urophycis tenuis" entirely.
+![Model vs. Truth MaxN counts at a 0.8 confidence threshold.](figure/plot-scatterplot-1.png)
 
 This vignette provides a basic overview of a standard workflow. The `Optics` package contains many other S4 methods for more in-depth analysis, including generating ROC curves, confusion matrices, and analyzing the drivers of model error.

@@ -9,7 +9,7 @@ knitr::opts_chunk$set(
   fig.path = "man/figures/"
 )
 # Load all package functions to be available in the vignette
-devtools::load_all()
+devtools::load_all('Optics')
 ```
 
 
