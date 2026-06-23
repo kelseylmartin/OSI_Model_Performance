@@ -196,6 +196,7 @@ h3 {
 .vehicle-icons img {
   box-shadow: none !important;
   filter: none !important;
+  border: none !important;
 }
 
 @keyframes float {

@@ -22,8 +22,8 @@ knitr::opts_chunk$set(
 The `Optics` package provides a standardized toolkit for evaluating the performance of machine learning models on optical survey data. This vignette demonstrates a complete workflow, from ingesting raw model output to generating final performance metrics and visualizations.
 
 <div class="vehicle-icons">
-<span><i class="fa-solid fa-ship" style="font-size: 6em; color: #00d2ff;"></i></span>
-<span><i class="fa-solid fa-plane" style="font-size: 6em; color: #f97316;"></i></span>
+<span><img src="https://oceanexplorer.noaa.gov/okeanos/media/multimedia/hires/7-ship-port-bow-hires.jpg" alt="NOAA Research Vessel" style="height: 5em; width: auto; vertical-align: middle; border-radius: 4px; margin-bottom: 1rem;"/></span>
+<span><img src="https://www.noaa.gov/sites/default/files/styles/landscape_width_1275/public/2021-03/highlights-twin-otter-aoc-031021-social.jpg?itok=5-i5-a-f" alt="Small Propeller Plane" style="height: 5em; width: auto; vertical-align: middle; border-radius: 4px; margin-bottom: 1rem;"/></span>
 <span><img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" style="height: 5em; width: auto; vertical-align: middle; border-radius: 4px; margin-bottom: 1rem;"/></span>
 </div>
 
