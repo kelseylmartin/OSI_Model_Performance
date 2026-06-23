@@ -180,7 +180,7 @@ plot_performance_by_threshold(
 #> (`geom_point()`).
 ```
 
-![Precision, Recall, and F1-Score for Model A and Model B across different confidence thresholds.](figure/plot-performance-1.png)
+![Precision, Recall, and F1-Score for Model A and Model B across different confidence thresholds.](man/figures/plot-performance-1.png)
 
 ### Count Comparison Scatterplot
 
@@ -219,6 +219,6 @@ plot_counts_scatterplot(
 )
 ```
 
-![Model vs. Truth MaxN counts at a 0.8 confidence threshold.](figure/plot-scatterplot-1.png)
+![Model vs. Truth MaxN counts at a 0.8 confidence threshold.](man/figures/plot-scatterplot-1.png)
 
 This vignette provides a basic overview of a standard workflow. The `Optics` package contains many other S4 methods for more in-depth analysis, including generating ROC curves, confusion matrices, and analyzing the drivers of model error.
