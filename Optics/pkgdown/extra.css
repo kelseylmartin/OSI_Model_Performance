@@ -169,10 +169,10 @@ h3 {
   flex-wrap: nowrap !important;
   justify-content: center;
   align-items: center;
-  gap: 2.25rem !important; /* Decreased gap to fit half size */
+  gap: 3.5rem !important; /* Increased horizontal space */
   margin-top: 2rem;
   background: rgba(255, 255, 255, 0.1);
-  padding: 1rem 2rem !important; /* Decreased padding for half size display */
+  padding: 1rem 2rem !important;
   border-radius: 50px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(5px);
@@ -204,9 +204,9 @@ h3 {
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
 }
 
-/* Ensure no borders or shadows around the images, including the AUV image, and set half size */
+/* Ensure no borders or shadows around the images, including the AUV image, and set a slightly larger size */
 .vehicle-icons img, .platform-icon {
-  height: 3.75em !important; /* Half size of 7.5em */
+  height: 4.5em !important; /* Slightly larger icon size */
   width: auto !important;
   box-shadow: none !important;
   filter: none !important;
