@@ -22,9 +22,9 @@ knitr::opts_chunk$set(
 The `Optics` package provides a standardized toolkit for evaluating the performance of machine learning models on optical survey data. This vignette demonstrates a complete workflow, from ingesting raw model output to generating final performance metrics and visualizations.
 
 <div class="vehicle-icons">
-<span><i class="fa-solid fa-ship" style="font-size: 6em;"></i></span>
-<span><i class="fa-solid fa-plane" style="font-size: 6em;"></i></span>
-<span><img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" style="height: 5em; width: auto; vertical-align: middle; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1rem;"/></span>
+<span><i class="fa-solid fa-ship" style="font-size: 6em; color: #00d2ff;"></i></span>
+<span><i class="fa-solid fa-plane" style="font-size: 6em; color: #f97316;"></i></span>
+<span><img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" style="height: 5em; width: auto; vertical-align: middle; border-radius: 4px; margin-bottom: 1rem;"/></span>
 </div>
 
 First, let's load the `Optics` package and other useful libraries like `dplyr`.

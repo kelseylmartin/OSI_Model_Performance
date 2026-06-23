@@ -184,13 +184,18 @@ h3 {
 }
 
 /* Animating different icons with delays */
-.vehicle-icons span:nth-child(1) { animation-delay: 0s; color: #ffffff; }
-.vehicle-icons span:nth-child(2) { animation-delay: 1.5s; color: #ffffff; }
-.vehicle-icons span:nth-child(3) { animation-delay: 3s; color: #ffffff; }
-.vehicle-icons span:nth-child(4) { animation-delay: 4.5s; color: #ffffff; }
+.vehicle-icons span:nth-child(1) { animation-delay: 0s; color: #00d2ff !important; }
+.vehicle-icons span:nth-child(2) { animation-delay: 1.5s; color: #f97316 !important; }
+.vehicle-icons span:nth-child(3) { animation-delay: 3s; }
+.vehicle-icons span:nth-child(4) { animation-delay: 4.5s; }
 
 .vehicle-icons i, .vehicle-icons svg {
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
+}
+
+.vehicle-icons img {
+  box-shadow: none !important;
+  filter: none !important;
 }
 
 @keyframes float {
