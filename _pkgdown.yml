@@ -1,0 +1,10 @@
+url: https://your-org.github.io/Optics/ # Replace with your site's URL
+template:
+  bootstrap: 5
+  bootswatch: cerulean
+  assets: assets/
+
+navbar:
+  left:
+    - text: "Home"
+      href: index.html

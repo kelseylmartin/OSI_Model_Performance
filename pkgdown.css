@@ -1,0 +1,19 @@
+/* Custom CSS for Optics pkgdown site */
+
+/* NOAA-inspired color palette with Teal */
+:root {
+  --bs-primary: #0099B4; /* NOAA Teal/Blue */
+  --bs-secondary: #707372; /* NOAA Gray */
+  --bs-info: #005F6F; /* Darker Teal for links */
+  --bs-body-color: #333;
+  --bs-body-font-family: "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Navbar styling */
+.navbar {
+  background-color: #003E51 !important; /* NOAA Dark Blue */
+}
+
+.navbar-light .navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
