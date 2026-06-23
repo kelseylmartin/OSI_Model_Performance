@@ -10,6 +10,8 @@ output to generating final performance metrics and visualizations.
 
 <div class="vehicle-icons">
 
+<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTuDMP7FiViQpYFSlWHisRaeY-JnzHHM4fl6EBkjbwCkw&s=10" alt="NOAA Research Vessel" class="platform-icon boat"/><img src="https://s1.cdn.autoevolution.com/images/news/gallery/modified-cessna-caravan-kicks-off-nasa-s-research-into-remotely-piloted-cargo-planes_2.jpg" alt="Small Propeller Plane" class="platform-icon plane"/><img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" class="platform-icon auv"/>
+
 </div>
 
 First, let’s load the `Optics` package and other useful libraries like
@@ -180,8 +182,7 @@ plot_performance_by_threshold(
 ```
 
 <figure>
-<img
-src="/home/user/.gemini/OSI_Model_Performance/Optics/README_files/figure-gfm/plot-performance-1.png"
+<img src="README_files/figure-gfm/plot-performance-1.png"
 alt="Precision, Recall, and F1-Score for Model A and Model B across different confidence thresholds." />
 <figcaption aria-hidden="true">Precision, Recall, and F1-Score for Model
 A and Model B across different confidence thresholds.</figcaption>
@@ -227,8 +228,7 @@ plot_counts_scatterplot(
 ```
 
 <figure>
-<img
-src="/home/user/.gemini/OSI_Model_Performance/Optics/README_files/figure-gfm/plot-scatterplot-1.png"
+<img src="README_files/figure-gfm/plot-scatterplot-1.png"
 alt="Model vs. Truth MaxN counts at a 0.8 confidence threshold." />
 <figcaption aria-hidden="true">Model vs. Truth MaxN counts at a 0.8
 confidence threshold.</figcaption>
