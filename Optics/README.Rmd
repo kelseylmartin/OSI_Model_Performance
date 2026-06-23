@@ -20,11 +20,7 @@ knitr::opts_chunk$set(
 
 The `Optics` package provides a standardized toolkit for evaluating the performance of machine learning models on optical survey data. This vignette demonstrates a complete workflow, from ingesting raw model output to generating final performance metrics and visualizations.
 
-<div class="vehicle-icons">
-<span><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTuDMP7FiViQpYFSlWHisRaeY-JnzHHM4fl6EBkjbwCkw&s=10" alt="NOAA Research Vessel" style="height: 7.5em; width: auto; vertical-align: middle; border: 0px none transparent !important; box-shadow: none !important; border-radius: 0px !important; outline: none !important; background: transparent !important; margin: 0 1.5rem 1rem 1.5rem !important;"/></span>
-<span><img src="https://s1.cdn.autoevolution.com/images/news/gallery/modified-cessna-caravan-kicks-off-nasa-s-research-into-remotely-piloted-cargo-planes_2.jpg" alt="Small Propeller Plane" style="height: 7.5em; width: auto; vertical-align: middle; border: 0px none transparent !important; box-shadow: none !important; border-radius: 0px !important; outline: none !important; background: transparent !important; margin: 0 1.5rem 1rem 1.5rem !important;"/></span>
-<span><img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" style="height: 7.5em; width: auto; vertical-align: middle; border: 0px none transparent !important; box-shadow: none !important; border-radius: 0px !important; outline: none !important; background: transparent !important; margin: 0 1.5rem 1rem 1.5rem !important;"/></span>
-</div>
+<div class="vehicle-icons"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTuDMP7FiViQpYFSlWHisRaeY-JnzHHM4fl6EBkjbwCkw&s=10" alt="NOAA Research Vessel" class="platform-icon boat"/><img src="https://s1.cdn.autoevolution.com/images/news/gallery/modified-cessna-caravan-kicks-off-nasa-s-research-into-remotely-piloted-cargo-planes_2.jpg" alt="Small Propeller Plane" class="platform-icon plane"/><img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" class="platform-icon auv"/></div>
 
 First, let's load the `Optics` package and other useful libraries like `dplyr`.
 

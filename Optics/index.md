@@ -10,9 +10,7 @@ output to generating final performance metrics and visualizations.
 
 <div class="vehicle-icons">
 
-<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTuDMP7FiViQpYFSlWHisRaeY-JnzHHM4fl6EBkjbwCkw&s=10" alt="NOAA Research Vessel" class="platform-icon boat"/>
-<img src="https://s1.cdn.autoevolution.com/images/news/gallery/modified-cessna-caravan-kicks-off-nasa-s-research-into-remotely-piloted-cargo-planes_2.jpg" alt="Small Propeller Plane" class="platform-icon plane"/>
-<img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" class="platform-icon auv"/>
+<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTuDMP7FiViQpYFSlWHisRaeY-JnzHHM4fl6EBkjbwCkw&s=10" alt="NOAA Research Vessel" class="platform-icon boat"/><img src="https://s1.cdn.autoevolution.com/images/news/gallery/modified-cessna-caravan-kicks-off-nasa-s-research-into-remotely-piloted-cargo-planes_2.jpg" alt="Small Propeller Plane" class="platform-icon plane"/><img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" class="platform-icon auv"/>
 
 </div>
 
