@@ -1,26 +1,23 @@
----
-title: "Introduction to the Optics Package"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Introduction to the Optics Package}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-
+Introduction to the Optics Package
+================
 
 ## 1. Introduction
 
-The `Optics` package provides a standardized toolkit for evaluating the performance of machine learning models on optical survey data. This vignette demonstrates a complete workflow, from ingesting raw model output to generating final performance metrics and visualizations.
+The `Optics` package provides a standardized toolkit for evaluating the
+performance of machine learning models on optical survey data. This
+vignette demonstrates a complete workflow, from ingesting raw model
+output to generating final performance metrics and visualizations.
 
 <div class="vehicle-icons">
-<span><img src="https://oceanexplorer.noaa.gov/okeanos/media/multimedia/hires/7-ship-port-bow-hires.jpg" alt="NOAA Research Vessel" style="height: 5em; width: auto; vertical-align: middle; border-radius: 4px; margin-bottom: 1rem;"/></span>
-<span><img src="https://www.noaa.gov/sites/default/files/styles/landscape_width_1275/public/2021-03/highlights-twin-otter-aoc-031021-social.jpg?itok=5-i5-a-f" alt="Small Propeller Plane" style="height: 5em; width: auto; vertical-align: middle; border-radius: 4px; margin-bottom: 1rem;"/></span>
-<span><img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" style="height: 5em; width: auto; vertical-align: middle; border-radius: 4px; margin-bottom: 1rem;"/></span>
+
+<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTuDMP7FiViQpYFSlWHisRaeY-JnzHHM4fl6EBkjbwCkw&s=10" alt="NOAA Research Vessel" style="height: 5em; width: auto; vertical-align: middle; border: none !important; box-shadow: none !important; border-radius: 0px !important; outline: none !important; background: transparent !important; margin-bottom: 1rem;"/>
+<img src="https://png.pngtree.com/png-vector/20250611/ourlarge/pngtree-modern-twin-propeller-airplane-isolated-on-transparent-png-image_16518189.png" alt="Small Propeller Plane" style="height: 5em; width: auto; vertical-align: middle; border: none !important; box-shadow: none !important; border-radius: 0px !important; outline: none !important; background: transparent !important; margin-bottom: 1rem;"/>
+<img src="https://res.cloudinary.com/osrl-production/image/upload/osrlprod/globalassets/knowledge-hub-169/smv/auv-slocum-glider.png" alt="Autonomous Underwater Vehicle" style="height: 5em; width: auto; vertical-align: middle; border: none !important; box-shadow: none !important; border-radius: 0px !important; outline: none !important; background: transparent !important; margin-bottom: 1rem;"/>
+
 </div>
 
-First, let's load the `Optics` package and other useful libraries like `dplyr`.
-
+First, let’s load the `Optics` package and other useful libraries like
+`dplyr`.
 
 ``` r
 library(Optics)
@@ -38,10 +35,14 @@ library(ggplot2)
 
 ## 2. Creating Sample Data
 
-For this example, we will create sample data representing raw model detections and a corresponding ground truth dataset. In a real workflow, this data would be ingested using `read_kwcoco()` or `read_viame_csv()`, which return `OpticsDetections` S4 objects.
+For this example, we will create sample data representing raw model
+detections and a corresponding ground truth dataset. In a real workflow,
+this data would be ingested using `read_kwcoco()` or `read_viame_csv()`,
+which return `OpticsDetections` S4 objects.
 
-For this vignette, we'll construct the data frames manually and then create the S4 objects. Note that the `OpticsDetections` class requires a specific set of columns.
-
+For this vignette, we’ll construct the data frames manually and then
+create the S4 objects. Note that the `OpticsDetections` class requires a
+specific set of columns.
 
 ``` r
 # Sample model detections with scores
@@ -99,8 +100,9 @@ print(truth_detections_df)
 
 ## 3. Summarizing Performance by Threshold
 
-A key task is to evaluate how a model performs at different confidence thresholds. The `summarize_performance_by_threshold()` function automates this. It now operates on `OpticsDetections` S4 objects.
-
+A key task is to evaluate how a model performs at different confidence
+thresholds. The `summarize_performance_by_threshold()` function
+automates this. It now operates on `OpticsDetections` S4 objects.
 
 ``` r
 # Define the thresholds we want to test
@@ -161,12 +163,13 @@ print(performance_summary)
 
 ## 4. Visualizing Performance
 
-With the summary data, we can now create plots to compare the models. The plotting functions are now S4 generics.
+With the summary data, we can now create plots to compare the models.
+The plotting functions are now S4 generics.
 
 ### Performance by Threshold Plot
 
-The `plot_performance_by_threshold()` function visualizes the trade-offs between precision, recall, and F1-score.
-
+The `plot_performance_by_threshold()` function visualizes the trade-offs
+between precision, recall, and F1-score.
 
 ``` r
 plot_performance_by_threshold(
@@ -180,12 +183,19 @@ plot_performance_by_threshold(
 #> (`geom_point()`).
 ```
 
-![Precision, Recall, and F1-Score for Model A and Model B across different confidence thresholds.](man/figures/plot-performance-1.png)
+<figure>
+<img src="man/figures/plot-performance-1.png"
+alt="Precision, Recall, and F1-Score for Model A and Model B across different confidence thresholds." />
+<figcaption aria-hidden="true">Precision, Recall, and F1-Score for Model
+A and Model B across different confidence thresholds.</figcaption>
+</figure>
 
 ### Count Comparison Scatterplot
 
-To see how well the model counts match the truth counts at a *specific* threshold (e.g., 0.8), we can generate a scatterplot. The `calculate_maxn` generic works on both `OpticsDetections` objects and standard `data.frame`s.
-
+To see how well the model counts match the truth counts at a *specific*
+threshold (e.g., 0.8), we can generate a scatterplot. The
+`calculate_maxn` generic works on both `OpticsDetections` objects and
+standard `data.frame`s.
 
 ``` r
 # We can still use standard dplyr pipes. The calculate_maxn S4 generic will
@@ -219,6 +229,14 @@ plot_counts_scatterplot(
 )
 ```
 
-![Model vs. Truth MaxN counts at a 0.8 confidence threshold.](man/figures/plot-scatterplot-1.png)
+<figure>
+<img src="man/figures/plot-scatterplot-1.png"
+alt="Model vs. Truth MaxN counts at a 0.8 confidence threshold." />
+<figcaption aria-hidden="true">Model vs. Truth MaxN counts at a 0.8
+confidence threshold.</figcaption>
+</figure>
 
-This vignette provides a basic overview of a standard workflow. The `Optics` package contains many other S4 methods for more in-depth analysis, including generating ROC curves, confusion matrices, and analyzing the drivers of model error.
+This vignette provides a basic overview of a standard workflow. The
+`Optics` package contains many other S4 methods for more in-depth
+analysis, including generating ROC curves, confusion matrices, and
+analyzing the drivers of model error.

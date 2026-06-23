@@ -197,6 +197,8 @@ h3 {
   box-shadow: none !important;
   filter: none !important;
   border: none !important;
+  border-radius: 0px !important;
+  background: transparent !important;
 }
 
 @keyframes float {
