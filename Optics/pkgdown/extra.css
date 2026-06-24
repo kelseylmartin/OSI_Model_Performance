@@ -195,10 +195,10 @@ h3 {
 }
 
 /* Animating different icons with delays */
-.vehicle-icons span:nth-child(1), .vehicle-icons > img:nth-child(1), .platform-icon.boat { animation-delay: 0s; color: #00d2ff !important; }
-.vehicle-icons span:nth-child(2), .vehicle-icons > img:nth-child(2), .platform-icon.plane { animation-delay: 1.5s; color: #f97316 !important; }
-.vehicle-icons span:nth-child(3), .vehicle-icons > img:nth-child(3), .platform-icon.auv { animation-delay: 3s; }
-.vehicle-icons span:nth-child(4), .vehicle-icons > img:nth-child(4) { animation-delay: 4.5s; }
+.vehicle-icons span:nth-child(1), .vehicle-icons > img:nth-child(1), .platform-icon.boat { animation-delay: 0s !important; color: #00d2ff !important; }
+.vehicle-icons span:nth-child(2), .vehicle-icons > img:nth-child(2), .platform-icon.plane { animation-delay: 1.5s !important; color: #f97316 !important; }
+.vehicle-icons span:nth-child(3), .vehicle-icons > img:nth-child(3), .platform-icon.auv { animation-delay: 3s !important; }
+.vehicle-icons span:nth-child(4), .vehicle-icons > img:nth-child(4) { animation-delay: 4.5s !important; }
 
 .vehicle-icons i, .vehicle-icons svg {
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
