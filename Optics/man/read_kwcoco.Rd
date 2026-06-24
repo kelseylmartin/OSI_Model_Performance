@@ -19,33 +19,30 @@ Ingests a KWCOCO-formatted JSON file and wraps the standardized data in an
 \code{OpticsDetections} S4 object.
 }
 \examples{
-\dontrun{
-  # Create a dummy KWCOCO file for demonstration
-  dummy_kwcoco <- list(
-    videos = list(list(id = 1, name = "video_1")),
-    images = list(
-      list(id = 101, video_id = 1, file_name = "frame_001.jpg", frame_index = 1),
-      list(id = 102, video_id = 1, file_name = "frame_002.jpg", frame_index = 2)
-    ),
-    annotations = list(
-      list(id = 1, image_id = 101, category_id = 1, track_id = 1,
-           bbox = c(10, 20, 30, 40), score = 0.95, area = 1200)
-    ),
-    categories = list(list(id = 1, name = "Gadus morhua"))
-  )
-  json_path <- tempfile(fileext = ".json")
-  jsonlite::write_json(dummy_kwcoco, json_path, auto_unbox = TRUE)
+# Example with a temporary KWCOCO JSON file based on Abi's AUV data.
+kwcoco_json_string <- '{
+  "info": [{"date_created": "2024-01-01", "description": "Sample from Abi AUV data"}],
+  "videos": [{"id": 1, "name": "AUV_video_1"}],
+  "images": [
+    {"id": 1, "video_id": 1, "frame_index": 1, "file_name": "frame0001.jpg"},
+    {"id": 2, "video_id": 1, "frame_index": 2, "file_name": "frame0002.jpg"}
+  ],
+  "annotations": [
+    {"id": 1, "image_id": 1, "category_id": 1, "bbox": [10, 20, 30, 40], "score": 0.9},
+    {"id": 2, "image_id": 2, "category_id": 2, "bbox": [50, 60, 70, 80], "score": 0.95}
+  ],
+  "categories": [
+    {"id": 1, "name": "sea_star"},
+    {"id": 2, "name": "sea_anemone"}
+  ]
+}'
+temp_json_path <- tempfile(fileext = ".json")
+writeLines(kwcoco_json_string, temp_json_path)
 
-  # Ingest the file
-  detections_obj <- read_kwcoco(json_path)
-  print(detections_obj@data)
+# Ingest the data
+detections_obj <- read_kwcoco(temp_json_path)
+print(detections_obj)
 
-  # Clean up
-  unlink(json_path)
-}
-\dontrun{
-# For Abi's AUV platform data
-kwcoco_file <- system.file("extdata", "AUV_viame_test_detections.coco.json", package = "Optics")
-detections <- read_kwcoco(kwcoco_file)
-}
+# Clean up
+unlink(temp_json_path)
 }

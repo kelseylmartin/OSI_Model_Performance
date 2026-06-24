@@ -17,21 +17,3 @@ plot_roc_curve(detection_df, ...)
 \description{
 Plot a Receiver Operating Characteristic (ROC) Curve
 }
-\examples{
-\dontrun{
-# For Abi's AUV data
-kwcoco_file <- system.file("extdata", "AUV_viame_test_detections.coco.json", package = "Optics")
-detections <- read_kwcoco(kwcoco_file)
-
-# This is a placeholder for truth data
-truth_detections <- detections 
-
-classified_detections <- classify_detections(
-raw_detections = detections@data,
-validated_detections = truth_detections@data,
-detection_id = annotation_id
-)
-
-plot_roc_curve(classified_detections)
-}
-}

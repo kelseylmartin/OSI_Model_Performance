@@ -22,20 +22,24 @@ classify_detections(raw_detections, validated_detections, ...)
 Classify Detections as True/False Positives
 }
 \examples{
-\dontrun{
-# For Erin's ice seal survey
-erin_csv <- system.file("extdata", 
-"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-raw_detections <- read_viame_csv(erin_csv)
+# Example using Erin's ice seal data.
+model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
+truth_csv_data <- c("2,video1,10,110,110,210,210,1,1.0,"ringed_seal",1")
+model_csv_path <- tempfile(fileext = ".csv")
+truth_csv_path <- tempfile(fileext = ".csv")
+writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
+writeLines(c("# h1", "# h2", truth_csv_data), truth_csv_path)
 
-erin_truth_csv <- system.file("extdata", 
-"ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-validated_detections <- read_viame_csv(erin_truth_csv)
+raw_detections <- read_viame_csv(model_csv_path)
+validated_detections <- read_viame_csv(truth_csv_path)
 
 classified_detections <- classify_detections(
-raw_detections = raw_detections@data,
-validated_detections = validated_detections@data,
-detection_id = annotation_id
+  raw_detections = raw_detections@data,
+  validated_detections = validated_detections@data,
+  detection_id = annotation_id
 )
-}
+print(classified_detections)
+
+unlink(model_csv_path)
+unlink(truth_csv_path)
 }

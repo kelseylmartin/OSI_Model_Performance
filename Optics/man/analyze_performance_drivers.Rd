@@ -15,7 +15,10 @@ Analyze Performance Drivers
 \examples{
 \dontrun{
 # For Tom & Michael's coral survey
-# Assuming 'aligned_df' is created from align_counts()
+aligned_df <- dplyr::tibble(
+ video_id = "v1", Species = "Acropora", model_count = 5, truth_count = 10,
+ n_species_truth = 1, total_individuals_truth = 10
+)
 performance_drivers <- analyze_performance_drivers(aligned_df, 
 group_vars = c("video_id", "category_name"))
 }

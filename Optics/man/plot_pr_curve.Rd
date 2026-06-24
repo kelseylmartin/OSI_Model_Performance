@@ -18,22 +18,25 @@ plot_pr_curve(detection_df, ...)
 Plot a Precision-Recall (PR) Curve
 }
 \examples{
-\dontrun{
-# For Erin's ice seal survey
-erin_csv <- system.file("extdata", 
-"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-raw_detections <- read_viame_csv(erin_csv)
+# Example using Erin's ice seal data.
+raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
+validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1")
+raw_csv_path <- tempfile(fileext = ".csv")
+validated_csv_path <- tempfile(fileext = ".csv")
+writeLines(c("# h1", "# h2", raw_csv_data), raw_csv_path)
+writeLines(c("# h1", "# h2", validated_csv_data), validated_csv_path)
 
-erin_truth_csv <- system.file("extdata", 
-"ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-validated_detections <- read_viame_csv(erin_truth_csv)
+raw_detections <- read_viame_csv(raw_csv_path)
+validated_detections <- read_viame_csv(validated_csv_path)
 
 classified_detections <- classify_detections(
-raw_detections = raw_detections@data,
-validated_detections = validated_detections@data,
-detection_id = annotation_id
+  raw_detections = raw_detections@data,
+  validated_detections = validated_detections@data,
+  detection_id = annotation_id
 )
 
 plot_pr_curve(classified_detections)
-}
+
+unlink(raw_csv_path)
+unlink(validated_csv_path)
 }

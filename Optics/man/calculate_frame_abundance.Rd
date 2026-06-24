@@ -27,26 +27,23 @@ Calculates the number of detections for each species category in every frame
 where they appear.
 }
 \examples{
-# Create a sample OpticsDetections object
-sample_df <- dplyr::tibble(
-  video_id = c(rep("video1", 3)),
-  frame_index = c(1, 1, 2),
-  category_name = c("FishA", "FishA", "FishB")
+# Example using a sample of GFISHER data to calculate per-frame abundance.
+# This simulates reading a VIAME CSV output from a GFISHER survey.
+gfisher_csv_data <- c(
+  "1,video1,10,100,100,200,200,1,0.95,"Gadus morhua",1",
+  "1,video1,10,150,150,250,250,1,0.90,"Gadus morhua",1",
+  "2,video1,10,300,300,400,400,1,0.85,"Melanogrammus aeglefinus",1",
+  "1,video1,11,100,100,200,200,1,0.92,"Gadus morhua",1"
 )
-detections_obj <- OpticsDetections(
-  data = sample_df,
-  source_file = "dummy_file.csv",
-  ingest_format = "dummy"
-)
+temp_csv_path <- tempfile(fileext = ".csv")
+writeLines(c("# header 1", "# header 2", gfisher_csv_data), temp_csv_path)
 
-# Calculate frame-by-frame abundance
+# Ingest the data
+detections_obj <- read_viame_csv(temp_csv_path, model_name = "GFISHER-model")
+
+# Calculate abundance per frame
 calculate_frame_abundance(detections_obj)
 
-\dontrun{
-# For Erin's ice seal survey
-erin_csv <- system.file("extdata", 
-"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-detections <- read_viame_csv(erin_csv)
-fba <- calculate_frame_abundance(detections)
-}
+# Clean up the temporary file
+unlink(temp_csv_path)
 }

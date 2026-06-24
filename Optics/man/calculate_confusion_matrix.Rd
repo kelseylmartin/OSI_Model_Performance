@@ -20,27 +20,3 @@ calculate_confusion_matrix(aligned_df, ...)
 The rest of the functions are utilities that operate on generic data.frames.
 They are converted to S4 generics for consistency.
 }
-\examples{
-\dontrun{
-# For Abi's AUV data
-kwcoco_file <- system.file("extdata", "AUV_viame_test_detections.coco.json", package = "Optics")
-detections <- read_kwcoco(kwcoco_file)
-
-# This is a placeholder for truth data
-truth_detections <- detections 
-
-model_counts <- calculate_maxn(detections)
-truth_counts <- calculate_maxn(truth_detections)
-
-aligned_df <- align_counts(
- model_counts, 
- truth_counts,
- by = c("video_id", "category_name"),
- model_col = maxn,
- truth_col = maxn
-)
-
-conf_matrix <- calculate_confusion_matrix(aligned_df, 
-group_vars = c("video_id"), species_col = category_name)
-}
-}

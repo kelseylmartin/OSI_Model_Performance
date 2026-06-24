@@ -21,10 +21,21 @@ Ingests a CSV file from VIAME and wraps the standardized data in an
 \code{OpticsDetections} S4 object.
 }
 \examples{
-\dontrun{
-# For Erin's ice seal survey
-erin_csv <- system.file("extdata", 
-"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-detections <- read_viame_csv(erin_csv)
-}
+# Example with a temporary VIAME CSV file based on Erin's ice seal data.
+# This simulates reading a processed detections file.
+erin_csv_data <- c(
+  "1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1",
+  "2,video1,15,150,150,250,250,1,0.90,"bearded_seal",1"
+)
+temp_csv_path <- tempfile(fileext = ".csv")
+# Write the data to a temp file, making sure to add the two header lines
+# that read_viame_csv expects to skip.
+writeLines(c("# 1: Track-id ...", "# 2: Video or Image ...", erin_csv_data), temp_csv_path)
+
+# Ingest the data
+detections_obj <- read_viame_csv(temp_csv_path, video_id = "erin_ice_seals")
+print(detections_obj)
+
+# Clean up the temporary file
+unlink(temp_csv_path)
 }

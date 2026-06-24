@@ -26,27 +26,31 @@ calculate_binary_metrics(aligned_df, ...)
 Calculate Binary Classification Metrics
 }
 \examples{
-\dontrun{
-# For Erin's ice seal survey, to compare raw vs. validated data
-erin_raw_csv <- system.file("extdata", 
-"ice_seals_2025_fl223_C_ir_detections.csv", package = "Optics")
-raw_detections <- read_viame_csv(erin_raw_csv)
-
-erin_truth_csv <- system.file("extdata", 
-"ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-truth_detections <- read_viame_csv(erin_truth_csv)
-
-raw_counts <- calculate_maxn(raw_detections)
-truth_counts <- calculate_maxn(truth_detections)
-
-aligned_df <- align_counts(
- raw_counts, 
- truth_counts,
- by = c("video_id", "category_name"),
- model_col = maxn,
- truth_col = maxn
+# Example using Erin's ice seal data.
+# 1. Create temporary VIAME CSV files for model and truth data.
+model_csv_data <- c(
+  "1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1",
+  "2,video1,15,150,150,250,250,1,0.90,"bearded_seal",1"
 )
+truth_csv_data <- c(
+  "1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1",
+  "3,video1,20,300,300,400,400,1,1.0,"ringed_seal",1"
+)
+model_csv_path <- tempfile(fileext = ".csv")
+truth_csv_path <- tempfile(fileext = ".csv")
+writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
+writeLines(c("# h1", "# h2", truth_csv_data), truth_csv_path)
 
+# 2. Ingest and align data.
+model_detections <- read_viame_csv(model_csv_path)
+truth_detections <- read_viame_csv(truth_csv_path)
+aligned_df <- align_counts(calculate_maxn(model_detections), calculate_maxn(truth_detections), by = c("video_id", "category_name"))
+
+# 3. Calculate binary metrics.
 binary_metrics <- calculate_binary_metrics(aligned_df)
-}
+print(binary_metrics)
+
+# Clean up.
+unlink(model_csv_path)
+unlink(truth_csv_path)
 }

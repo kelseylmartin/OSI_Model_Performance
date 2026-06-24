@@ -46,6 +46,16 @@ setGeneric("calculate_maxn", function(object, ...) {
 #'
 #' # Clean up the temporary file
 #' unlink(temp_csv_path)
+#'
+#' \dontrun{
+#' # For GFISHER survey, calculate MaxN using a file from the GFISHER folder
+#' gfisher_csv <- "Data/GFISHER/762301061_cam3_tracks.csv"
+#' detections <- read_viame_csv(gfisher_csv)
+#'
+#' # Calculate MaxN
+#' maxn_df <- calculate_maxn(detections)
+#' print(maxn_df)
+#' }
 setMethod("calculate_maxn", "OpticsDetections",
           function(object, group_cols = NULL) {
             

@@ -13,10 +13,11 @@ get_disagreement_report(aligned_df, ...)
 Get a Report of Disagreements
 }
 \examples{
-\dontrun{
-# For Tom & Michael's coral survey
-# Assuming 'aligned_df' is created from align_counts()
+# Example using Tom & Michael's coral survey data
+aligned_df <- dplyr::tibble(
+  video_id = "v1", category_name = "Acropora", model_count = 5, truth_count = 10
+)
 disagreement_report <- get_disagreement_report(aligned_df, 
 group_vars = c("video_id", "category_name"))
-}
+print(disagreement_report)
 }

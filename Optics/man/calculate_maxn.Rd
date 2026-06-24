@@ -29,38 +29,33 @@ observed in any single frame within each video. This is a standard metric
 for baited remote underwater video (BRUV) surveys.
 }
 \examples{
-# Create a sample OpticsDetections object
-sample_df <- dplyr::tibble(
-  video_id = c(rep("video1", 4), rep("video2", 3)),
-  frame_index = c(1, 1, 2, 2, 1, 1, 1),
-  category_name = c("FishA", "FishA", "FishA", "FishB", "FishA", "FishA", "FishA")
+# Example using a sample of GFISHER data to calculate MaxN.
+gfisher_csv_data <- c(
+  "1,video1,10,100,100,200,200,1,0.95,"Gadus morhua",1",
+  "1,video1,10,150,150,250,250,1,0.90,"Gadus morhua",1",
+  "2,video1,10,300,300,400,400,1,0.85,"Melanogrammus aeglefinus",1",
+  "1,video1,11,100,100,200,200,1,0.92,"Gadus morhua",1"
 )
-detections_obj <- OpticsDetections(
-  data = sample_df,
-  source_file = "dummy_file.csv",
-  ingest_format = "dummy"
-)
+temp_csv_path <- tempfile(fileext = ".csv")
+writeLines(c("# header 1", "# header 2", gfisher_csv_data), temp_csv_path)
 
-# Calculate MaxN for each video and species
-calculate_maxn(detections_obj)
+# Ingest the data
+detections_obj <- read_viame_csv(temp_csv_path)
+
+# Calculate MaxN
+maxn_df <- calculate_maxn(detections_obj)
+print(maxn_df)
+
+# Clean up the temporary file
+unlink(temp_csv_path)
 
 \dontrun{
-# For Erin's ice seal survey, calculate MaxN by camera view
-erin_csv_c <- system.file("extdata", 
-"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-detections_c <- read_viame_csv(erin_csv_c, video_id = "center")
+# For GFISHER survey, calculate MaxN using a file from the GFISHER folder
+gfisher_csv <- "Data/GFISHER/762301061_cam3_tracks.csv"
+detections <- read_viame_csv(gfisher_csv)
 
-erin_csv_l <- system.file("extdata", 
-"ice_seals_2025_fl223_L_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-detections_l <- read_viame_csv(erin_csv_l, video_id = "left")
-
-erin_csv_r <- system.file("extdata", 
-"ice_seals_2025_fl223_R_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-detections_r <- read_viame_csv(erin_csv_r, video_id = "right")
-
-all_detections <- rbind(detections_c@data, detections_l@data, detections_r@data)
-
-maxn <- calculate_maxn(all_detections, group_cols = "video_id")
+# Calculate MaxN
+maxn_df <- calculate_maxn(detections)
+print(maxn_df)
 }
-
 }

@@ -28,26 +28,28 @@ Calculates density by dividing a count by an area. This generic function
 dispatches to methods based on the class of the input object.
 }
 \examples{
-count_data <- dplyr::tibble(
-  site = c("A", "B"),
-  maxn = c(10, 25),
-  survey_area_m2 = c(5, 10)
+# Example for Tom & Michael's coral survey data.
+# Create a data frame with coral counts per site.
+coral_counts_df <- dplyr::tibble(
+  site = c("site1", "site1", "site2"),
+  taxon = c("Acropora", "Pocillopora", "Acropora"),
+  count = c(50, 25, 30),
+  survey_area_m2 = c(10, 10, 8)
 )
 
-# Using a fixed area
-calculate_density(count_data, count_col = maxn, area = 100)
+# Calculate density using a fixed area for all sites.
+density_fixed_area <- calculate_density(
+  coral_counts_df,
+  count_col = count,
+  area = 100
+)
+print(density_fixed_area)
 
-# Using a per-site area from a column
-calculate_density(count_data, count_col = maxn, area_col = survey_area_m2)
-
-\dontrun{
-# For Tom & Michael's coral survey
-# Assuming you have a data frame with counts per taxon
-coral_counts <- dplyr::tibble(
- taxon = c("Acropora", "Pocillopora"),
- count = c(50, 25)
- )
-# Calculate density with a fixed sampling area
-density <- calculate_density(coral_counts, count_col = count, area = 500)
-}
+# Calculate density using a per-site area from a column.
+density_per_site_area <- calculate_density(
+  coral_counts_df,
+  count_col = count,
+  area_col = survey_area_m2
+)
+print(density_per_site_area)
 }

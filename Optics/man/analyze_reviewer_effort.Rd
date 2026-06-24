@@ -13,16 +13,20 @@ analyze_reviewer_effort(raw_df, validated_df, ...)
 Analyze Reviewer Effort
 }
 \examples{
-\dontrun{
-# For Erin's ice seal survey
-erin_csv <- system.file("extdata", 
-"ice_seals_2025_fl223_C_rgb_irDetectionsTransposed_processed.csv", package = "Optics")
-raw_df <- read_viame_csv(erin_csv)@data
+# Example using Erin's ice seal data
+raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
+validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"harbor_seal",1")
+raw_csv_path <- tempfile(fileext = ".csv")
+validated_csv_path <- tempfile(fileext = ".csv")
+writeLines(c("# h1", "# h2", raw_csv_data), raw_csv_path)
+writeLines(c("# h1", "# h2", validated_csv_data), validated_csv_path)
 
-erin_truth_csv <- system.file("extdata", 
-"ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-validated_df <- read_viame_csv(erin_truth_csv)@data
+raw_df <- read_viame_csv(raw_csv_path)@data
+validated_df <- read_viame_csv(validated_csv_path)@data
 
 effort_analysis <- analyze_reviewer_effort(raw_df, validated_df)
-}
+print(effort_analysis)
+
+unlink(raw_csv_path)
+unlink(validated_csv_path)
 }
