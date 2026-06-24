@@ -59,30 +59,34 @@ print("Model Detections:")
 #> [1] "Model Detections:"
 print(model_detections_df)
 #> # A tibble: 8 × 11
-#>   video_id image_id annotation_id category_name     score frame_index model_name
-#>   <chr>    <chr>            <int> <chr>             <dbl>       <dbl> <chr>     
-#> 1 vid01    img01                1 Gadus morhua       0.95          10 Model A   
-#> 2 vid01    img01                2 Gadus morhua       0.85          10 Model A   
-#> 3 vid01    img01                3 Melanogrammus ae…  0.8           15 Model A   
-#> 4 vid01    img01                4 Gadus morhua       0.65          20 Model A   
-#> 5 vid01    img01                5 Pollachius virens  0.5           20 Model A   
-#> 6 vid01    img01                6 Gadus morhua       0.92          10 Model B   
-#> 7 vid01    img01                7 Melanogrammus ae…  0.75          15 Model B   
-#> 8 vid01    img01                8 Melanogrammus ae…  0.6           15 Model B   
-#> # ℹ 4 more variables: bbox_x <dbl>, bbox_y <dbl>, bbox_width <dbl>,
-#> #   bbox_height <dbl>
+#>   video_id image_id annotation_id category_name
+#>   <chr>    <chr>            <int> <chr>        
+#> 1 vid01    img01                1 Gadus morhua 
+#> 2 vid01    img01                2 Gadus morhua 
+#> 3 vid01    img01                3 Melanogrammu…
+#> 4 vid01    img01                4 Gadus morhua 
+#> 5 vid01    img01                5 Pollachius v…
+#> 6 vid01    img01                6 Gadus morhua 
+#> 7 vid01    img01                7 Melanogrammu…
+#> 8 vid01    img01                8 Melanogrammu…
+#> # ℹ 7 more variables: score <dbl>,
+#> #   frame_index <dbl>, model_name <chr>,
+#> #   bbox_x <dbl>, bbox_y <dbl>,
+#> #   bbox_width <dbl>, bbox_height <dbl>
 
 print("Truth Detections:")
 #> [1] "Truth Detections:"
 print(truth_detections_df)
 #> # A tibble: 4 × 10
-#>   video_id image_id annotation_id category_name  frame_index score bbox_x bbox_y
-#>   <chr>    <chr>            <int> <chr>                <dbl> <dbl>  <dbl>  <dbl>
-#> 1 vid01    img01                9 Gadus morhua            10     1      0      0
-#> 2 vid01    img01               10 Gadus morhua            10     1      0      0
-#> 3 vid01    img01               11 Gadus morhua            20     1      0      0
-#> 4 vid01    img01               12 Urophycis ten…          30     1      0      0
-#> # ℹ 2 more variables: bbox_width <dbl>, bbox_height <dbl>
+#>   video_id image_id annotation_id category_name
+#>   <chr>    <chr>            <int> <chr>        
+#> 1 vid01    img01                9 Gadus morhua 
+#> 2 vid01    img01               10 Gadus morhua 
+#> 3 vid01    img01               11 Gadus morhua 
+#> 4 vid01    img01               12 Urophycis te…
+#> # ℹ 6 more variables: frame_index <dbl>,
+#> #   score <dbl>, bbox_x <dbl>, bbox_y <dbl>,
+#> #   bbox_width <dbl>, bbox_height <dbl>
 ```
 
 ## 3. Summarizing Performance by Threshold
@@ -129,22 +133,26 @@ performance_summary <- bind_rows(perf_model_a, perf_model_b)
 
 print(performance_summary)
 #> # A tibble: 12 × 17
-#>       tp    fp    fn precision recall f1_score    tn accuracy   fpr   fnr
-#>    <dbl> <dbl> <int>     <dbl>  <dbl>    <dbl> <int>    <dbl> <dbl> <dbl>
-#>  1     1     2     1     0.333    0.5    0.4       0    0.25    1     0.5
-#>  2     1     1     1     0.5      0.5    0.5       1    0.5     0.5   0.5
-#>  3     1     1     1     0.5      0.5    0.5       1    0.5     0.5   0.5
-#>  4     1     1     1     0.5      0.5    0.5       1    0.5     0.5   0.5
-#>  5     1     0     1     1        0.5    0.667     2    0.75    0     0.5
-#>  6     0     0     2    NA        0     NA        NA   NA      NA    NA  
-#>  7     1     1     1     0.5      0.5    0.5       0    0.333   1     0.5
-#>  8     1     1     1     0.5      0.5    0.5       0    0.333   1     0.5
-#>  9     1     1     1     0.5      0.5    0.5       0    0.333   1     0.5
-#> 10     1     0     1     1        0.5    0.667     1    0.667   0     0.5
-#> 11     1     0     1     1        0.5    0.667     1    0.667   0     0.5
-#> 12     0     0     2    NA        0     NA        NA   NA      NA    NA  
-#> # ℹ 7 more variables: false_positive_ratio <dbl>, false_negative_ratio <dbl>,
-#> #   mcc_num <dbl>, mcc_den <dbl>, mcc <dbl>, threshold <dbl>, model_name <chr>
+#>       tp    fp    fn precision recall f1_score
+#>    <dbl> <dbl> <int>     <dbl>  <dbl>    <dbl>
+#>  1     1     2     1     0.333    0.5    0.4  
+#>  2     1     1     1     0.5      0.5    0.5  
+#>  3     1     1     1     0.5      0.5    0.5  
+#>  4     1     1     1     0.5      0.5    0.5  
+#>  5     1     0     1     1        0.5    0.667
+#>  6     0     0     2    NA        0     NA    
+#>  7     1     1     1     0.5      0.5    0.5  
+#>  8     1     1     1     0.5      0.5    0.5  
+#>  9     1     1     1     0.5      0.5    0.5  
+#> 10     1     0     1     1        0.5    0.667
+#> 11     1     0     1     1        0.5    0.667
+#> 12     0     0     2    NA        0     NA    
+#> # ℹ 11 more variables: tn <int>,
+#> #   accuracy <dbl>, fpr <dbl>, fnr <dbl>,
+#> #   false_positive_ratio <dbl>,
+#> #   false_negative_ratio <dbl>, mcc_num <dbl>,
+#> #   mcc_den <dbl>, mcc <dbl>, threshold <dbl>,
+#> #   model_name <chr>
 ```
 
 ## 4. Visualizing Performance
@@ -162,10 +170,12 @@ plot_performance_by_threshold(
   model_col = model_name,
   title = "Model Performance Comparison"
 )
-#> Warning: Removed 4 rows containing missing values or values outside the
-#> scale range (`geom_line()`).
-#> Warning: Removed 4 rows containing missing values or values outside the
-#> scale range (`geom_point()`).
+#> Warning: Removed 4 rows containing missing values or
+#> values outside the scale range
+#> (`geom_line()`).
+#> Warning: Removed 4 rows containing missing values or
+#> values outside the scale range
+#> (`geom_point()`).
 ```
 
 ![Precision, Recall, and F1-Score for Model A and Model B across different confidence thresholds.](figure/plot-performance-1.png)
