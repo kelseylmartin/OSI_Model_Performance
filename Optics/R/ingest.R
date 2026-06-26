@@ -33,7 +33,7 @@ setClass("OpticsDetections",
 )
 
 #' Validity check for OpticsDetections objects
-#'
+#' @name OpticsDetections-validity
 #' @rdname OpticsDetections-class
 #' @importFrom dplyr all_of
 setValidity("OpticsDetections", function(object) {
@@ -212,36 +212,50 @@ read_kwcoco <- function(file_path) {
 #' Read and Standardize a VIAME-style CSV File
 #'
 #' Ingests a CSV file from VIAME and wraps the standardized data in an
-#' `OpticsDetections` S4 object.
+#' `OpticsDetections` S4 object. This function can handle two identifier schemas:
+#' 'classic' (deriving IDs from the filename and frame number) and 'image_path'
+#' (deriving IDs from a full image path in column 2).
 #'
 #' @param file_path The full path to the VIAME CSV file.
 #' @param video_id An optional character string to assign as the video ID.
-#'   If `NULL`, the ID is derived from the input file's name.
+#'   If `NULL` (default), the ID is derived based on the `id_schema`. This
+#'   parameter is ignored when `id_schema` is "image_path".
+#' @param id_schema The schema for generating `video_id` and `image_id`.
+#'   - `"classic"`: `video_id` is from the filename, `image_id` is a
+#'     combination of `video_id` and frame number.
+#'   - `"image_path"`: `video_id` and `image_id` are parsed from the explicit
+#'     image path provided in the second column of the CSV.
 #' @return An `OpticsDetections` object. If the file is empty or unreadable,
 #'   the object's `data` slot will be an empty tibble.
 #' @export
 #' @importFrom readr read_csv cols
-#' @importFrom dplyr tibble rename mutate select across
+#' @importFrom dplyr tibble rename mutate select across any_of
 #' @importFrom tools file_path_sans_ext
+#' @importFrom stringr str_extract
 #' @examples
-#' # Example with a temporary VIAME CSV file based on Erin's ice seal data.
-#' # This simulates reading a processed detections file.
-#' erin_csv_data <- c(
-#'   "1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1",
-#'   "2,video1,15,150,150,250,250,1,0.90,"bearded_seal",1"
+#' # Example with a temporary VIAME CSV file (classic schema)
+#' classic_csv_data <- c(
+#'   "1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1",
+#'   "2,video1,15,150,150,250,250,1,0.90,\"bearded_seal\",1"
 #' )
-#' temp_csv_path <- tempfile(fileext = ".csv")
-#' # Write the data to a temp file, making sure to add the two header lines
-#' # that read_viame_csv expects to skip.
-#' writeLines(c("# 1: Track-id ...", "# 2: Video or Image ...", erin_csv_data), temp_csv_path)
+#' temp_classic_path <- tempfile(fileext = ".csv")
+#' writeLines(c("# header 1", "# header 2", classic_csv_data), temp_classic_path)
+#' detections_classic <- read_viame_csv(temp_classic_path, video_id = "my_video")
+#' print(detections_classic)
+#' unlink(temp_classic_path)
 #'
-#' # Ingest the data
-#' detections_obj <- read_viame_csv(temp_csv_path, video_id = "erin_ice_seals")
-#' print(detections_obj)
-#'
-#' # Clean up the temporary file
-#' unlink(temp_csv_path)
-read_viame_csv <- function(file_path, video_id = NULL) {
+#' # Example with image path schema
+#' image_path_csv_data <- c(
+#'"1,C:/data/ice_seals_2025_fl223_L_img.tif,274,535,200,540,205,1,1,animal,1"
+#' )
+#' temp_image_path <- tempfile(fileext = ".csv")
+#' writeLines(c("# header 1", "# header 2", image_path_csv_data), temp_image_path)
+#' detections_img <- read_viame_csv(temp_image_path, id_schema = "image_path")
+#' print(detections_img)
+#' unlink(temp_image_path)
+read_viame_csv <- function(file_path, video_id = NULL, id_schema = c("classic", "image_path")) {
+
+  id_schema <- match.arg(id_schema)
 
   # --- 1. Input Validation ---
   if (!file.exists(file_path)) {
@@ -251,13 +265,13 @@ read_viame_csv <- function(file_path, video_id = NULL) {
 
   # --- 2. Read Data ---
   raw_df <- tryCatch({
-    readr::read_csv(
+    suppressWarnings(readr::read_csv(
       file_path,
       skip = 2,
       col_names = FALSE,
       col_types = readr::cols(.default = "c"),
       show_col_types = FALSE
-    )
+    ))
   }, error = function(e) {
     warning("Failed to read CSV file: ", file_path, " - Error: ", e$message)
     return(NULL)
@@ -275,14 +289,27 @@ read_viame_csv <- function(file_path, video_id = NULL) {
   )
   names(raw_df)[1:min(ncol(raw_df), length(viame_names))] <- viame_names[1:min(ncol(raw_df), length(viame_names))]
 
-  if (is.null(video_id)) {
-    video_id <- tools::file_path_sans_ext(basename(file_path))
+
+  if (id_schema == "classic") {
+    if (is.null(video_id)) {
+      video_id <- tools::file_path_sans_ext(basename(file_path))
+    }
+    standardized_df <- raw_df %>%
+      dplyr::mutate(
+        video_id = !!video_id,
+        image_id = paste0(video_id, "_frame_", .data$UniqFrame)
+      )
+  } else { # id_schema == "image_path"
+    standardized_df <- raw_df %>%
+      dplyr::mutate(
+        video_id = stringr::str_extract(basename(.data$VidIdent), "ice_seals_\\d{4}_fl\\d+"),
+        image_id = basename(.data$VidIdent)
+      )
   }
 
-  standardized_df <- raw_df %>%
+  # --- 4. Common Transformation Logic ---
+  standardized_df <- standardized_df %>%
     dplyr::mutate(
-      video_id = !!video_id,
-      image_id = paste0(video_id, "_frame_", .data$UniqFrame),
       bbox_width = as.numeric(.data$BR_X) - as.numeric(.data$TL_X),
       bbox_height = as.numeric(.data$BR_Y) - as.numeric(.data$TL_Y)
     ) %>%
@@ -317,3 +344,54 @@ read_viame_csv <- function(file_path, video_id = NULL) {
 
   return(OpticsDetections(standardized_df, file_path, "viame_csv"))
 }
+
+#' Read and Transform a Wide-Format MaxN CSV File
+#'
+#' Ingests a CSV file containing species counts (like MaxN) in a wide format,
+#' where columns represent species and rows represent observations, and
+#' transforms it into a long-format tibble suitable for alignment.
+#'
+#' @param file_path The full path to the wide-format CSV file.
+#' @param ... Additional arguments passed to methods.
+#' @return A `tibble` in long format with columns for the video identifier,
+#'   `category_name`, and `truth_count`.
+#' @export
+#' @rdname read_wide_maxn
+setGeneric("read_wide_maxn", function(file_path, ...) {
+  standardGeneric("read_wide_maxn")
+})
+
+#' @param video_id_col The unquoted name of the column to be used as the
+#'   video/observation identifier. Defaults to `REFERENCE`.
+#' @param pivot_cols A tidyselect expression for the columns to pivot from wide
+#'   to long format. Defaults to all columns except `LAB` and `REFERENCE`.
+#'
+#' @rdname read_wide_maxn
+#' @export
+#' @importFrom utils read.csv
+#' @importFrom tidyr pivot_longer
+#' @importFrom dplyr rename filter select any_of
+setMethod("read_wide_maxn", "character",
+  function(file_path, video_id_col = REFERENCE, pivot_cols = -dplyr::any_of(c("LAB", "REFERENCE"))) {
+
+    if (!file.exists(file_path)) {
+      stop("File does not exist: ", file_path)
+    }
+
+    data <- utils::read.csv(file_path, check.names = FALSE)
+
+    long_data <- data %>%
+      tidyr::pivot_longer(
+        cols = {{ pivot_cols }},
+        names_to = "category_name",
+        values_to = "truth_count"
+      ) %>%
+      dplyr::rename(video_id = {{ video_id_col }}) %>%
+      dplyr::filter(.data$truth_count > 0) %>%
+      dplyr::select(.data$video_id, .data$category_name, .data$truth_count)
+
+    # Ensure video_id is character for joining
+    long_data$video_id <- as.character(long_data$video_id)
+
+    return(long_data)
+  })

@@ -251,8 +251,8 @@ setMethod("plot_confusion_matrix", "data.frame",
 #' @rdname plot_roc_curve
 #' @examples
 #' # Example using Abi's AUV data.
-#' raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"sea_star",1")
-#' validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"sea_star",1")
+#' raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"sea_star\",1")
+#' validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"sea_star\",1")
 #' raw_csv_path <- tempfile(fileext = ".csv")
 #' validated_csv_path <- tempfile(fileext = ".csv")
 #' writeLines(c("# h1", "# h2", raw_csv_data), raw_csv_path)

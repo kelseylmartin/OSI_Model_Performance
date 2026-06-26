@@ -35,6 +35,43 @@ test_that("calculate_maxn() works with correct inputs", {
   #' @description Test that calculate_maxn() works with grouping variables.
   maxn_grouped <- calculate_maxn(maxn_obj, group_cols = "model_name")
   expect_true("model_name" %in% names(maxn_grouped))
+  
+  #' @description Test that calculate_maxn() works directly with a data.frame.
+  maxn_df_results <- calculate_maxn(maxn_df)
+  expect_equal(nrow(maxn_df_results), 3)
+  expect_equal(maxn_df_results$maxn[maxn_df_results$video_id == "v1" & maxn_df_results$category_name == "A"], 2)
+  expect_equal(maxn_df_results$maxn[maxn_df_results$video_id == "v2" & maxn_df_results$category_name == "A"], 3)
+})
+
+## Edge handling ----
+test_that("calculate_maxn() handles edge cases correctly", {
+  #' @description Test that calculate_maxn() handles empty data frames.
+  empty_df <- dplyr::tibble(
+    video_id = character(), frame_index = integer(), category_name = character()
+  )
+  expect_equal(
+    nrow(calculate_maxn(empty_df)),
+    0
+  )
+  
+  #' @description Test that calculate_maxn() handles empty OpticsDetections objects.
+  empty_obj <- OpticsDetections(
+    data = empty_df, source_file = "test.csv", ingest_format = "test"
+  )
+  expect_equal(
+    nrow(calculate_maxn(empty_obj)),
+    0
+  )
+})
+
+## Error handling ----
+test_that("calculate_maxn() returns correct error messages", {
+  #' @description Test that calculate_maxn() errors when required columns are missing.
+  incomplete_df <- dplyr::select(maxn_df, -video_id)
+  expect_error(
+    calculate_maxn(incomplete_df),
+    "Input data frame must contain columns: video_id, frame_index, category_name"
+  )
 })
 
 # {{{ calculate_frame_abundance }}} ----

@@ -4,13 +4,26 @@
 \alias{read_viame_csv}
 \title{Read and Standardize a VIAME-style CSV File}
 \usage{
-read_viame_csv(file_path, video_id = NULL)
+read_viame_csv(
+  file_path,
+  video_id = NULL,
+  id_schema = c("classic", "image_path")
+)
 }
 \arguments{
 \item{file_path}{The full path to the VIAME CSV file.}
 
 \item{video_id}{An optional character string to assign as the video ID.
-If \code{NULL}, the ID is derived from the input file's name.}
+If \code{NULL} (default), the ID is derived based on the \code{id_schema}. This
+parameter is ignored when \code{id_schema} is "image_path".}
+
+\item{id_schema}{The schema for generating \code{video_id} and \code{image_id}.
+\itemize{
+\item \code{"classic"}: \code{video_id} is from the filename, \code{image_id} is a
+combination of \code{video_id} and frame number.
+\item \code{"image_path"}: \code{video_id} and \code{image_id} are parsed from the explicit
+image path provided in the second column of the CSV.
+}}
 }
 \value{
 An \code{OpticsDetections} object. If the file is empty or unreadable,
@@ -18,24 +31,29 @@ the object's \code{data} slot will be an empty tibble.
 }
 \description{
 Ingests a CSV file from VIAME and wraps the standardized data in an
-\code{OpticsDetections} S4 object.
+\code{OpticsDetections} S4 object. This function can handle two identifier schemas:
+'classic' (deriving IDs from the filename and frame number) and 'image_path'
+(deriving IDs from a full image path in column 2).
 }
 \examples{
-# Example with a temporary VIAME CSV file based on Erin's ice seal data.
-# This simulates reading a processed detections file.
-erin_csv_data <- c(
-  "1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1",
-  "2,video1,15,150,150,250,250,1,0.90,"bearded_seal",1"
+# Example with a temporary VIAME CSV file (classic schema)
+classic_csv_data <- c(
+  "1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1",
+  "2,video1,15,150,150,250,250,1,0.90,\"bearded_seal\",1"
 )
-temp_csv_path <- tempfile(fileext = ".csv")
-# Write the data to a temp file, making sure to add the two header lines
-# that read_viame_csv expects to skip.
-writeLines(c("# 1: Track-id ...", "# 2: Video or Image ...", erin_csv_data), temp_csv_path)
+temp_classic_path <- tempfile(fileext = ".csv")
+writeLines(c("# header 1", "# header 2", classic_csv_data), temp_classic_path)
+detections_classic <- read_viame_csv(temp_classic_path, video_id = "my_video")
+print(detections_classic)
+unlink(temp_classic_path)
 
-# Ingest the data
-detections_obj <- read_viame_csv(temp_csv_path, video_id = "erin_ice_seals")
-print(detections_obj)
-
-# Clean up the temporary file
-unlink(temp_csv_path)
+# Example with image path schema
+image_path_csv_data <- c(
+"1,C:/data/ice_seals_2025_fl223_L_img.tif,274,535,200,540,205,1,1,animal,1"
+)
+temp_image_path <- tempfile(fileext = ".csv")
+writeLines(c("# header 1", "# header 2", image_path_csv_data), temp_image_path)
+detections_img <- read_viame_csv(temp_image_path, id_schema = "image_path")
+print(detections_img)
+unlink(temp_image_path)
 }

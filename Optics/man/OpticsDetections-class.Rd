@@ -3,6 +3,7 @@
 \docType{class}
 \name{OpticsDetections-class}
 \alias{OpticsDetections-class}
+\alias{OpticsDetections-validity}
 \title{An S4 class to represent standardized detection data.}
 \description{
 The \code{OpticsDetections} class serves as a container for object detection data

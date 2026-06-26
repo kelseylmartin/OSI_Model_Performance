@@ -29,6 +29,7 @@ Imports:
     tools
 Collate: 
     'align.R'
+    'ice_seals.R'
     'ingest.R'
     'metrics.R'
     'performance.R'

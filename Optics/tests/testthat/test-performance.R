@@ -96,3 +96,112 @@ test_that("classify_detections() returns correct error messages", {
     "must exist in both data frames"
   )
 })
+
+# {{{ get_disagreement_report }}} ----
+## Setup ----
+disagreement_df <- dplyr::tibble(
+  site = c("A", "A", "B", "C", "C", "D"),
+  species = c("cod", "haddock", "cod", "pollock", "cusk", "cod"),
+  model_count = c(1, 1, 0, 5, 0, 1),
+  truth_count = c(0, 1, 1, 5, 1, 0)
+)
+# Summary of disagreements:
+# (A, cod): 1 FP
+# (B, cod): 1 FN
+# (C, cusk): 1 FN
+# (D, cod): 1 FP (total disagreement 2 for species cod)
+
+## IO correctness ----
+test_that("get_disagreement_report() works with correct inputs", {
+  #' @description Test that get_disagreement_report() correctly summarizes disagreements.
+  report <- get_disagreement_report(disagreement_df, group_vars = c("site", "species"))
+  
+  # remove rows with no disagreement
+  report <- report[report$total_disagreement > 0, ]
+  
+  expect_equal(nrow(report), 4)
+  expect_true(all(report$total_disagreement == 1))
+  expect_equal(sum(report$false_positives), 2)
+  expect_equal(sum(report$false_negatives), 2)
+  
+  #' @description Test that get_disagreement_report() respects the top_n parameter.
+  report_top2 <- get_disagreement_report(disagreement_df, group_vars = c("site", "species"), top_n = 2)
+  report_top2 <- report_top2[report_top2$total_disagreement > 0, ]
+  expect_equal(nrow(report_top2), 2)
+})
+
+# {{{ analyze_reviewer_effort }}} ----
+## Setup ----
+raw_effort_df <- dplyr::tibble(
+  TrackID = c(1, 2, 3, 4, 5),
+  Species = c("cod", "cod", "haddock", "cod", "pollock"),
+  video_id = "v1"
+)
+
+validated_effort_df <- dplyr::tibble(
+  TrackID = c(1, 3, 5, 6),
+  Species = c("cod", "pollock", "pollock", "cusk"),
+  video_id = "v1"
+)
+
+## IO correctness ----
+test_that("analyze_reviewer_effort() works with correct inputs", {
+  #' @description Test that analyze_reviewer_effort() correctly analyzes effort metrics.
+  effort_summary <- analyze_reviewer_effort(raw_effort_df, validated_effort_df, group_vars = "video_id")
+  
+  expect_equal(nrow(effort_summary), 1)
+  expect_equal(effort_summary$n_reclassified, 1)
+  expect_equal(effort_summary$n_raw, 5)
+  expect_equal(effort_summary$n_validated, 4)
+  expect_equal(effort_summary$n_deleted, 1) # 5 raw - 4 validated
+  expect_equal(effort_summary$avg_raw_per_validated, 5 / 4)
+})
+
+## Error handling ----
+test_that("analyze_reviewer_effort() returns correct error messages", {
+  #' @description Test that analyze_reviewer_effort() errors if required columns are missing.
+  expect_error(
+    analyze_reviewer_effort(dplyr::select(raw_effort_df, -TrackID), validated_effort_df),
+    "Both data frames must contain 'TrackID' and 'Species' columns."
+  )
+  
+  #' @description Test that analyze_reviewer_effort() errors if group_vars are missing.
+  expect_error(
+    analyze_reviewer_effort(raw_effort_df, validated_effort_df, group_vars = "missing_col"),
+    "All group_vars must be column names in both raw_df and validated_df."
+  )
+})
+
+# {{{ calculate_confusion_matrix }}} ----
+## Setup ----
+conf_matrix_df <- dplyr::tibble(
+  video_id = "v1",
+  category_name = c("cod", "haddock", "pollock", "cusk"),
+  model_count = c(1, 1, 0, 0),
+  truth_count = c(1, 0, 1, 1)
+)
+
+## IO correctness ----
+test_that("calculate_confusion_matrix() works with correct inputs", {
+  #' @description Test that the fixed calculate_confusion_matrix() correctly calculates the matrix.
+  conf_matrix <- calculate_confusion_matrix(
+    conf_matrix_df, 
+    group_vars = "video_id", 
+    species_col = category_name
+  )
+  
+  # Expected: 1 TP (cod), 1 FP (haddock), 2 FN (pollock, cusk)
+  expect_equal(nrow(conf_matrix), 4)
+  
+  tp_row <- conf_matrix[conf_matrix$Truth == "cod",]
+  expect_equal(tp_row$Prediction, "cod")
+  expect_equal(tp_row$n, 1)
+  
+  fp_row <- conf_matrix[conf_matrix$Truth == "FP (No Truth)",]
+  expect_equal(fp_row$Prediction, "haddock")
+  expect_equal(fp_row$n, 1)
+  
+  fn_rows <- conf_matrix[conf_matrix$Prediction == "FN (No Prediction)",]
+  expect_equal(nrow(fn_rows), 2)
+  expect_true(all(c("pollock", "cusk") %in% fn_rows$Truth))
+})

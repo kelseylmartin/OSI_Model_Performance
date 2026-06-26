@@ -20,3 +20,28 @@ calculate_confusion_matrix(aligned_df, ...)
 The rest of the functions are utilities that operate on generic data.frames.
 They are converted to S4 generics for consistency.
 }
+\examples{
+# Example using Abi's AUV data
+model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"sea_star\",1")
+truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"sea_anemone\",1")
+model_csv_path <- tempfile(fileext = ".csv")
+truth_csv_path <- tempfile(fileext = ".csv")
+writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
+writeLines(c("# h1", "# h2", truth_csv_data), truth_csv_path)
+
+model_detections <- read_viame_csv(model_csv_path)
+truth_detections <- read_viame_csv(truth_csv_path)
+
+aligned_df <- align_counts(
+ calculate_maxn(model_detections), 
+ calculate_maxn(truth_detections),
+ by = c("video_id", "category_name")
+)
+
+conf_matrix <- calculate_confusion_matrix(aligned_df, 
+group_vars = c("video_id"), species_col = category_name)
+print(conf_matrix)
+
+unlink(model_csv_path)
+unlink(truth_csv_path)
+}

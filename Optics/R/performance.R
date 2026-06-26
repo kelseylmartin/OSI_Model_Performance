@@ -242,8 +242,8 @@ setMethod("classify_detections",
 #' @export
 #' @examples
 #' # Example using Abi's AUV data
-#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"sea_star",1")
-#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"sea_anemone",1")
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"sea_star\",1")
+#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"sea_anemone\",1")
 #' model_csv_path <- tempfile(fileext = ".csv")
 #' truth_csv_path <- tempfile(fileext = ".csv")
 #' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
@@ -268,18 +268,33 @@ setGeneric("calculate_confusion_matrix", function(aligned_df, ...) standardGener
 #' @rdname calculate_confusion_matrix
 #' @export
 setMethod("calculate_confusion_matrix", "data.frame", function(aligned_df, group_vars, species_col = Species, model_col = model_count, truth_col = truth_count) {
-  model_predictions <- aligned_df %>%
-    dplyr::filter({{ model_col }} > 0) %>%
-    dplyr::select(!!!rlang::syms(group_vars), Prediction = {{ species_col }})
-  
-  manual_annotations <- aligned_df %>%
-    dplyr::filter({{ truth_col }} > 0) %>%
-    dplyr::select(!!!rlang::syms(group_vars), Truth = {{ species_col }})
-  
-  dplyr::left_join(manual_annotations, model_predictions, by = group_vars, relationship = "many-to-many") %>%
-    dplyr::mutate(Prediction = ifelse(is.na(Prediction), "FN (No Prediction)", Prediction)) %>%
-    dplyr::group_by(Truth, Prediction) %>%
-    dplyr::summarize(n = dplyr::n(), .groups = 'drop')
+
+  all_comparisons <- aligned_df %>%
+    dplyr::mutate(
+      model_present = {{ model_col }} > 0,
+      truth_present = {{ truth_col }} > 0
+    )
+
+  # True Positives: present in both
+  tps <- all_comparisons %>%
+    dplyr::filter(.data$model_present & .data$truth_present) %>%
+    dplyr::select(Truth = {{ species_col }}, Prediction = {{ species_col }})
+
+  # False Negatives: present in truth, not in model
+  fns <- all_comparisons %>%
+    dplyr::filter(.data$truth_present & !.data$model_present) %>%
+    dplyr::select(Truth = {{ species_col }}) %>%
+    dplyr::mutate(Prediction = "FN (No Prediction)")
+
+  # False Positives: present in model, not in truth
+  fps <- all_comparisons %>%
+    dplyr::filter(.data$model_present & !.data$truth_present) %>%
+    dplyr::select(Prediction = {{ species_col }}) %>%
+    dplyr::mutate(Truth = "FP (No Truth)")
+
+  dplyr::bind_rows(tps, fns, fps) %>%
+    dplyr::group_by(.data$Truth, .data$Prediction) %>%
+    dplyr::summarise(n = dplyr::n(), .groups = "drop")
 })
 
 #' Analyze Reviewer Effort

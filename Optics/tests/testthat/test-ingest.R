@@ -99,6 +99,33 @@ test_that("read_viame_csv() works with correct inputs", {
   expect_equal(result_data$score, 0.98)
 })
 
+test_that("read_viame_csv() works with project VIAME CSV", {
+  #' @description Test that read_viame_csv() correctly parses a real project data file.
+  # This test uses a real data file from inst/extdata
+  real_csv_path <- system.file("extdata", "2024-NCD-017_tracks.csv", package = "Optics")
+  
+  # The file must exist for the test to run
+  if (real_csv_path == "") {
+    skip("Test data file '2024-NCD-017_tracks.csv' not found.")
+  }
+  
+  result_obj <- read_viame_csv(real_csv_path)
+  
+  expect_s4_class(result_obj, "OpticsDetections")
+  
+  result_data <- result_obj@data
+  expect_true(is.data.frame(result_data))
+  expect_gt(nrow(result_data), 0) # Should have rows
+  
+  # Check column types
+  expect_type(result_data$video_id, "character")
+  expect_type(result_data$frame_index, "double") # readr parses as double
+  expect_type(result_data$category_name, "character")
+  expect_type(result_data$score, "double")
+  expect_type(result_data$bbox_x, "double")
+  
+})
+
 ## Edge handling ----
 test_that("read_viame_csv() returns correct outputs for edge cases", {
   #' @description Test that read_viame_csv() returns an empty object for an empty CSV file.
@@ -119,4 +146,32 @@ test_that("read_viame_csv() returns correct warnings", {
     object = read_viame_csv(non_existent_path),
     regexp = "File does not exist"
   )
+})
+
+test_that("read_viame_csv() warns on corrupted data", {
+  #' @description Test that read_viame_csv() warns when parsing a malformed CSV file.
+  
+  # Create a corrupted CSV file
+  corrupted_content <- c(
+    "# 1: Track-id",
+    "# 2: Video or Image Identifier",
+    "1,video_a.mp4,10,not-a-number,200,150,250,0.98,Gadus morhua,1.0"
+  )
+  corrupted_csv_path <- tempfile(fileext = ".csv")
+  writeLines(corrupted_content, corrupted_csv_path)
+  
+  # Expect a warning because of the parsing failure
+  expect_warning(
+    result_obj <- read_viame_csv(corrupted_csv_path),
+    regexp = "NAs introduced by coercion"
+  )
+  
+  # The resulting object should be empty but valid
+  expect_s4_class(result_obj, "OpticsDetections")
+  expect_equal(nrow(result_obj@data), 1)
+  
+  # Check that the columns that couldn't be parsed are NA
+  expect_true(is.na(result_obj@data$bbox_x))
+  
+  unlink(corrupted_csv_path)
 })
