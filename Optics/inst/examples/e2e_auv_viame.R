@@ -72,20 +72,18 @@ model_a_viame <- read_viame_csv(viame_tmp, video_id = "AUV_demo")
 cat("Rows from read_viame_csv() demo:", nrow(model_a_viame@data), "\n\n")
 
 # --- 4. Core counting functions ---
-model_a_maxn <- calculate_maxn(model_a)
-model_b_maxn <- calculate_maxn(model_b)
-truth_maxn <- calculate_maxn(truth)
-
 model_a_frame_abundance <- calculate_frame_abundance(model_a)
-cat("MaxN rows (model A):", nrow(model_a_maxn), "\n")
+model_b_frame_abundance <- calculate_frame_abundance(model_b)
+truth_frame_abundance <- calculate_frame_abundance(truth)
+
 cat("Frame abundance rows (model A):", nrow(model_a_frame_abundance), "\n\n")
 
 # --- 5. Demonstrate read_wide_maxn() using AUV-derived truth counts ---
 truth_wide_tmp <- tempfile(fileext = ".csv")
-truth_wide <- truth_maxn %>%
+truth_wide <- truth_frame_abundance %>%
   group_by(video_id, category_name) %>%
-  summarise(maxn = sum(maxn), .groups = "drop") %>%
-  pivot_wider(names_from = category_name, values_from = maxn, values_fill = 0) %>%
+  summarise(truth_count = sum(abundance), .groups = "drop") %>%
+  pivot_wider(names_from = category_name, values_from = truth_count, values_fill = 0) %>%
   rename(REFERENCE = video_id)
 
 write.csv(truth_wide, truth_wide_tmp, row.names = FALSE)
@@ -93,8 +91,20 @@ truth_from_wide <- read_wide_maxn(truth_wide_tmp, video_id_col = REFERENCE)
 cat("Rows from read_wide_maxn() demo:", nrow(truth_from_wide), "\n\n")
 
 # --- 6. Align counts and compute metrics ---
-aligned_a <- align_counts(model_a_maxn, truth_maxn, by = c("video_id", "category_name"))
-aligned_b <- align_counts(model_b_maxn, truth_maxn, by = c("video_id", "category_name"))
+aligned_a <- align_counts(
+  model_a_frame_abundance,
+  truth_frame_abundance,
+  by = c("video_id", "frame_index", "category_name"),
+  model_col = abundance,
+  truth_col = abundance
+)
+aligned_b <- align_counts(
+  model_b_frame_abundance,
+  truth_frame_abundance,
+  by = c("video_id", "frame_index", "category_name"),
+  model_col = abundance,
+  truth_col = abundance
+)
 
 aligned_a <- aligned_a %>% mutate(model_name = "model_a")
 aligned_b <- aligned_b %>% mutate(model_name = "model_b")
@@ -105,8 +115,8 @@ aligned_a_density <- calculate_density(aligned_a, count_col = model_count, area 
 
 # calculate_binary_metrics() demo (single and model-comparison)
 all_groups <- bind_rows(
-  distinct(aligned_a, video_id, category_name),
-  distinct(aligned_b, video_id, category_name)
+  distinct(aligned_a, video_id, frame_index, category_name),
+  distinct(aligned_b, video_id, frame_index, category_name)
 )
 total_comparisons <- nrow(distinct(all_groups))
 
@@ -183,13 +193,13 @@ print(reviewer_effort)
 # --- 9. Confusion and disagreement outputs ---
 confusion_df <- calculate_confusion_matrix(
   aligned_a,
-  group_vars = "video_id",
+  group_vars = c("video_id", "frame_index"),
   species_col = category_name
 )
 
 disagreement_report <- get_disagreement_report(
   aligned_a,
-  group_vars = c("video_id", "category_name")
+  group_vars = c("video_id", "frame_index", "category_name")
 )
 
 # analyze_performance_drivers() expects column named Species
