@@ -7,30 +7,28 @@
 # - ground truth: file name containing "groundtruth"
 #
 # For model-comparison examples, this script assumes two detections-like model
-# inputs. If only one exists, it creates a second in-memory variant.
+# input files.
 
 library(Optics)
 library(dplyr)
 library(tidyr)
 
-# --- 1. Locate AUV files in package extdata ---
-extdata_dir <- system.file("extdata", package = "Optics")
-auv_files <- list.files(extdata_dir, pattern = "^AUV_viame_test", full.names = TRUE)
+# --- 1. Define your data folder and file paths ---
+# Update this path to the folder where your AUV files are stored.
+data_dir <- "/path/to/your/data/folder"
 
-model_files <- auv_files[grepl("detections", basename(auv_files), ignore.case = TRUE)]
-truth_files <- auv_files[grepl("groundtruth", basename(auv_files), ignore.case = TRUE)]
+# Required files:
+# - one ground truth file (manually corrected)
+# - two model output files for model-comparison examples
+truth_path <- file.path(data_dir, "AUV_viame_test_groundtruth.coco.json")
+model_path_a <- file.path(data_dir, "AUV_viame_test_detections_model_a.coco.json")
+model_path_b <- file.path(data_dir, "AUV_viame_test_detections_model_b.coco.json")
 
-if (length(model_files) < 1) {
-  stop("No AUV detections file found in inst/extdata.")
+required_files <- c(model_path_a, model_path_b, truth_path)
+missing_files <- required_files[!file.exists(required_files)]
+if (length(missing_files) > 0) {
+  stop("Missing required files:\n", paste(missing_files, collapse = "\n"))
 }
-if (length(truth_files) < 1) {
-  stop("No AUV groundtruth file found in inst/extdata.")
-}
-
-# Use first truth file. For model comparisons, prefer two model files if present.
-truth_path <- truth_files[[1]]
-model_path_a <- model_files[[1]]
-model_path_b <- if (length(model_files) >= 2) model_files[[2]] else model_files[[1]]
 
 cat("Model A file:", model_path_a, "\n")
 cat("Model B file:", model_path_b, "\n")
@@ -40,22 +38,7 @@ cat("Ground truth file:", truth_path, "\n\n")
 model_a <- read_kwcoco(model_path_a)
 truth <- read_kwcoco(truth_path)
 
-# If only one detections file exists, make a second model variant in memory.
-if (identical(model_path_a, model_path_b)) {
-  model_b_df <- model_a@data %>%
-    mutate(
-      score = pmax(0, pmin(1, score * 0.92))
-    ) %>%
-    filter(!is.na(score) & score >= 0.35)
-
-  model_b <- OpticsDetections(
-    data = model_b_df,
-    source_file = paste0(model_path_b, " (in-memory model B variant)"),
-    ingest_format = "kwcoco"
-  )
-} else {
-  model_b <- read_kwcoco(model_path_b)
-}
+model_b <- read_kwcoco(model_path_b)
 
 cat("Rows - model A:", nrow(model_a@data), "\n")
 cat("Rows - model B:", nrow(model_b@data), "\n")
