@@ -13,20 +13,26 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.0.0
 VignetteBuilder: knitr
-Suggests: 
-    testthat (>= 3.0.0),
-    knitr,
-    rmarkdown
+Suggests:
+   ggpubr,
+   knitr,
+   PRROC,
+   pROC,
+   rmarkdown,
+   testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Imports: 
-    dplyr,
-    ggpubr,
-    jsonlite,
-    pROC,
-    PRROC,
-    readr,
-    tidyr,
-    tools
+   dplyr,
+   ggplot2,
+   jsonlite,
+   magrittr,
+   methods,
+   purrr,
+   readr,
+   rlang,
+   stringr,
+   tidyr,
+   tools
 Collate: 
     'align.R'
     'ice_seals.R'

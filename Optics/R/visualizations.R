@@ -40,6 +40,9 @@ setMethod("plot_counts_scatterplot", "data.frame",
             if (!all(c("model_count", "truth_count") %in% names(aligned_df))) {
               stop("Input data frame must contain 'model_count' and 'truth_count' columns.")
             }
+            if (!requireNamespace("ggpubr", quietly = TRUE)) {
+              stop("Package 'ggpubr' is required for plot_counts_scatterplot(). Please install it.", call. = FALSE)
+            }
             model_col_quo <- rlang::enquo(model_col)
             p <- ggplot2::ggplot(aligned_df, ggplot2::aes(x = .data$truth_count, y = .data$model_count)) +
               ggplot2::geom_point(alpha = 0.6, shape = 16) +
@@ -91,6 +94,9 @@ setMethod("plot_pr_curve", "data.frame",
             # ... implementation from original function ...
             if (!all(c("score", "status") %in% names(detection_df))) {
               stop("Input data frame must contain 'score' and 'status' columns.")
+            }
+            if (!requireNamespace("PRROC", quietly = TRUE)) {
+              stop("Package 'PRROC' is required for plot_pr_curve(). Please install it.", call. = FALSE)
             }
             model_col_quo <- rlang::enquo(model_col)
             if (rlang::quo_is_null(model_col_quo)) {
@@ -280,6 +286,9 @@ setMethod("plot_roc_curve", "data.frame",
             # ... implementation from original function ...
             if (!all(c("score", "status") %in% names(detection_df))) {
               stop("Input data frame must contain 'score' and 'status' columns.")
+            }
+            if (!requireNamespace("pROC", quietly = TRUE)) {
+              stop("Package 'pROC' is required for plot_roc_curve(). Please install it.", call. = FALSE)
             }
             model_col_quo <- rlang::enquo(model_col)
             if (rlang::quo_is_null(model_col_quo)) {
