@@ -28,12 +28,19 @@ extract_deployment_id <- function(path) {
   sub("_tracks.*$", "", basename(path))
 }
 
+normalize_reference_id <- function(x) {
+  x %>%
+    toupper() %>%
+    str_replace("^(\\d{4})-(N(?:CD|CO)-\\d{3})$", "\\1_\\2")
+}
+
 # --- 2. Stitch all video-level model outputs into one OpticsDetections object ---
 stitched_model_df <- map2_dfr(track_files, extract_deployment_id(track_files), function(track_file, deployment_id) {
   detections <- read_viame_csv(track_file, video_id = deployment_id)
   detections@data %>%
     mutate(
       deployment_id = deployment_id,
+      deployment_reference_id = normalize_reference_id(deployment_id),
       video_id = deployment_id,
       source_track_file = basename(track_file)
     )
@@ -50,32 +57,39 @@ cat("Stitched model detections:", nrow(model_stitched@data), "rows across", leng
 # --- 3. Read GT wide MaxN and align deployment identifiers ---
 truth_maxn <- read_wide_maxn(truth_path, video_id_col = REFERENCE) %>%
   mutate(
-    deployment_id = str_extract(video_id, "\\d{4}-N(?:CD|CO)-\\d{3}"),
+    deployment_id = str_extract(video_id, "\\d{4}[_-]N(?:CD|CO)-\\d{3}"),
     deployment_id = ifelse(is.na(deployment_id), video_id, deployment_id),
+    deployment_reference_id = normalize_reference_id(deployment_id),
     class_label = category_name
   )
 
-model_deployments <- unique(model_stitched@data$deployment_id)
+model_deployments <- unique(model_stitched@data$deployment_reference_id)
 truth_aligned <- truth_maxn %>%
-  filter(deployment_id %in% model_deployments)
+  filter(deployment_reference_id %in% model_deployments)
 
 # --- 4. Calculate model MaxN and compare against manual GT MaxN ---
 model_maxn <- calculate_maxn(model_stitched) %>%
-  transmute(deployment_id = video_id, class_label = category_name, model_maxn = maxn)
+  transmute(
+    deployment_id = video_id,
+    deployment_reference_id = normalize_reference_id(video_id),
+    class_label = category_name,
+    model_maxn = maxn
+  )
 
 aligned_maxn <- align_counts(
   model_counts = model_maxn %>%
-    transmute(video_id = deployment_id, category_name = class_label, maxn = model_maxn),
+    transmute(video_id = deployment_reference_id, category_name = class_label, maxn = model_maxn),
   truth_counts = truth_aligned %>%
-    transmute(video_id = deployment_id, category_name = class_label, true_count = truth_count),
+    transmute(video_id = deployment_reference_id, category_name = class_label, true_count = truth_count),
   by = c("video_id", "category_name"),
   model_col = maxn,
   truth_col = true_count
 ) %>%
-  rename(deployment_id = video_id, class_label = category_name, true_count = truth_count) %>%
+  rename(deployment_reference_id = video_id, class_label = category_name, true_count = truth_count) %>%
   mutate(maxn_difference = model_count - true_count)
 
 cat("Aligned MaxN rows:", nrow(aligned_maxn), "\n")
+cat("Matched truth deployments:", n_distinct(truth_aligned$deployment_reference_id), "\n")
 cat("\nSample MaxN comparison:\n")
 print(head(aligned_maxn))
 
