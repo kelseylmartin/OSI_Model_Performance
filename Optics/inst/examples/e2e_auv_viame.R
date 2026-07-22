@@ -15,14 +15,14 @@ library(tidyr)
 
 # --- 1. Define your data folder and file paths ---
 # Update this path to the folder where your AUV files are stored.
-data_dir <- "/path/to/your/data/folder"
+data_dir <- "C:/Users/Kelsey.l.martin.NMFS/Documents/NMFS/Automation/OSI_Model_Performance/Optics/inst/extdata"
 
 # Required files:
 # - one ground truth file (manually corrected)
 # - two model output files for model-comparison examples
-truth_path <- file.path(data_dir, "AUV_viame_test_groundtruth.coco.json")
-model_path_a <- file.path(data_dir, "AUV_viame_test_detections_model_a.coco.json")
-model_path_b <- file.path(data_dir, "AUV_viame_test_detections_model_b.coco.json")
+truth_path <- file.path(data_dir, "AUV_viame_test_groundtruth.csv")
+model_path_a <- file.path(data_dir, "AUV_viame_test_detections.csv")
+model_path_b <- file.path(data_dir, "AUV_viame_test_detections.csv")
 
 required_files <- c(model_path_a, model_path_b, truth_path)
 missing_files <- required_files[!file.exists(required_files)]
@@ -35,30 +35,37 @@ cat("Model B file:", model_path_b, "\n")
 cat("Ground truth file:", truth_path, "\n\n")
 
 # --- 2. Ingest KWCOCO data (read_kwcoco + OpticsDetections class) ---
-model_a <- read_kwcoco(model_path_a)
-truth <- read_kwcoco(truth_path)
+model_a_csv <- read.csv(model_path_a, header = F)
+truth <- read.csv(truth_path, header = F)
+model_b_csv <- read.csv(model_path_b, header = F)
 
-model_b <- read_kwcoco(model_path_b)
 
-cat("Rows - model A:", nrow(model_a@data), "\n")
-cat("Rows - model B:", nrow(model_b@data), "\n")
-cat("Rows - truth:", nrow(truth@data), "\n\n")
+# Redifing models as s4 objects
+model_a <- setClass(
+  "ViameModela",                  # The name of your new class
+  slots = list(data = "data.frame"))
+model_a <-  new("ViameModela", data = model_a_csv)
+
+model_b <- setClass(
+  "ViameModelb",                  # The name of your new class
+  slots = list(data = "data.frame"))
+model_b <-  new("ViameModelb", data = model_b_csv)
 
 # --- 3. Demonstrate read_viame_csv() using AUV-derived rows ---
 # Build a temporary VIAME CSV from AUV model A detections.
 viame_tmp <- tempfile(fileext = ".csv")
 viame_df <- model_a@data %>%
   transmute(
-    TrackID = as.character(annotation_id),
-    VidIdent = as.character(video_id),
-    UniqFrame = as.character(frame_index),
-    TL_X = as.character(bbox_x),
-    TL_Y = as.character(bbox_y),
-    BR_X = as.character(bbox_x + bbox_width),
-    BR_Y = as.character(bbox_y + bbox_height),
-    DetLen_Conf = as.character(score),
+    TrackID = as.character(V1),
+    VidIdent = as.character(V2),
+    UniqFrame = as.character(V3),
+    TL_X = as.character(V4),
+    TL_Y = as.character(V5),
+    BR_X = as.character(V6),
+    BR_Y = as.character(V7),
+    DetLen_Conf = as.character(V8),
     Tar_Len = "1",
-    SP = as.character(category_name),
+    SP = as.character(V10),
     CP = "1"
   )
 

@@ -87,12 +87,12 @@ setMethod("calculate_maxn", "data.frame",
             
             detections_df <- object
             # --- 1. Input Validation ---
-            required_cols <- c("video_id", "frame_index", "category_name")
+            required_cols <- c("VidIdent", "UniqFrame", "SP")
             if (!all(required_cols %in% names(detections_df))) {
               stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
             }
             
-            all_groups <- unique(c("video_id", "category_name", group_cols))
+            all_groups <- unique(c("VidIdent", "UniqFrame", "SP", group_cols))
             
             if (nrow(detections_df) == 0) {
               return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "maxn"), function(x) logical(0)), c(all_groups, "maxn"))))
@@ -100,7 +100,7 @@ setMethod("calculate_maxn", "data.frame",
             
             # --- 2. Calculate MaxN ---
             detections_df %>%
-              dplyr::group_by(!!!rlang::syms(unique(c(all_groups, "frame_index")))) %>%
+              dplyr::group_by(!!!rlang::syms(unique(c(all_groups)))) %>%
               dplyr::summarise(n_in_frame = dplyr::n(), .groups = "drop") %>%
               dplyr::group_by(!!!rlang::syms(all_groups)) %>%
               dplyr::summarise(maxn = max(c(0, .data$n_in_frame)), .groups = "drop")
@@ -154,12 +154,12 @@ setMethod("calculate_frame_abundance", "OpticsDetections",
             
             detections_df <- object@data
             # --- 1. Input Validation ---
-            required_cols <- c("video_id", "frame_index", "category_name")
+            required_cols <- c("VidIdent", "UniqFrame", "SP")
             if (!all(required_cols %in% names(detections_df))) {
               stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
             }
             
-            all_groups <- unique(c("video_id", "frame_index", "category_name", group_cols))
+            all_groups <- unique(c("VidIdent", "UniqFrame", "SP", group_cols))
             
             if (nrow(detections_df) == 0) {
               return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "abundance"), function(x) logical(0)), c(all_groups, "abundance"))))
@@ -178,12 +178,12 @@ setMethod("calculate_frame_abundance", "data.frame",
             
             detections_df <- object
             # --- 1. Input Validation ---
-            required_cols <- c("video_id", "frame_index", "category_name")
+            required_cols <- c("VidIdent", "UniqFrame", "SP")
             if (!all(required_cols %in% names(detections_df))) {
               stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
             }
             
-            all_groups <- unique(c("video_id", "frame_index", "category_name", group_cols))
+            all_groups <- unique(c("VidIdent", "UniqFrame", "SP", group_cols))
             
             if (nrow(detections_df) == 0) {
               return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "abundance"), function(x) logical(0)), c(all_groups, "abundance"))))
