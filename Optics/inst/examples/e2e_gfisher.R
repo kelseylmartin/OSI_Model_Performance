@@ -1,95 +1,82 @@
-# End-to-End Data Processing Example for the Optics Package
-#
-# This script demonstrates how to use the core functions of the Optics package
-# to go from raw model outputs to performance metrics using the user's
-# specified data files.
+# ---
+# End-to-End Example: GFisher Stationary Benthic Video Dataset
+# ---
 
-# --- 1. Setup: Load Package and File Paths ---
-
-# In a development context, it's more reliable to source files directly
-# than to rely on a potentially cached installed version of the package.
-r_files <- list.files("Optics/R", pattern = "\\.R$", full.names = TRUE)
-for (file in r_files) {
-  source(file)
-}
+library(Optics)
 library(dplyr)
+library(purrr)
+library(stringr)
 
-# Define file paths for model and truth data.
-model_csv_path <- "Optics/inst/extdata/2024-NCD-017_tracks_SUBSET.csv"
-truth_csv_path <- "Optics/inst/extdata/maxn3LABS_93to24.csv"
+# --- 1. Locate extdata sources ---
+sefsc_dir <- system.file("extdata/SEFSC", package = "Optics")
+truth_path <- file.path(sefsc_dir, "maxn3LABS_93to24.csv")
 
-# --- 2. Ingest and Process Data ---
+track_files <- list.files(
+  sefsc_dir,
+  pattern = "_tracks.*\\.csv$",
+  full.names = TRUE
+)
 
-# Ingest the model detections from the VIAME CSV.
-cat("Ingesting model detections from:", model_csv_path, "\n")
-model_detections <- read_viame_csv(model_csv_path)
-cat("Model detections ingested successfully.\n\n")
+if (length(track_files) == 0) {
+  stop("No SEFSC track files found in extdata/SEFSC.")
+}
+if (!file.exists(truth_path)) {
+  stop("Missing truth file: ", truth_path)
+}
 
-# Process the raw model detections to get MaxN counts per species.
-cat("Calculating MaxN for model detections...\n")
-model_maxn <- calculate_maxn(model_detections)
-print(head(model_maxn))
-cat("\n")
+extract_deployment_id <- function(path) {
+  sub("_tracks.*$", "", basename(path))
+}
 
-# Ingest and process the wide-format truth data.
-# The `read_wide_maxn` function reads the CSV, pivots it to a long format,
-# and renames columns to be compatible with the alignment functions.
-cat("Ingesting and transforming wide-format truth data from:", truth_csv_path, "\n")
-truth_maxn <- read_wide_maxn(truth_csv_path, video_id_col = REFERENCE)
-cat("Transformed truth data (MaxN counts):\n")
-print(head(truth_maxn))
-cat("\n")
+# --- 2. Stitch all video-level model outputs into one OpticsDetections object ---
+stitched_model_df <- map2_dfr(track_files, extract_deployment_id(track_files), function(track_file, deployment_id) {
+  detections <- read_viame_csv(track_file, video_id = deployment_id)
+  detections@data %>%
+    mutate(
+      deployment_id = deployment_id,
+      video_id = deployment_id,
+      source_track_file = basename(track_file)
+    )
+})
 
+model_stitched <- OpticsDetections(
+  data = stitched_model_df,
+  source_file = paste(basename(track_files), collapse = ", "),
+  ingest_format = "viame_csv_stitched_tracks"
+)
 
-# --- 3. Align Counts ---
+cat("Stitched model detections:", nrow(model_stitched@data), "rows across", length(unique(model_stitched@data$deployment_id)), "deployments.\n")
 
-cat("Aligning model and truth counts...\n")
-# The 'by' columns are critical for matching rows from model and truth.
-# Note: The model `video_id` is a filename, and the truth `video_id` is a
-# reference number. These will not match up. The alignment will still work,
-# but all data will be treated as unmatched (FPs from model, FNs from truth).
-# This demonstrates the functionality, but a real analysis would require
-# consistent video identifiers.
-aligned_df <- align_counts(model_maxn, truth_maxn, by = c("video_id", "category_name"), truth_col = truth_count)
-cat("Aligned counts (sample):\n")
-print(head(aligned_df))
-cat("\n")
+# --- 3. Read GT wide MaxN and align deployment identifiers ---
+truth_maxn <- read_wide_maxn(truth_path, video_id_col = REFERENCE) %>%
+  mutate(
+    deployment_id = str_extract(video_id, "\\d{4}-N(?:CD|CO)-\\d{3}"),
+    deployment_id = ifelse(is.na(deployment_id), video_id, deployment_id),
+    class_label = category_name
+  )
 
+model_deployments <- unique(model_stitched@data$deployment_id)
+truth_aligned <- truth_maxn %>%
+  filter(deployment_id %in% model_deployments)
 
-# --- 4. Calculate Performance Metrics ---
+# --- 4. Calculate model MaxN and compare against manual GT MaxN ---
+model_maxn <- calculate_maxn(model_stitched) %>%
+  transmute(deployment_id = video_id, class_label = category_name, model_maxn = maxn)
 
-cat("Calculating binary performance metrics...\n")
-binary_metrics <- calculate_binary_metrics(aligned_df)
-print(binary_metrics)
-cat("\n")
+aligned_maxn <- align_counts(
+  model_counts = model_maxn %>%
+    transmute(video_id = deployment_id, category_name = class_label, maxn = model_maxn),
+  truth_counts = truth_aligned %>%
+    transmute(video_id = deployment_id, category_name = class_label, true_count = truth_count),
+  by = c("video_id", "category_name"),
+  model_col = maxn,
+  truth_col = true_count
+) %>%
+  rename(deployment_id = video_id, class_label = category_name, true_count = truth_count) %>%
+  mutate(maxn_difference = model_count - true_count)
 
-cat("Calculating confusion matrix...\n")
-confusion_matrix <- calculate_confusion_matrix(aligned_df, group_vars = c("video_id", "category_name"), species_col = category_name)
-print(confusion_matrix)
-cat("\n")
+cat("Aligned MaxN rows:", nrow(aligned_maxn), "\n")
+cat("\nSample MaxN comparison:\n")
+print(head(aligned_maxn))
 
-cat("Generating disagreement report...\n")
-disagreement_report <- get_disagreement_report(aligned_df, group_vars = c("video_id", "category_name"))
-print(head(disagreement_report))
-cat("\n")
-
-
-# --- 5. Inapplicable Functions ---
-
-cat("--- Notes on other functions ---\n")
-cat("The following functions cannot be run with the pre-aggregated truth data format.\n\n")
-
-cat("`summarize_performance_by_threshold`: This function requires a raw, un-aggregated\n")
-cat("`OpticsDetections` object for the truth data so it can re-calculate metrics at\n")
-cat("different model confidence thresholds. The `read_wide_maxn` output is already aggregated.\n\n")
-
-cat("`classify_detections`: Requires a unique detection ID present in both model and truth\n")
-cat("to match individual detections and classify them as TP/FP.\n\n")
-
-cat("`analyze_reviewer_effort`: Requires a 'TrackID' and 'Species' column for comparing\n")
-cat("a raw dataframe to a validated one to see how classifications changed.\n\n")
-
-cat("`analyze_performance_drivers`: A complex function that fits a statistical model.\n\n")
-
-cat("End-to-end script finished.\n")
-
+cat("\nGFisher end-to-end example complete.\n")
