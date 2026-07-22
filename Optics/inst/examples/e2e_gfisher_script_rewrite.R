@@ -255,7 +255,14 @@ if (!file.exists(analysis_report_path)) {
         "---",
         "title: \"GFisher Output Analysis Report\"",
         "output: html_document",
+        "params:",
+        "  spec_master: !r NULL",
+        "  sub_false: !r NULL",
+        "  species: !r \"\"",
+        "  outdir: !r \"\"",
         "---",
+        "",
+        "# `r if (nzchar(params$species)) params$species else \"GFisher\"` Analysis Report",
         "",
         "# Part I - Counts",
         "",
@@ -266,13 +273,21 @@ if (!file.exists(analysis_report_path)) {
         "# Part II - Groundtruthing",
         "",
         "```{r}",
-        "if (exists(\"model_vs_manual_maxn\")) print(utils::head(model_vs_manual_maxn))",
+        "if (!is.null(params$spec_master)) {",
+        "  print(utils::head(params$spec_master))",
+        "} else if (exists(\"model_vs_manual_maxn\")) {",
+        "  print(utils::head(model_vs_manual_maxn))",
+        "}",
         "```",
         "",
         "# Part III - Data Analysis",
         "",
         "```{r}",
-        "if (exists(\"maxn_binary_metrics\")) print(maxn_binary_metrics)",
+        "if (!is.null(params$sub_false)) {",
+        "  print(params$sub_false)",
+        "} else if (exists(\"maxn_binary_metrics\")) {",
+        "  print(maxn_binary_metrics)",
+        "}",
         "```"
       ),
       analysis_report_path
@@ -283,13 +298,32 @@ if (!file.exists(analysis_report_path)) {
 if (requireNamespace("rmarkdown", quietly = TRUE) && file.exists(analysis_report_path)) {
   analysis_reports_dir <- file.path(outdir, "Part III - Data Analysis", "Analysis Reports")
   dir.create(analysis_reports_dir, recursive = TRUE, showWarnings = FALSE)
-  rmarkdown::render(
-    analysis_report_path,
-    output_dir = analysis_reports_dir,
-    output_format = "html_document",
-    output_file = "GFisher Analysis Report.html",
-    quiet = TRUE
-  )
+  species_values <- sort(unique(model_vs_manual_maxn$class_label))
+  for (species in species_values) {
+    spec_master <- model_vs_manual_maxn %>% filter(class_label == species)
+    sub_false <- aligned_maxn %>%
+      filter(category_name == species) %>%
+      summarise(
+        total = n(),
+        exact_agreement = sum(model_count == truth_count, na.rm = TRUE),
+        agreement_rate = ifelse(total == 0, NA_real_, exact_agreement / total),
+        .groups = "drop"
+      )
+    spec_pretty <- gsub("_", " ", stringr::str_to_sentence(species))
+    rmarkdown::render(
+      analysis_report_path,
+      output_dir = analysis_reports_dir,
+      output_format = "html_document",
+      output_file = paste(spec_pretty, "Analysis Report.html"),
+      params = list(
+        spec_master = spec_master,
+        sub_false = sub_false,
+        species = species,
+        outdir = outdir
+      ),
+      quiet = TRUE
+    )
+  }
 }
 
 cat("\nGFisher package-based rewrite complete.\n")
