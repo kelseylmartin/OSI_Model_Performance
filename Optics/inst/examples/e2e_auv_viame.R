@@ -79,7 +79,7 @@ model_a_viame <- read_viame_csv(viame_tmp, video_id = "AUV_demo")
 cat("Rows from read_viame_csv() demo:", nrow(model_a_viame@data), "\n\n")
 
 # --- 4. Core counting functions ---
-model_a_frame_abundance <- calculate_frame_abundance(model_a)
+model_a_frame_abundance <- calculate_frame_abundance(model_a@data)
 model_b_frame_abundance <- calculate_frame_abundance(model_b)
 truth_frame_abundance <- calculate_frame_abundance(truth)
 
