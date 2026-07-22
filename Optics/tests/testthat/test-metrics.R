@@ -97,6 +97,26 @@ test_that("calculate_frame_abundance() works with correct inputs", {
   expect_equal(nrow(abundance_results), 2)
   expect_equal(abundance_results$abundance[abundance_results$frame_index == 1], 2)
   expect_equal(abundance_results$abundance[abundance_results$frame_index == 2], 1)
+
+  #' @description Test that calculate_frame_abundance() works directly with a unified-schema data.frame.
+  abundance_df_results <- calculate_frame_abundance(abundance_df)
+  expect_equal(nrow(abundance_df_results), 2)
+  expect_equal(abundance_df_results$abundance[abundance_df_results$frame_index == 1], 2)
+  expect_equal(abundance_df_results$abundance[abundance_df_results$frame_index == 2], 1)
+})
+
+test_that("counting helpers still accept legacy VIAME column names", {
+  #' @description Test that calculate_maxn() accepts legacy VIAME-style column names and normalizes them.
+  legacy_df <- dplyr::rename(maxn_df, VidIdent = video_id, UniqFrame = frame_index, SP = category_name)
+  legacy_maxn <- calculate_maxn(legacy_df)
+  expect_true(all(c("video_id", "category_name", "maxn") %in% names(legacy_maxn)))
+  expect_equal(legacy_maxn$maxn[legacy_maxn$video_id == "v1" & legacy_maxn$category_name == "A"], 2)
+
+  #' @description Test that calculate_frame_abundance() accepts legacy VIAME-style column names and normalizes them.
+  legacy_abundance_df <- dplyr::rename(abundance_df, VidIdent = video_id, UniqFrame = frame_index, SP = category_name)
+  legacy_abundance <- calculate_frame_abundance(legacy_abundance_df)
+  expect_true(all(c("video_id", "frame_index", "category_name", "abundance") %in% names(legacy_abundance)))
+  expect_equal(legacy_abundance$abundance[legacy_abundance$frame_index == 1], 2)
 })
 
 

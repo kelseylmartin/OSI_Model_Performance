@@ -17,6 +17,7 @@ scatterplot_df <- dplyr::tibble(
 ## IO correctness ----
 test_that("plot_counts_scatterplot() works with correct inputs", {
   #' @description Test that plot_counts_scatterplot returns a ggplot object.
+  skip_if_not_installed("ggpubr")
   p <- plot_counts_scatterplot(scatterplot_df)
   expect_s3_class(p, "ggplot")
   expect_equal(p$labels$x, "Ground Truth Count")
@@ -48,6 +49,7 @@ pr_data_multi <- dplyr::tibble(
 ## IO correctness ----
 test_that("plot_pr_curve() works with correct inputs", {
   #' @description Test that plot_pr_curve() returns a ggplot object for a single model.
+  skip_if_not_installed("PRROC")
   p <- plot_pr_curve(pr_data)
   expect_s3_class(p, "ggplot")
   expect_equal(p$labels$title, "Precision-Recall Curve")
@@ -102,6 +104,7 @@ roc_data <- dplyr::tibble(
 ## IO correctness ----
 test_that("plot_roc_curve() works correctly", {
   #' @description Test that plot_roc_curve() returns a ggplot object.
+  skip_if_not_installed("pROC")
   p <- plot_roc_curve(roc_data, title = "Test ROC")
   expect_s3_class(p, "ggplot")
   expect_equal(p$labels$title, "Test ROC")

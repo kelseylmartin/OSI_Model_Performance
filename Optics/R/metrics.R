@@ -1,6 +1,32 @@
 #' @include ingest.R
 NULL
 
+.normalize_detection_schema <- function(detections_df, group_cols = NULL) {
+  required_cols <- c("video_id", "frame_index", "category_name")
+  legacy_cols <- c("VidIdent", "UniqFrame", "SP")
+
+  if (!all(required_cols %in% names(detections_df)) &&
+      all(legacy_cols %in% names(detections_df))) {
+    detections_df <- dplyr::rename(
+      detections_df,
+      video_id = "VidIdent",
+      frame_index = "UniqFrame",
+      category_name = "SP"
+    )
+
+    if (!is.null(group_cols)) {
+      group_cols <- dplyr::recode(
+        group_cols,
+        VidIdent = "video_id",
+        UniqFrame = "frame_index",
+        SP = "category_name"
+      )
+    }
+  }
+
+  list(detections_df = detections_df, group_cols = group_cols)
+}
+
 #' Calculate MaxN (Maximum Number of Individuals)
 #'
 #' Calculates the maximum number of individuals of each species category
@@ -85,14 +111,16 @@ setMethod("calculate_maxn", "OpticsDetections",
 setMethod("calculate_maxn", "data.frame",
           function(object, group_cols = NULL) {
             
-            detections_df <- object
+            normalized <- .normalize_detection_schema(object, group_cols = group_cols)
+            detections_df <- normalized$detections_df
+            group_cols <- normalized$group_cols
             # --- 1. Input Validation ---
-            required_cols <- c("VidIdent", "UniqFrame", "SP")
+            required_cols <- c("video_id", "frame_index", "category_name")
             if (!all(required_cols %in% names(detections_df))) {
               stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
             }
             
-            all_groups <- unique(c("VidIdent", "UniqFrame", "SP", group_cols))
+            all_groups <- unique(c("video_id", "category_name", group_cols))
             
             if (nrow(detections_df) == 0) {
               return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "maxn"), function(x) logical(0)), c(all_groups, "maxn"))))
@@ -100,7 +128,7 @@ setMethod("calculate_maxn", "data.frame",
             
             # --- 2. Calculate MaxN ---
             detections_df %>%
-              dplyr::group_by(!!!rlang::syms(unique(c(all_groups)))) %>%
+              dplyr::group_by(!!!rlang::syms(unique(c(all_groups, "frame_index")))) %>%
               dplyr::summarise(n_in_frame = dplyr::n(), .groups = "drop") %>%
               dplyr::group_by(!!!rlang::syms(all_groups)) %>%
               dplyr::summarise(maxn = max(c(0, .data$n_in_frame)), .groups = "drop")
@@ -154,12 +182,12 @@ setMethod("calculate_frame_abundance", "OpticsDetections",
             
             detections_df <- object@data
             # --- 1. Input Validation ---
-            required_cols <- c("VidIdent", "UniqFrame", "SP")
+            required_cols <- c("video_id", "frame_index", "category_name")
             if (!all(required_cols %in% names(detections_df))) {
               stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
             }
             
-            all_groups <- unique(c("VidIdent", "UniqFrame", "SP", group_cols))
+            all_groups <- unique(c("video_id", "frame_index", "category_name", group_cols))
             
             if (nrow(detections_df) == 0) {
               return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "abundance"), function(x) logical(0)), c(all_groups, "abundance"))))
@@ -176,14 +204,16 @@ setMethod("calculate_frame_abundance", "OpticsDetections",
 setMethod("calculate_frame_abundance", "data.frame",
           function(object, group_cols = NULL) {
             
-            detections_df <- object
+            normalized <- .normalize_detection_schema(object, group_cols = group_cols)
+            detections_df <- normalized$detections_df
+            group_cols <- normalized$group_cols
             # --- 1. Input Validation ---
-            required_cols <- c("VidIdent", "UniqFrame", "SP")
+            required_cols <- c("video_id", "frame_index", "category_name")
             if (!all(required_cols %in% names(detections_df))) {
               stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
             }
             
-            all_groups <- unique(c("VidIdent", "UniqFrame", "SP", group_cols))
+            all_groups <- unique(c("video_id", "frame_index", "category_name", group_cols))
             
             if (nrow(detections_df) == 0) {
               return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "abundance"), function(x) logical(0)), c(all_groups, "abundance"))))
