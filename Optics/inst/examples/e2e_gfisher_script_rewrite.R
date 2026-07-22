@@ -57,29 +57,24 @@ fwri_ref_key <- read.csv(file.path(wrkdir, "env3LABS_93to24.csv")) %>%
     Deployment = ifelse(YEAR < 2024 | LAB == "FWRI", REFERENCE, SITE_ID)
   )
 
-# Locate model and truth inputs. Prefer external Data/ folders and fall back to
-# packaged extdata so the example still runs inside package contexts.
-sefsc_dir <- system.file("extdata/SEFSC", package = "Optics")
-track_search_dirs <- c(trkdir, sefsc_dir)
-track_files <- unique(unlist(lapply(track_search_dirs, function(dir_path) {
-  if (!dir.exists(dir_path)) {
-    return(character(0))
-  }
-  list.files(dir_path, pattern = "_tracks.*\\.csv$", full.names = TRUE, recursive = TRUE)
-})))
+# Locate model and truth inputs from external Data/ folders only.
+track_files <- if (dir.exists(trkdir)) {
+  list.files(trkdir, pattern = "_tracks.*\\.csv$", full.names = TRUE, recursive = TRUE)
+} else {
+  character(0)
+}
 
 truth_candidates <- c(
   file.path(trthdir, "maxn3LABS_93to24.csv"),
-  file.path(wrkdir, "maxn3LABS_93to24.csv"),
-  file.path(sefsc_dir, "maxn3LABS_93to24.csv")
+  file.path(wrkdir, "maxn3LABS_93to24.csv")
 )
 truth_path <- truth_candidates[file.exists(truth_candidates)][1]
 
 if (length(track_files) == 0) {
-  stop("No SEFSC track files found in Data/Tracks or extdata/SEFSC.")
+  stop("No SEFSC track files found in Data/Tracks.")
 }
 if (is.na(truth_path) || !file.exists(truth_path)) {
-  stop("Missing truth file: maxn3LABS_93to24.csv in Data/Truth, Data/, or extdata/SEFSC.")
+  stop("Missing truth file: maxn3LABS_93to24.csv in Data/Truth or Data/.")
 }
 
 extract_deployment_id <- function(path) {
@@ -114,6 +109,9 @@ frame_lookup <- full_join(start_lookup, end_lookup, by = "ReferenceID") %>%
     End = ifelse(is.infinite(End), NA, End)
   )
 
+##################################################
+## Part I: Importing Tracks and Creating Counts ##
+##################################################
 # 2) Stitch video-level model outputs into one deployment-level S4 object.
 #    Legacy script manually merged raw tables; here we use read_viame_csv() so
 #    each file is standardized to the Optics schema before binding.
@@ -142,6 +140,9 @@ stitched_model <- OpticsDetections(
 
 cat("Stitched detections:", nrow(stitched_model@data), "\n")
 
+######################################################
+## Part II: Groundtruth Alignment and Comparison   ##
+######################################################
 # 3) Read manual MaxN truth with read_wide_maxn() instead of custom pivot code.
 #    We then normalize deployment IDs to match model naming before alignment.
 truth_maxn <- read_wide_maxn(truth_path, video_id_col = REFERENCE) %>%
@@ -225,7 +226,10 @@ model_vs_manual_maxn <- aligned_maxn %>%
 
 print(model_vs_manual_maxn)
 
-# 6) Optional summary metric table for this aligned MaxN comparison.
+##################################################
+## Part III: Data Analysis and Report Creation  ##
+##################################################
+# 5) Optional summary metric table for this aligned MaxN comparison.
 total_comparisons <- nrow(distinct(aligned_maxn, deployment_reference_compact, category_name))
 maxn_binary_metrics <- calculate_binary_metrics(
   aligned_maxn %>% rename(video_id = deployment_reference_compact),
@@ -233,4 +237,59 @@ maxn_binary_metrics <- calculate_binary_metrics(
 )
 
 print(maxn_binary_metrics)
+
+# Preserve legacy report structure by creating/using a script-local analysis Rmd.
+analysis_report_path <- file.path(script.dir, "VIAME Output Analysis Report.Rmd")
+report_template_candidates <- c(
+  file.path(script.dir, "Optics Model Performance Report.Rmd"),
+  file.path(getwd(), "Optics Model Performance Report.Rmd")
+)
+report_template <- report_template_candidates[file.exists(report_template_candidates)][1]
+
+if (!file.exists(analysis_report_path)) {
+  if (!is.na(report_template) && file.exists(report_template)) {
+    file.copy(report_template, analysis_report_path, overwrite = TRUE)
+  } else {
+    writeLines(
+      c(
+        "---",
+        "title: \"GFisher Output Analysis Report\"",
+        "output: html_document",
+        "---",
+        "",
+        "# Part I - Counts",
+        "",
+        "```{r}",
+        "if (exists(\"model_maxn\")) print(utils::head(model_maxn))",
+        "```",
+        "",
+        "# Part II - Groundtruthing",
+        "",
+        "```{r}",
+        "if (exists(\"model_vs_manual_maxn\")) print(utils::head(model_vs_manual_maxn))",
+        "```",
+        "",
+        "# Part III - Data Analysis",
+        "",
+        "```{r}",
+        "if (exists(\"maxn_binary_metrics\")) print(maxn_binary_metrics)",
+        "```"
+      ),
+      analysis_report_path
+    )
+  }
+}
+
+if (requireNamespace("rmarkdown", quietly = TRUE) && file.exists(analysis_report_path)) {
+  analysis_reports_dir <- file.path(outdir, "Part III - Data Analysis", "Analysis Reports")
+  dir.create(analysis_reports_dir, recursive = TRUE, showWarnings = FALSE)
+  rmarkdown::render(
+    analysis_report_path,
+    output_dir = analysis_reports_dir,
+    output_format = "html_document",
+    output_file = "GFisher Analysis Report.html",
+    quiet = TRUE
+  )
+}
+
 cat("\nGFisher package-based rewrite complete.\n")
