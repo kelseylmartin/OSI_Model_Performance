@@ -22,9 +22,8 @@ INFO <- list(
 #' performs necessary data cleaning.
 #'
 #' @param flnm The file path of the CSV to read.
-#' @param year The year of the data collection, used for year-specific filename fixes.
 #' @return A data frame with corrected headers and types, or NULL on error.
-preprocess_and_read_csv <- function(flnm, year = NULL) {
+preprocess_and_read_csv <- function(flnm) {
   # --- Cloud vs Local Read ---
   # Check if the path is a GCS path (gs://bucket/object)
   is_gcs_path <- grepl("^gs://", flnm)
@@ -52,18 +51,16 @@ preprocess_and_read_csv <- function(flnm, year = NULL) {
     deployment_name <- gsub("_\\d+\\.\\d+_(tracks|detections)$|_cam.*_(tracks|detections)$|_(tracks|detections)_cam.*$| cam.*_(tracks|detections)$|_(tracks|detections)$","", deployment_name)
     deployment_name <- gsub("_|-", "", deployment_name)
     
-    # Year-specific fixes
-    if (!is.null(year)) {
-      if (year == 2019) {
-        deployment_name <- gsub("^19W_", "2019W", deployment_name)
-        deployment_name <- gsub("^19E_", "2019E", deployment_name)
-      }
-      if (year == 2022) {
-        if (grepl("^[A-Za-z]", deployment_name)) {
-          deployment_name <- paste0("2022-", deployment_name)
-        }
+    # Year-specific fixes based on filename patterns
+    if (grepl("^19[WE]_", deployment_name)) {
+      deployment_name <- gsub("^19W_", "2019W", deployment_name)
+      deployment_name <- gsub("^19E_", "2019E", deployment_name)
+    } else if (grepl("^(?:[A-Za-z]+_)?2022", flnm) || grepl("2022", flnm)) { # Attempting to loosely guess if it's 2022 data from the path
+      if (grepl("^[A-Za-z]", deployment_name) && !grepl("^20", deployment_name)) {
+        deployment_name <- paste0("2022-", deployment_name)
       }
     }
+    
     df$X12 <- deployment_name
     
     # Assign all column names
@@ -87,15 +84,13 @@ preprocess_and_read_csv <- function(flnm, year = NULL) {
 #' @param default_category_id A default category ID to use if no category mapping is provided.
 #' @param video_info A named list containing video metadata:
 #'   list(id = integer, name = character, width = integer, height = integer).
-#' @param year The data collection year for pre-processing rules.
 #' @param output_path Path to save the output KWCOCO JSON file.
 #'
 convert_track_csv_to_kwcoco_r <- function(csv_path,
                                           video_info,
                                           output_path,
                                           col_mapping,
-                                          default_category_id = 1,
-                                          year = NULL) {
+                                          default_category_id = 1) {
   
   cat(sprintf("Processing video: %s from %s\n", video_info$name, csv_path))
   
@@ -107,7 +102,7 @@ convert_track_csv_to_kwcoco_r <- function(csv_path,
   )
   
   # 2. Pre-process and read the raw CSV data (now supports local and gs:// paths)
-  df <- preprocess_and_read_csv(csv_path, year = year)
+  df <- preprocess_and_read_csv(csv_path)
   
   if (is.null(df)) { return(invisible(NULL)) } # Skip if file was empty or failed to read
   
@@ -210,11 +205,10 @@ convert_track_csv_to_kwcoco_r <- function(csv_path,
 #'   to the actual column names in the CSV. Supports 'tl_x', 'tl_y', 'br_x', 'br_y' for bounding boxes.
 #' @param default_category_id A default category ID to use if no category mapping is provided.
 #' @param video_metadata_list A named list of video metadata, where names
-#' @param year The data collection year for pre-processing rules.
 #'   match the video names in `csv_inputs`.
 #' @param output_path Path to save the single output KWCOCO JSON file.
 #'
-convert_batch_to_kwcoco_r <- function(csv_inputs, video_metadata_list, output_path, col_mapping, default_category_id = 1, year = NULL) {
+convert_batch_to_kwcoco_r <- function(csv_inputs, video_metadata_list, output_path, col_mapping, default_category_id = 1) {
   
   cat("Starting batch conversion...\n")
   
@@ -244,7 +238,7 @@ convert_batch_to_kwcoco_r <- function(csv_inputs, video_metadata_list, output_pa
     
     # Pre-process and read the raw CSV data (now supports local and gs:// paths)
     cat(sprintf("Reading %s", csv_path))
-    df <- preprocess_and_read_csv(csv_path, year = year)
+    df <- preprocess_and_read_csv(csv_path)
     
     if (is.null(df)) { next } # Skip if file was empty or failed to read
     
@@ -334,7 +328,6 @@ convert_batch_to_kwcoco_r <- function(csv_inputs, video_metadata_list, output_pa
 #' @param col_mapping A named list that maps standard KWCOCO concepts to CSV column names.
 #' @param default_category_id A default category ID to use if no category mapping is provided.
 #' @param default_video_width Default width to use for video metadata. This is a placeholder
-#' @param year The data collection year for pre-processing rules.
 #'   as video dimensions are not typically in tracking CSVs.
 #' @param default_video_height Default height to use for video metadata.
 #'
@@ -342,7 +335,6 @@ convert_folder_to_kwcoco_r <- function(folder_path,
                                        output_filename = "output_kwcoco.json",
                                        col_mapping,
                                        default_category_id = 1,
-                                       year = NULL,
                                        default_video_width = 1920,
                                        default_video_height = 1080) {
   
@@ -384,8 +376,7 @@ convert_folder_to_kwcoco_r <- function(folder_path,
     video_metadata_list = video_metadata_list,
     output_path = output_path,
     col_mapping = col_mapping,
-    default_category_id = default_category_id,
-    year = year
+    default_category_id = default_category_id
   )
 }
 
@@ -398,14 +389,12 @@ convert_folder_to_kwcoco_r <- function(folder_path,
 #' @param folder_path The prefix/folder path within the bucket.
 #' @param output_path The local path to save the final JSON file.
 #' @param col_mapping A named list that maps standard KWCOCO concepts to CSV column names.
-#' @param year The data collection year for pre-processing rules.
 #' @param ... Additional arguments passed to gcs_auth().
 #'
 convert_gcs_folder_to_kwcoco_r <- function(bucket_name,
                                            folder_path = "",
                                            output_path = "cloud_output_kwcoco.json",
                                            col_mapping,
-                                           year = NULL,
                                            ...) {
   
   # 1. Authenticate with Google Cloud Storage
@@ -438,7 +427,67 @@ convert_gcs_folder_to_kwcoco_r <- function(bucket_name,
   
   # 4. Call the existing batch conversion function
   # The preprocess_and_read_csv function will handle the gs:// paths
-  convert_batch_to_kwcoco_r(csv_inputs, video_metadata_list, output_path, col_mapping, year = year)
+  convert_batch_to_kwcoco_r(csv_inputs, video_metadata_list, output_path, col_mapping)
+}
+
+#' Converts all CSV files in a folder to individual KWCOCO JSON files. 
+#' 
+#' This function scans a directory for .csv files, automatically generates 
+#' video metadata, and then calls the single file converter to produce an
+#' individual KWCOCO file for each CSV, saved in the specified output folder.
+#'
+#' @param input_folder Path to the directory containing the input CSV files.
+#' @param output_folder Path to the directory where the output JSON files will be saved.
+#' @param col_mapping A named list that maps standard KWCOCO concepts to CSV column names.
+#' @param default_category_id A default category ID to use if no category mapping is provided.
+#' @param default_video_width Default width to use for video metadata.
+#' @param default_video_height Default height to use for video metadata.
+#'
+convert_folder_to_individual_kwcoco_r <- function(input_folder,
+                                                  output_folder,
+                                                  col_mapping,
+                                                  default_category_id = 1,
+                                                  default_video_width = 1920,
+                                                  default_video_height = 1080) {
+  
+  # Ensure output folder exists
+  if (!dir.exists(output_folder)) {
+    dir.create(output_folder, recursive = TRUE)
+  }
+  
+  # 1. Find all CSV files in the input folder
+  cat(sprintf("Scanning for CSV files in '%s'...\n", input_folder))
+  csv_files <- list.files(path = input_folder, pattern = "\\.csv$", full.names = TRUE)
+  
+  if (length(csv_files) == 0) {
+    cat("No CSV files found in the specified input folder.\n")
+    return(invisible(NULL))
+  }
+  cat(sprintf("Found %d CSV files. Beginning individual conversions...\n", length(csv_files)))
+  
+  # 2. Loop through each CSV and convert it
+  for (i in seq_along(csv_files)) {
+    csv_file_path <- csv_files[i]
+    video_name <- tools::file_path_sans_ext(basename(csv_file_path))
+    output_path <- file.path(output_folder, paste0(video_name, ".coco.json"))
+    
+    video_info <- list(
+      id = i,
+      name = video_name,
+      width = default_video_width,
+      height = default_video_height
+    )
+    
+    convert_track_csv_to_kwcoco_r(
+      csv_path = csv_file_path,
+      video_info = video_info,
+      output_path = output_path,
+      col_mapping = col_mapping,
+      default_category_id = default_category_id
+    )
+  }
+  
+  cat(sprintf("\nAll %d individual conversions completed. Outputs saved to '%s'.\n", length(csv_files), output_folder))
 }
 
 
@@ -461,45 +510,47 @@ your_column_map <- list(
 # --- Option 1: Convert a LOCAL folder ---
 # To run the conversion on your local folder, you would uncomment and run the following lines:
 #
-# year_of_data <- 2022 # IMPORTANT: Set the year of your data
 # convert_folder_to_kwcoco_r(
 #   folder_path = "/path/to/your/csv/folder",
 #   output_filename = "my_kwcoco_dataset.json",
-#   col_mapping = your_column_map,
-#   year = year_of_data
+#   col_mapping = your_column_map
 # )
 
 # --- Option 2: Convert a Google Cloud Storage (GCS) folder ---
 # To run the conversion on a GCS folder, you would uncomment and run the following lines:
 #
-# year_of_data <- 2022 # IMPORTANT: Set the year of your data
 # convert_gcs_folder_to_kwcoco_r(
 #   bucket_name = "your-gcs-bucket-name",
 #   folder_path = "path/inside/bucket/",
 #   output_path = "my_cloud_kwcoco_dataset.json", # Local path to save the final file
-#   col_mapping = your_column_map,
-#   year = year_of_data
+#   col_mapping = your_column_map
 # )
 
 # --- Option 3: Convert a SINGLE local file ---
 # To run the conversion on a single CSV file, you would uncomment and run the following lines:
 #
-# year_of_data <- 2024 # IMPORTANT: Set the year of your data
 # convert_track_csv_to_kwcoco_r(
 #   csv_path = "C:/Users/Kelsey.l.martin.NMFS/Documents/NMFS/Automation/VIAME Output Analysis/Data/Tracks/2024_2.5/2024-SFD-022_tracks.csv",
 #   video_info = list(id = 1, name = "/2024-SFD-022_tracks", width = 1920, height = 1080),
 #   output_path = "C:/Users/Kelsey.l.martin.NMFS/Documents/NMFS/Automation/VIAME Output Analysis/Data/Tracks/2024_2.5/2024-SFD-022_tracks.coco.json",
-#   col_mapping = your_column_map,
-#   year = year_of_data
+#   col_mapping = your_column_map
 # )
 
-year_of_data <- 2024 # IMPORTANT: Set the year of your data
+# --- Option 4: Convert a LOCAL folder to INDIVIDUAL files ---
+# To run the conversion on a local folder and create separate JSON files for each CSV,
+# you would uncomment and run the following lines:
+#
+# convert_folder_to_individual_kwcoco_r(
+#   input_folder = "C:/Users/Kelsey.l.martin.NMFS/Downloads/Input_CSVs",
+#   output_folder = "C:/Users/Kelsey.l.martin.NMFS/Downloads/Output_JSONs",
+#   col_mapping = your_column_map
+# )
+
 convert_track_csv_to_kwcoco_r(
   csv_path = "C:/Users/Kelsey.l.martin.NMFS/Downloads/AUV_viame_test_detections.csv",
   video_info = list(id = 1, name = "/AUV_viame_test_detections", width = 1920, height = 1080),
   output_path = "C:/Users/Kelsey.l.martin.NMFS/Downloads/AUV_viame_test_detections.coco.json",
-  col_mapping = your_column_map,
-  year = year_of_data
+  col_mapping = your_column_map
 )
 
 
@@ -510,16 +561,15 @@ convert_track_csv_to_kwcoco_r(
 # You can run this part of the script as-is to verify its functionality.
 
 run_demonstration <- function() {
-  demo_year <- 2022 # Set year for demonstration's filename logic
   cat("\n--- Running Self-Contained Demonstration ---\n")
   temp_folder <- "temp_csv_folder"
   if (!dir.exists(temp_folder)) { dir.create(temp_folder) }
   
-  df1 <- data.frame(TrackID=c(1,2,1), VidIdent="v1", UniqFrame=c(1,1,2), TL_X=c(10,100,12), TL_Y=c(10,150,12), BR_X=c(30,150,32), BR_Y=c(50,230,52), DetLen_Conf=c(0.98,0.95,0.99), Tar_Len=10, SP=1, CP=2, Deployment="Dep1")
+  df1 <- data.frame(TrackID=c(1,2,1), VidIdent="v1", UniqFrame=c(1,1,2), TL_X=c(10,100,12), TL_Y=c(10,150,12), BR_X=c(30,150,32), BR_Y=c(50,230,52), DetLen_Conf=c(0.98,0.95,0.99), Tar_Len=10, SP=1, CP=2, Deployment="2022-Dep1")
   df2 <- data.frame(TrackID=c(3,3,4), VidIdent="v2", UniqFrame=c(1,2,2), TL_X=c(50,55,200), TL_Y=c(50,55,250), BR_X=c(75,80,255), BR_Y=c(95,100,335), DetLen_Conf=c(0.91,0.92,0.89), Tar_Len=12, SP=1, CP=3, Deployment="Dep2")
   # Write the dummy dataframes without headers and with 2 junk rows to simulate the real scenario
-  write(c("Junk Header Row 1", "Junk Header Row 2"), file.path(temp_folder, "video1_tracks.csv"))
-  write_csv(df1, file.path(temp_folder, "video1_tracks.csv"), append = TRUE, col_names = FALSE)
+  write(c("Junk Header Row 1", "Junk Header Row 2"), file.path(temp_folder, "2022_video1_tracks.csv"))
+  write_csv(df1, file.path(temp_folder, "2022_video1_tracks.csv"), append = TRUE, col_names = FALSE)
   write(c("Junk Header Row 1", "Junk Header Row 2"), file.path(temp_folder, "video2_tracks.csv"))
   write_csv(df2, file.path(temp_folder, "video2_tracks.csv"), append = TRUE, col_names = FALSE)
   cat(sprintf("Created dummy CSV files in folder: '%s'\n", temp_folder))
@@ -527,8 +577,7 @@ run_demonstration <- function() {
   convert_folder_to_kwcoco_r(
     folder_path = temp_folder,
     output_filename = "folder_combined_output.json",
-    col_mapping = your_column_map,
-    year = demo_year
+    col_mapping = your_column_map
   )
   cat(sprintf("\nSuccessfully converted all CSVs in '%s' to '%s'.\n", temp_folder, file.path(temp_folder, "folder_combined_output.json")))
   cat("--- Demonstration Complete ---\n")
