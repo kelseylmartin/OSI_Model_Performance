@@ -106,6 +106,9 @@ convert_track_csv_to_kwcoco_r <- function(csv_path,
   
   if (is.null(df)) { return(invisible(NULL)) } # Skip if file was empty or failed to read
   
+  # Sort dataframe by frame and track_id to ensure annotations match DIVE sort order
+  df <- df[order(as.numeric(df[[col_mapping$frame]]), as.numeric(df[[col_mapping$track_id]])), ]
+  
   # 3. Process data frame and populate KWCOCO structure
   annotation_id_counter <- 1
   image_id_counter <- 0
@@ -241,6 +244,9 @@ convert_batch_to_kwcoco_r <- function(csv_inputs, video_metadata_list, output_pa
     df <- preprocess_and_read_csv(csv_path)
     
     if (is.null(df)) { next } # Skip if file was empty or failed to read
+    
+    # Sort dataframe by frame and track_id to ensure annotations match DIVE sort order
+    df <- df[order(as.numeric(df[[col_mapping$frame]]), as.numeric(df[[col_mapping$track_id]])), ]
     
     processed_frames <- list() # Tracks frames *within the current video*
     
