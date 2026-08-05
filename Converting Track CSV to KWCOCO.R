@@ -540,11 +540,11 @@ your_column_map <- list(
 # To run the conversion on a local folder and create separate JSON files for each CSV,
 # you would uncomment and run the following lines:
 #
-# convert_folder_to_individual_kwcoco_r(
-#   input_folder = "C:/Users/Kelsey.l.martin.NMFS/Downloads/Input_CSVs",
-#   output_folder = "C:/Users/Kelsey.l.martin.NMFS/Downloads/Output_JSONs",
-#   col_mapping = your_column_map
-# )
+convert_folder_to_individual_kwcoco_r(
+  input_folder = "G:/.shortcut-targets-by-id/1NQbXTERaMRHyQASygwppJ54a6DoC2n0H/AI ML Materials/Reef Fish Training Library/training library/For_Training",
+  output_folder = "G:/.shortcut-targets-by-id/1NQbXTERaMRHyQASygwppJ54a6DoC2n0H/AI ML Materials/Reef Fish Training Library/training library/For_Training_KWCOCO_Files",
+  col_mapping = your_column_map
+)
 
 convert_track_csv_to_kwcoco_r(
   csv_path = "C:/Users/Kelsey.l.martin.NMFS/Downloads/AUV_viame_test_detections.csv",
