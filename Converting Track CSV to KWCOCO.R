@@ -111,8 +111,14 @@ convert_track_csv_to_kwcoco_r <- function(csv_path,
   
   if (is.null(df)) { return(invisible(NULL)) } # Skip if file was empty or failed to read
   
-  # Sort dataframe by track_id and frame to ensure annotations match DIVE sort order
-  df <- df[order(df[[col_mapping$track_id]], as.numeric(df[[col_mapping$frame]])), ]
+  # Sort dataframe by track_id (numerically) and frame to ensure annotations match DIVE sort order
+  df <- df[order(as.numeric(df[[col_mapping$track_id]]), as.numeric(df[[col_mapping$frame]])), ]
+  
+  # Remove duplicate track/frame combinations (DIVE expects exactly one annotation per track per frame)
+  duplicate_rows <- duplicated(df[c(col_mapping$track_id, col_mapping$frame)])
+  if (any(duplicate_rows)) {
+    df <- df[!duplicate_rows, ]
+  }
   
   # 3. Process data frame and populate KWCOCO structure
   annotation_id_counter <- 1
@@ -250,8 +256,14 @@ convert_batch_to_kwcoco_r <- function(csv_inputs, video_metadata_list, output_pa
     
     if (is.null(df)) { next } # Skip if file was empty or failed to read
     
-    # Sort dataframe by track_id and frame to ensure annotations match DIVE sort order
-    df <- df[order(df[[col_mapping$track_id]], as.numeric(df[[col_mapping$frame]])), ]
+    # Sort dataframe by track_id (numerically) and frame to ensure annotations match DIVE sort order
+    df <- df[order(as.numeric(df[[col_mapping$track_id]]), as.numeric(df[[col_mapping$frame]])), ]
+    
+    # Remove duplicate track/frame combinations (DIVE expects exactly one annotation per track per frame)
+    duplicate_rows <- duplicated(df[c(col_mapping$track_id, col_mapping$frame)])
+    if (any(duplicate_rows)) {
+      df <- df[!duplicate_rows, ]
+    }
     
     processed_frames <- list() # Tracks frames *within the current video*
     
