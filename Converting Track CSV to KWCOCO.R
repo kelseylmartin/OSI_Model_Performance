@@ -112,7 +112,7 @@ convert_track_csv_to_kwcoco_r <- function(csv_path,
   if (is.null(df)) { return(invisible(NULL)) } # Skip if file was empty or failed to read
   
   # Sort dataframe by track_id and frame to ensure annotations match DIVE sort order
-  df <- df[order(as.numeric(df[[col_mapping$track_id]]), as.numeric(df[[col_mapping$frame]])), ]
+  df <- df[order(df[[col_mapping$track_id]], as.numeric(df[[col_mapping$frame]])), ]
   
   # 3. Process data frame and populate KWCOCO structure
   annotation_id_counter <- 1
@@ -126,7 +126,7 @@ convert_track_csv_to_kwcoco_r <- function(csv_path,
     row <- df[i, ]
     
     frame_number <- as.integer(row[[col_mapping$frame]])
-    frame_index <- frame_number - 1
+    frame_index <- frame_number
     track_id <- as.integer(row[[col_mapping$track_id]])
     
     # Bounding box calculation from top-left and bottom-right coordinates
@@ -250,8 +250,8 @@ convert_batch_to_kwcoco_r <- function(csv_inputs, video_metadata_list, output_pa
     
     if (is.null(df)) { next } # Skip if file was empty or failed to read
     
-    # Sort dataframe by frame and track_id to ensure annotations match DIVE sort order
-    df <- df[order(as.numeric(df[[col_mapping$frame]]), as.numeric(df[[col_mapping$track_id]])), ]
+    # Sort dataframe by track_id and frame to ensure annotations match DIVE sort order
+    df <- df[order(df[[col_mapping$track_id]], as.numeric(df[[col_mapping$frame]])), ]
     
     processed_frames <- list() # Tracks frames *within the current video*
     
@@ -259,7 +259,7 @@ convert_batch_to_kwcoco_r <- function(csv_inputs, video_metadata_list, output_pa
     for (i in 1:nrow(df)) {
       row <- df[i, ]
       frame_number <- as.integer(row[[col_mapping$frame]])
-      frame_index <- frame_number - 1
+      frame_index <- frame_number
       frame_key <- as.character(frame_number)
       
       # If it's a new frame for this video, create an image entry
