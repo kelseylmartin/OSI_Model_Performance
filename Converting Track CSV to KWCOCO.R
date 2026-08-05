@@ -55,9 +55,14 @@ preprocess_and_read_csv <- function(flnm) {
     if (grepl("^19[WE]_", deployment_name)) {
       deployment_name <- gsub("^19W_", "2019W", deployment_name)
       deployment_name <- gsub("^19E_", "2019E", deployment_name)
-    } else if (grepl("^(?:[A-Za-z]+_)?2022", flnm) || grepl("2022", flnm)) { # Attempting to loosely guess if it's 2022 data from the path
-      if (grepl("^[A-Za-z]", deployment_name) && !grepl("^20", deployment_name)) {
-        deployment_name <- paste0("2022-", deployment_name)
+    } else if (grepl("^(?:[A-Za-z]+_)?(19|20)\\d{2}", flnm) || grepl("(19|20)\\d{2}", flnm)) { 
+      # Attempting to loosely guess if it's year data from the path
+      year_match <- regmatches(flnm, regexpr("(19|20)\\d{2}", flnm))
+      if (length(year_match) > 0) {
+        year_str <- year_match[[1]]
+        if (grepl("^[A-Za-z]", deployment_name) && !grepl("^(19|20)\\d{2}", deployment_name)) {
+          deployment_name <- paste0(year_str, "-", deployment_name)
+        }
       }
     }
     
@@ -106,8 +111,8 @@ convert_track_csv_to_kwcoco_r <- function(csv_path,
   
   if (is.null(df)) { return(invisible(NULL)) } # Skip if file was empty or failed to read
   
-  # Sort dataframe by frame and track_id to ensure annotations match DIVE sort order
-  df <- df[order(as.numeric(df[[col_mapping$frame]]), as.numeric(df[[col_mapping$track_id]])), ]
+  # Sort dataframe by track_id and frame to ensure annotations match DIVE sort order
+  df <- df[order(as.numeric(df[[col_mapping$track_id]]), as.numeric(df[[col_mapping$frame]])), ]
   
   # 3. Process data frame and populate KWCOCO structure
   annotation_id_counter <- 1
