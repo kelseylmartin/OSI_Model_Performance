@@ -268,7 +268,7 @@ convert_batch_to_kwcoco_r <- function(csv_inputs, video_metadata_list, output_pa
     processed_frames <- list() # Tracks frames *within the current video*
     
     # 3. Process each row of the current CSV
-    for (i in 1:nrow(df)) {
+    for (i in seq_len(nrow(df))) {
       row <- df[i, ]
       frame_number <- as.integer(row[[col_mapping$frame]])
       frame_index <- frame_number
@@ -297,6 +297,9 @@ convert_batch_to_kwcoco_r <- function(csv_inputs, video_metadata_list, output_pa
       
       # Get species name for category mapping
       species_name <- as.character(row[[col_mapping$species_name]])
+      if (is.na(species_name) || species_name == "") {
+        species_name <- "Unknown"
+      }
       all_species <- c(all_species, species_name)
       category_id <- species_name
       
