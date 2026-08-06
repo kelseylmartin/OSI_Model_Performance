@@ -375,7 +375,7 @@ convert_folder_to_kwcoco_r <- function(folder_path,
   csv_inputs <- list()
   video_metadata_list <- list()
   
-  for (i in 1:length(csv_files)) {
+  for (i in seq_along(csv_files)) {
     csv_file_path <- csv_files[i]
     # Extract a clean name for the video from the filename
     video_name <- tools::file_path_sans_ext(basename(csv_file_path))
