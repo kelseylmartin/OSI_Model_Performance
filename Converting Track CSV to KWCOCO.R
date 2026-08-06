@@ -43,7 +43,8 @@ preprocess_and_read_csv <- function(flnm) {
     # Read the first 11 columns, skipping 2 header rows, with no column names
     df <- read_csv(local_flnm_to_read, skip = 2, col_names = FALSE, col_select = c(1:11), show_col_types = FALSE)
     
-    if (nrow(df) == 0) return(NULL)
+    # Remove rows that are entirely NA (e.g., from trailing commas in NOFISH files)
+    df <- df[rowSums(is.na(df)) != ncol(df), ]
     
     # Replicate filename processing to create Deployment ID
     deployment_name <- basename(flnm)
@@ -128,7 +129,7 @@ convert_track_csv_to_kwcoco_r <- function(csv_path,
   processed_frames <- list() 
   all_species <- c()
   
-  for (i in 1:nrow(df)) {
+  for (i in seq_len(nrow(df))) {
     row <- df[i, ]
     
     frame_number <- as.integer(row[[col_mapping$frame]])
@@ -144,6 +145,9 @@ convert_track_csv_to_kwcoco_r <- function(csv_path,
     
     # Get species name for category mapping
     species_name <- as.character(row[[col_mapping$species_name]])
+    if (is.na(species_name) || species_name == "") {
+      species_name <- "Unknown"
+    }
     all_species <- c(all_species, species_name)
     category_id <- species_name
     
