@@ -67,6 +67,28 @@ test_that("summarize_performance_by_threshold() works with correct inputs", {
   expect_equal(metrics_at_08$fn, 1)
 })
 
+# {{{ calculate_scalpred_metrics }}} ----
+test_that("calculate_scalpred_metrics() computes threshold metrics for OpticsDetections", {
+  #' @description Test that ScalPred metrics return expected TP/FP/FN and PR/F1 values.
+  metrics_df <- calculate_scalpred_metrics(
+    model_detections = model_detections_perf,
+    truth_detections = truth_detections_perf,
+    by = c("video_id", "category_name"),
+    thresholds = c(0.8, 0.9)
+  )
+
+  expect_true(all(c("threshold", "tp", "fp", "fn", "precision", "recall", "f1_score") %in% names(metrics_df)))
+  expect_equal(nrow(metrics_df), 2)
+
+  metrics_08 <- metrics_df[metrics_df$threshold == 0.8, ]
+  expect_equal(metrics_08$tp, 1)
+  expect_equal(metrics_08$fp, 1)
+  expect_equal(metrics_08$fn, 1)
+  expect_equal(metrics_08$precision, 0.5)
+  expect_equal(metrics_08$recall, 0.5)
+  expect_equal(metrics_08$f1_score, 0.5)
+})
+
 # {{{ classify_detections }}} ----
 ## Setup ----
 raw_classify_df <- dplyr::tibble(

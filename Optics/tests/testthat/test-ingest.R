@@ -175,3 +175,44 @@ test_that("read_viame_csv() warns on corrupted data", {
   
   unlink(corrupted_csv_path)
 })
+
+# {{{ convert_track_csv_to_kwcoco }}} ----
+## Setup ----
+track_content <- c(
+  "# header 1",
+  "# header 2",
+  "1,video_a,1,10,20,40,60,0.90,1,cod,1",
+  "1,video_a,1,10,20,40,60,0.88,1,cod,1",
+  "2,video_a,2,50,70,80,100,0.95,1,,1"
+)
+track_csv_path <- tempfile(fileext = ".csv")
+writeLines(track_content, track_csv_path)
+
+test_that("convert_track_csv_to_kwcoco() converts track CSV flow correctly", {
+  #' @description Test that conversion sorts/deduplicates and builds KWCOCO entities.
+  kw <- convert_track_csv_to_kwcoco(track_csv_path, video_name = "video_a")
+
+  expect_true(is.list(kw))
+  expect_true(all(c("info", "videos", "images", "annotations", "categories") %in% names(kw)))
+  expect_equal(length(kw$annotations), 2)
+  expect_equal(length(kw$images), 2)
+
+  image_ids <- vapply(kw$images, function(x) x$id, integer(1))
+  expect_equal(image_ids, c(0L, 1L))
+
+  ann1 <- kw$annotations[[1]]
+  expect_equal(ann1$track_id, 1L)
+  expect_equal(ann1$bbox, c(10, 20, 30, 40))
+
+  category_names <- vapply(kw$categories, function(x) x$name, character(1))
+  expect_true(all(c("cod", "Unknown") %in% category_names))
+})
+
+test_that("convert_track_csv_to_kwcoco() validates required columns", {
+  #' @description Test that missing mapped columns raise a descriptive error.
+  bad_df <- data.frame(UniqFrame = 1, TL_X = 1, TL_Y = 1, BR_X = 2, BR_Y = 2, SP = "cod")
+  expect_error(
+    convert_track_csv_to_kwcoco(bad_df),
+    regexp = "missing required columns"
+  )
+})
