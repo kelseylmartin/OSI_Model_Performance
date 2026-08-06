@@ -3,7 +3,8 @@
 # ---
 # This script reproduces the GFisher MaxN comparison workflow using package
 # ingestion/alignment/metric functions instead of manual wrangling code.
-
+library(googleCloudStorageR)
+library(googleAuthR)
 library(Optics)
 library(dplyr)
 library(purrr)
