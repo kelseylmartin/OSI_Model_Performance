@@ -180,6 +180,121 @@ setMethod("summarize_performance_by_threshold",
             return(dplyr::bind_rows(all_metrics))
           })
 
+.scalpred_prf_from_counts <- function(tp, fp, fn) {
+  precision <- ifelse((tp + fp) == 0, 0, tp / (tp + fp))
+  recall <- ifelse((tp + fn) == 0, 0, tp / (tp + fn))
+  f1_score <- ifelse((precision + recall) == 0, 0, 2 * precision * recall / (precision + recall))
+  dplyr::tibble(
+    tp = tp,
+    fp = fp,
+    fn = fn,
+    precision = precision,
+    recall = recall,
+    f1_score = f1_score
+  )
+}
+
+#' Calculate ScalPred Precision, Recall, and F1 by Threshold
+#'
+#' Computes threshold-wise precision, recall, and F1 using the same count-based
+#' equations used in the NEFSC ScalPred scripts:
+#' `precision = TP/(TP+FP)`, `recall = TP/(TP+FN)`, and
+#' `F1 = 2 * precision * recall / (precision + recall)`.
+#'
+#' @param model_detections Model detections as an `OpticsDetections` object or
+#'   validated `data.frame`.
+#' @param truth_detections Truth detections as an `OpticsDetections` object or
+#'   validated `data.frame`.
+#' @param ... Additional arguments passed to methods.
+#' @return A `tibble` with threshold, TP/FP/FN, precision, recall, and F1.
+#' @export
+#' @rdname calculate_scalpred_metrics
+setGeneric("calculate_scalpred_metrics", function(model_detections, truth_detections, ...) {
+  standardGeneric("calculate_scalpred_metrics")
+})
+
+#' @param by Character vector of join/group columns used for alignment.
+#' @param thresholds Numeric confidence thresholds to evaluate.
+#' @param metric_function Aggregation function (default `calculate_maxn`).
+#'
+#' @rdname calculate_scalpred_metrics
+#' @export
+setMethod("calculate_scalpred_metrics",
+          signature(model_detections = "OpticsDetections", truth_detections = "OpticsDetections"),
+          function(model_detections, truth_detections, by,
+                   thresholds = seq(0.5, 1.0, by = 0.01),
+                   metric_function = calculate_maxn) {
+            calculate_scalpred_metrics(
+              model_detections = model_detections@data,
+              truth_detections = truth_detections@data,
+              by = by,
+              thresholds = thresholds,
+              metric_function = metric_function
+            )
+          })
+
+#' @rdname calculate_scalpred_metrics
+#' @export
+setMethod("calculate_scalpred_metrics",
+          signature(model_detections = "data.frame", truth_detections = "data.frame"),
+          function(model_detections, truth_detections, by,
+                   thresholds = seq(0.5, 1.0, by = 0.01),
+                   metric_function = calculate_maxn) {
+            required_model_cols <- c(by, "score")
+            missing_model_cols <- setdiff(required_model_cols, names(model_detections))
+            if (length(missing_model_cols) > 0) {
+              stop("model_detections is missing required columns: ",
+                   paste(missing_model_cols, collapse = ", "))
+            }
+
+            missing_truth_cols <- setdiff(by, names(truth_detections))
+            if (length(missing_truth_cols) > 0) {
+              stop("truth_detections is missing required columns: ",
+                   paste(missing_truth_cols, collapse = ", "))
+            }
+
+            if (!is.numeric(thresholds) || length(thresholds) == 0 || any(!is.finite(thresholds))) {
+              stop("thresholds must be a non-empty numeric vector of finite values.")
+            }
+
+            model_detections$score <- suppressWarnings(as.numeric(model_detections$score))
+            if (any(is.na(model_detections$score))) {
+              warning("NAs introduced while coercing model_detections$score to numeric.")
+            }
+
+            truth_counts <- metric_function(truth_detections)
+            all_groups <- dplyr::bind_rows(
+              dplyr::distinct(model_detections, !!!rlang::syms(by)),
+              dplyr::distinct(truth_detections, !!!rlang::syms(by))
+            )
+            total_comparisons <- nrow(dplyr::distinct(all_groups))
+
+            metrics_by_threshold <- lapply(thresholds, function(thresh) {
+              model_filtered <- dplyr::filter(model_detections, .data$score >= thresh)
+
+              if (nrow(model_filtered) == 0) {
+                fn_count <- sum(truth_counts[[ncol(truth_counts)]] > 0, na.rm = TRUE)
+                out <- .scalpred_prf_from_counts(tp = 0, fp = 0, fn = fn_count)
+              } else {
+                model_counts <- metric_function(model_filtered)
+                aligned <- align_counts(model_counts, truth_counts, by = by)
+                tp <- sum(aligned$model_count > 0 & aligned$truth_count > 0, na.rm = TRUE)
+                fp <- sum(aligned$model_count > 0 & aligned$truth_count == 0, na.rm = TRUE)
+                fn <- sum(aligned$model_count == 0 & aligned$truth_count > 0, na.rm = TRUE)
+                out <- .scalpred_prf_from_counts(tp = tp, fp = fp, fn = fn)
+              }
+
+              out$threshold <- thresh
+              out$total_comparisons <- total_comparisons
+              out
+            })
+
+            dplyr::bind_rows(metrics_by_threshold) %>%
+              dplyr::select(.data$threshold, .data$tp, .data$fp, .data$fn,
+                            .data$precision, .data$recall, .data$f1_score,
+                            .data$total_comparisons)
+          })
+
 #' Classify Detections as True/False Positives
 #'
 #' @param raw_detections An object of raw detections.

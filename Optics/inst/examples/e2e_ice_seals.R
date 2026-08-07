@@ -260,11 +260,15 @@ if (requireNamespace("ggpubr", quietly = TRUE)) {
 
 p_bland <- plot_bland_altman(aligned_both, model_col = model_name)
 p_perf <- plot_performance_by_threshold(perf_both, model_col = model_name)
+p_scalpred_f1 <- plot_scalpred_f1_curve(perf_both, model_col = model_name)
+p_scalpred_pr <- plot_scalpred_pr_curve(perf_both, model_col = model_name)
 p_confusion_binary <- plot_confusion_matrix(metrics_both, model_col = model_name)
 p_confusion_multiclass <- plot_multiclass_confusion_matrix(confusion_df)
 
 print(p_bland)
 print(p_perf)
+print(p_scalpred_f1)
+print(p_scalpred_pr)
 print(p_confusion_binary)
 print(p_confusion_multiclass)
 

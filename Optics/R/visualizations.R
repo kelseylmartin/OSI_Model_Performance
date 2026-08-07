@@ -423,3 +423,74 @@ setMethod("plot_performance_by_threshold", "data.frame",
             }
             return(p)
           })
+
+#' Plot a ScalPred F1 Curve Across Confidence Thresholds
+#'
+#' @param summary_df A data frame from `calculate_scalpred_metrics()`.
+#' @param ... Additional arguments.
+#' @return A `ggplot` object.
+#' @export
+#' @rdname plot_scalpred_f1_curve
+setGeneric("plot_scalpred_f1_curve", function(summary_df, ...) standardGeneric("plot_scalpred_f1_curve"))
+
+#' @param model_col Optional unquoted model column for faceting.
+#' @param title Plot title.
+#' @rdname plot_scalpred_f1_curve
+#' @export
+setMethod("plot_scalpred_f1_curve", "data.frame",
+          function(summary_df, model_col = NULL, title = "ScalPred F1 by Threshold") {
+            required_cols <- c("threshold", "f1_score")
+            if (!all(required_cols %in% names(summary_df))) {
+              stop("Input data frame must contain 'threshold' and 'f1_score' columns.")
+            }
+
+            model_col_quo <- rlang::enquo(model_col)
+            p <- ggplot2::ggplot(summary_df, ggplot2::aes(x = .data$threshold, y = .data$f1_score)) +
+              ggplot2::geom_line(linewidth = 1.1, color = "#4E79A7") +
+              ggplot2::geom_point(size = 2, color = "#4E79A7") +
+              ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
+              ggplot2::labs(title = title, x = "Confidence Threshold", y = "F1 Score") +
+              theme_optics()
+
+            if (!rlang::quo_is_null(model_col_quo)) {
+              p <- p + ggplot2::facet_wrap(rlang::quo_get_expr(model_col_quo))
+            }
+            p
+          })
+
+#' Plot a ScalPred Precision-Recall Curve
+#'
+#' @param summary_df A data frame from `calculate_scalpred_metrics()`.
+#' @param ... Additional arguments.
+#' @return A `ggplot` object.
+#' @export
+#' @rdname plot_scalpred_pr_curve
+setGeneric("plot_scalpred_pr_curve", function(summary_df, ...) standardGeneric("plot_scalpred_pr_curve"))
+
+#' @param model_col Optional unquoted model column for faceting.
+#' @param title Plot title.
+#' @rdname plot_scalpred_pr_curve
+#' @export
+setMethod("plot_scalpred_pr_curve", "data.frame",
+          function(summary_df, model_col = NULL, title = "ScalPred Precision-Recall Curve") {
+            required_cols <- c("precision", "recall")
+            if (!all(required_cols %in% names(summary_df))) {
+              stop("Input data frame must contain 'precision' and 'recall' columns.")
+            }
+
+            model_col_quo <- rlang::enquo(model_col)
+            plot_df <- summary_df %>%
+              dplyr::arrange(.data$recall, .data$precision)
+
+            p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$recall, y = .data$precision)) +
+              ggplot2::geom_path(linewidth = 1.1, color = "#59A14F") +
+              ggplot2::geom_point(size = 2, color = "#59A14F") +
+              ggplot2::coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
+              ggplot2::labs(title = title, x = "Recall", y = "Precision") +
+              theme_optics()
+
+            if (!rlang::quo_is_null(model_col_quo)) {
+              p <- p + ggplot2::facet_wrap(rlang::quo_get_expr(model_col_quo))
+            }
+            p
+          })

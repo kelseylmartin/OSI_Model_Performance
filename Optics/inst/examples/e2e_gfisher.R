@@ -30,6 +30,13 @@ normalize_reference_id <- function(x) {
     str_replace("^(\\d{4})-(N(?:CD|CO)-\\d{3})$", "\\1_\\2")
 }
 
+# Preview conversion of one track CSV to KWCOCO format using the package API.
+kwcoco_preview <- convert_track_csv_to_kwcoco(
+  track_files[[1]],
+  video_name = extract_deployment_id(track_files[[1]])
+)
+cat("KWCOCO preview annotations:", length(kwcoco_preview$annotations), "\n")
+
 # --- 2. Stitch all video-level model outputs into one S4 object ---
 stitched_model_df <- map2_dfr(track_files, extract_deployment_id(track_files), function(track_file, deployment_id) {
   detections <- read_viame_csv(track_file, video_id = deployment_id)

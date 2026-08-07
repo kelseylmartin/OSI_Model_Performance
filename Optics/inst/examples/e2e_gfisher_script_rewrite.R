@@ -94,6 +94,13 @@ normalize_compact_id <- function(x) {
     gsub("_|-", "", .)
 }
 
+# Preview conversion of one track CSV to KWCOCO format using the package API.
+kwcoco_preview <- convert_track_csv_to_kwcoco(
+  track_files[[1]],
+  video_name = extract_deployment_id(track_files[[1]])
+)
+cat("KWCOCO preview annotations:", length(kwcoco_preview$annotations), "\n")
+
 # Legacy frame-window trimming support from the read-time files.
 Allreadtimes$ReferenceID <- gsub("_|-", "", Allreadtimes$ReferenceID)
 start_lookup <- Allreadtimes %>%
