@@ -1,5 +1,5 @@
 ---
-title: "GFisher Output Analysis Report"
+title: "VIAME Output Analysis Report"
 author: "Author: Kelsey Martin \n\n VIAME Analysts: Jack Prior and Sara Thomas"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:

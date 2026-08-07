@@ -1,6 +1,32 @@
 example_report <- testthat::test_path("..", "..", "inst", "examples", "e2e_gfisher_script_markdown.Rmd")
 legacy_report <- testthat::test_path("..", "..", "..", "Optics Model Performance Report.Rmd")
 
+extract_report_scaffold <- function(path) {
+  report_lines <- readLines(path, warn = FALSE)
+  scaffold <- character()
+  in_chunk <- FALSE
+
+  for (line in report_lines) {
+    if (grepl("^```\\{", line)) {
+      in_chunk <- TRUE
+      scaffold <- c(scaffold, trimws(line))
+      next
+    }
+
+    if (grepl("^```\\s*$", line)) {
+      in_chunk <- FALSE
+      scaffold <- c(scaffold, "```")
+      next
+    }
+
+    if (!in_chunk && (grepl("^# ", line) || trimws(line) %in% c("***", "<br>"))) {
+      scaffold <- c(scaffold, trimws(line))
+    }
+  }
+
+  scaffold
+}
+
 test_that("GFisher markdown example is added without replacing the legacy report", {
   expect_true(file.exists(example_report))
   expect_true(file.exists(legacy_report))
@@ -33,4 +59,19 @@ test_that("GFisher markdown example keeps the report structure and package pipel
   expect_false(grepl("\\bmerge\\(", report_text))
   expect_false(grepl("\\bcast\\(", report_text))
   expect_false(grepl("reshape::melt", report_text, fixed = TRUE))
+})
+
+test_that("GFisher markdown example preserves the legacy report scaffold", {
+  example_lines <- readLines(example_report, warn = FALSE)
+  legacy_lines <- readLines(legacy_report, warn = FALSE)
+
+  expect_identical(
+    grep('^title:', example_lines, value = TRUE)[1],
+    grep('^title:', legacy_lines, value = TRUE)[1]
+  )
+
+  expect_identical(
+    extract_report_scaffold(example_report),
+    extract_report_scaffold(legacy_report)
+  )
 })
