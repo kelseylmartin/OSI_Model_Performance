@@ -115,24 +115,6 @@ perf_b <- summarize_performance_by_threshold(
 
 perf_both <- bind_rows(perf_a, perf_b)
 
-scalpred_a <- calculate_scalpred_metrics(
-  model_detections = model_a,
-  truth_detections = truth,
-  by = c("video_id", "frame_index", "category_name"),
-  thresholds = seq(0.5, 1.0, by = 0.05),
-  metric_function = calculate_frame_abundance
-) %>% mutate(model_name = "model_a")
-
-scalpred_b <- calculate_scalpred_metrics(
-  model_detections = model_b,
-  truth_detections = truth,
-  by = c("video_id", "frame_index", "category_name"),
-  thresholds = seq(0.5, 1.0, by = 0.05),
-  metric_function = calculate_frame_abundance
-) %>% mutate(model_name = "model_b")
-
-scalpred_both <- bind_rows(scalpred_a, scalpred_b)
-
 # --- 6. Detection-level classification + reviewer effort ---
 classified_a <- classify_detections(
   raw_detections = model_a@data,
@@ -204,8 +186,8 @@ if (requireNamespace("ggpubr", quietly = TRUE)) {
 
 p_bland <- plot_bland_altman(aligned_both, model_col = model_name)
 p_perf <- plot_performance_by_threshold(perf_both, model_col = model_name)
-p_scalpred_f1 <- plot_scalpred_f1_curve(scalpred_both, model_col = model_name)
-p_scalpred_pr <- plot_scalpred_pr_curve(scalpred_both, model_col = model_name)
+p_scalpred_f1 <- plot_scalpred_f1_curve(perf_both, model_col = model_name)
+p_scalpred_pr <- plot_scalpred_pr_curve(perf_both, model_col = model_name)
 p_confusion_binary <- plot_confusion_matrix(metrics_both, model_col = model_name)
 p_confusion_multiclass <- plot_multiclass_confusion_matrix(confusion_df)
 
