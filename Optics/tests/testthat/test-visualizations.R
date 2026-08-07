@@ -163,3 +163,20 @@ test_that("plot_performance_by_threshold() works correctly", {
   expect_true("colour" %in% names(p_data))
   expect_equal(length(unique(p_data$colour)), 3)
 })
+
+# {{{ plot_scalpred_f1_curve }}} ----
+test_that("plot_scalpred_f1_curve() returns a ggplot object", {
+  #' @description Test that ScalPred F1 plotting returns a valid ggplot with expected labels.
+  p <- plot_scalpred_f1_curve(perf_summary_df)
+  expect_s3_class(p, "ggplot")
+  expect_equal(p$labels$y, "F1 Score")
+})
+
+# {{{ plot_scalpred_pr_curve }}} ----
+test_that("plot_scalpred_pr_curve() returns a ggplot object", {
+  #' @description Test that ScalPred PR plotting returns a valid ggplot with expected labels.
+  p <- plot_scalpred_pr_curve(perf_summary_df)
+  expect_s3_class(p, "ggplot")
+  expect_equal(p$labels$x, "Recall")
+  expect_equal(p$labels$y, "Precision")
+})
