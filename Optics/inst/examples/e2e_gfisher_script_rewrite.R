@@ -3,12 +3,34 @@
 # ---
 # This script reproduces the GFisher MaxN comparison workflow using package
 # ingestion/alignment/metric functions instead of manual wrangling code.
-library(googleCloudStorageR)
-library(googleAuthR)
-library(Optics)
-library(dplyr)
-library(purrr)
-library(stringr)
+required_packages <- c(
+  "Optics",
+  "dplyr",
+  "purrr",
+  "stringr",
+  "rmarkdown"
+)
+
+ensure_example_packages <- function(packages, non_cran_packages = "Optics", repos = "https://cloud.r-project.org") {
+  missing_packages <- packages[!vapply(packages, requireNamespace, logical(1), quietly = TRUE)]
+  installable_packages <- setdiff(missing_packages, non_cran_packages)
+
+  if (length(installable_packages) > 0) {
+    install.packages(installable_packages, repos = repos)
+  }
+
+  still_missing <- packages[!vapply(packages, requireNamespace, logical(1), quietly = TRUE)]
+  if (length(still_missing) > 0) {
+    stop(
+      "Install missing packages before running this example: ",
+      paste(still_missing, collapse = ", ")
+    )
+  }
+
+  invisible(lapply(packages, library, character.only = TRUE))
+}
+
+ensure_example_packages(required_packages)
 
 # 1) Legacy directory structure setup (lines 247-271) for external execution.
 #    This preserves the original Data/Tracks/Truth/Output expectations when
@@ -303,7 +325,7 @@ if (!file.exists(analysis_report_path)) {
   }
 }
 
-if (requireNamespace("rmarkdown", quietly = TRUE) && file.exists(analysis_report_path)) {
+if (file.exists(analysis_report_path)) {
   analysis_reports_dir <- file.path(outdir, "Part III - Data Analysis", "Analysis Reports")
   dir.create(analysis_reports_dir, recursive = TRUE, showWarnings = FALSE)
   species_values <- sort(unique(model_vs_manual_maxn$class_label))
