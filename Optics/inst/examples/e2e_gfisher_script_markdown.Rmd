@@ -17,6 +17,45 @@ params:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width = 8, fig.height = 6)
+required_packages <- c(
+  "Optics",
+  "ggplot2",
+  "dplyr",
+  "tidyr",
+  "knitr",
+  "ggpubr",
+  "stringr",
+  "broom",
+  "flextable",
+  "MuMIn",
+  "lsmeans",
+  "boot",
+  "pander",
+  "purrr",
+  "FSA"
+)
+
+ensure_example_packages <- function(packages, non_cran_packages = "Optics", repos = "https://cloud.r-project.org") {
+  missing_packages <- packages[!vapply(packages, requireNamespace, logical(1), quietly = TRUE)]
+  installable_packages <- setdiff(missing_packages, non_cran_packages)
+
+  if (length(installable_packages) > 0) {
+    install.packages(installable_packages, repos = repos)
+  }
+
+  still_missing <- packages[!vapply(packages, requireNamespace, logical(1), quietly = TRUE)]
+  if (length(still_missing) > 0) {
+    stop(
+      "Install missing packages before running this example: ",
+      paste(still_missing, collapse = ", ")
+    )
+  }
+
+  invisible(lapply(packages, library, character.only = TRUE))
+}
+
+ensure_example_packages(required_packages)
+
 library(Optics)
 library(ggplot2)
 library(dplyr)
@@ -31,6 +70,7 @@ library(lsmeans)
 library(boot)
 library(pander)
 library(purrr)
+library(FSA)
 options(width = 850)
 opts_knit$set(progress = FALSE, verbose = FALSE)
 panderOptions('table.split.table', Inf)

@@ -1,4 +1,5 @@
 example_report <- testthat::test_path("..", "..", "inst", "examples", "e2e_gfisher_script_markdown.Rmd")
+rewrite_script <- testthat::test_path("..", "..", "inst", "examples", "e2e_gfisher_script_rewrite.R")
 legacy_report <- testthat::test_path("..", "..", "..", "Optics Model Performance Report.Rmd")
 
 extract_report_scaffold <- function(path) {
@@ -29,6 +30,7 @@ extract_report_scaffold <- function(path) {
 
 test_that("GFisher markdown example is added without replacing the legacy report", {
   expect_true(file.exists(example_report))
+  expect_true(file.exists(rewrite_script))
   expect_true(file.exists(legacy_report))
   expect_false(identical(normalizePath(example_report), normalizePath(legacy_report)))
 })
@@ -74,4 +76,20 @@ test_that("GFisher markdown example preserves the legacy report scaffold", {
     extract_report_scaffold(example_report),
     extract_report_scaffold(legacy_report)
   )
+})
+
+test_that("GFisher example scripts bootstrap their required packages", {
+  report_text <- paste(readLines(example_report, warn = FALSE), collapse = "\n")
+  rewrite_text <- paste(readLines(rewrite_script, warn = FALSE), collapse = "\n")
+
+  for (script_text in list(report_text, rewrite_text)) {
+    expect_match(script_text, "ensure_example_packages <- function", fixed = TRUE)
+    expect_match(script_text, "install.packages(", fixed = TRUE)
+    expect_match(script_text, "requireNamespace", fixed = TRUE)
+    expect_match(script_text, "required_packages <- c(", fixed = TRUE)
+  }
+
+  expect_match(report_text, "\"FSA\"", fixed = TRUE)
+  expect_match(report_text, "library(FSA)", fixed = TRUE)
+  expect_match(rewrite_text, "\"rmarkdown\"", fixed = TRUE)
 })
