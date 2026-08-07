@@ -69,8 +69,10 @@ dir.create(file.path(script.dir, "Output", "Part III - Data Analysis"), recursiv
 dir.create(file.path(script.dir, "Output", "Part III - Data Analysis", "Figures"), recursive = TRUE, showWarnings = FALSE)
 outdir <- file.path(script.dir, "Output")
 
-Allreadtimes <- read.csv(file.path(wrkdir, "All GFISHER Read Times.csv"))
-Readtimekey <- read.csv(file.path(wrkdir, "final_filled_key_v2.csv")) %>%
+Allreadtimes <- read.csv(file.path(wrkdir, "All GFISHER Read Times.csv")) %>% 
+  dplyr::mutate(StartTime = format(as.POSIXct(StartTime, format = "%H:%M:%S"), "%H:%M:%S"), 
+                EndTime = format(as.POSIXct(EndTime, format = "%H:%M:%S"), "%H:%M:%S")) 
+Readtimekey <- read.csv(file.path(wrkdir, "final_filled_key_v3.csv")) %>%
   mutate(Videotime = sub("\\..*", "", Timestamp))
 Species_List <- read.csv(file.path(wrkdir, "Species List.csv"))
 fwri_ref_key <- read.csv(file.path(wrkdir, "env3LABS_93to24.csv")) %>%
@@ -325,6 +327,16 @@ if (!file.exists(analysis_report_path)) {
   }
 }
 
+# Would you like to cut out large schools (i.e., 999, 299, 399)?
+print("Would you like to remove counts with large schools (i.e., 299, 399, and 999)? (y, n)")
+remove_large_schools <- rstudioapi::showPrompt(
+  title = "Manual Input Required",
+  message = "Would you like to remove counts with large schools (i.e., 299, 399, and 999)? Please enter y or n."
+)
+# checking to see if the user cancelled the value selection
+if (is.null(remove_large_schools)) {
+  stop("Script cancelled by user.", call. = FALSE)
+}
 if (file.exists(analysis_report_path)) {
   analysis_reports_dir <- file.path(outdir, "Part III - Data Analysis", "Analysis Reports")
   dir.create(analysis_reports_dir, recursive = TRUE, showWarnings = FALSE)
