@@ -13,12 +13,12 @@ NULL
 #' # Example using Erin's ice seal data.
 #' # 1. Create temporary VIAME CSV files for model and truth data.
 #' model_csv_data <- c(
-#'   "1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1",
-#'   "2,video1,15,150,150,250,250,1,0.90,"bearded_seal",1"
+#'   "1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1",
+#'   "2,video1,15,150,150,250,250,1,0.90,\"bearded_seal\",1"
 #' )
 #' truth_csv_data <- c(
-#'   "1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1",
-#'   "3,video1,20,300,300,400,400,1,1.0,"ringed_seal",1"
+#'   "1,video1,10,100,100,200,200,1,1.0,\"ringed_seal\",1",
+#'   "3,video1,20,300,300,400,400,1,1.0,\"ringed_seal\",1"
 #' )
 #' model_csv_path <- tempfile(fileext = ".csv")
 #' truth_csv_path <- tempfile(fileext = ".csv")
@@ -109,8 +109,8 @@ setMethod("calculate_binary_metrics", "data.frame",
 #' @rdname summarize_performance_by_threshold
 #' @examples
 #' # Example using Erin's ice seal data.
-#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1")
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"ringed_seal\",1")
 #' model_csv_path <- tempfile(fileext = ".csv")
 #' truth_csv_path <- tempfile(fileext = ".csv")
 #' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
@@ -290,9 +290,9 @@ setMethod("calculate_scalpred_metrics",
             })
 
             dplyr::bind_rows(metrics_by_threshold) %>%
-              dplyr::select(.data$threshold, .data$tp, .data$fp, .data$fn,
-                            .data$precision, .data$recall, .data$f1_score,
-                            .data$total_comparisons)
+              dplyr::select("threshold", "tp", "fp", "fn",
+                            "precision", "recall", "f1_score",
+                            "total_comparisons")
           })
 
 #' Classify Detections as True/False Positives
@@ -304,8 +304,8 @@ setMethod("calculate_scalpred_metrics",
 #' @rdname classify_detections
 #' @examples
 #' # Example using Erin's ice seal data.
-#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-#' truth_csv_data <- c("2,video1,10,110,110,210,210,1,1.0,"ringed_seal",1")
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+#' truth_csv_data <- c("2,video1,10,110,110,210,210,1,1.0,\"ringed_seal\",1")
 #' model_csv_path <- tempfile(fileext = ".csv")
 #' truth_csv_path <- tempfile(fileext = ".csv")
 #' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
@@ -353,6 +353,14 @@ setMethod("classify_detections",
 #' The rest of the functions are utilities that operate on generic data.frames.
 #' They are converted to S4 generics for consistency.
 
+#' Calculate Confusion Matrix
+#'
+#' @param aligned_df A data frame of aligned counts.
+#' @param group_vars Character vector of grouping variables.
+#' @param species_col Symbol or unquoted name of the species column.
+#' @param model_col Symbol or unquoted name of the model counts column.
+#' @param truth_col Symbol or unquoted name of the truth counts column.
+#' @param ... Additional arguments.
 #' @rdname calculate_confusion_matrix
 #' @export
 #' @examples
@@ -414,25 +422,19 @@ setMethod("calculate_confusion_matrix", "data.frame", function(aligned_df, group
 
 #' Analyze Reviewer Effort
 #'
+#' @param raw_df A data frame of raw detections.
+#' @param validated_df A data frame of validated detections.
+#' @param group_vars Character vector of grouping variables.
+#' @param ... Additional arguments.
 #' @rdname analyze_reviewer_effort
 #' @export
 #' @examples
-#' # Example using Erin's ice seal data
-#' raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-#' validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"harbor_seal",1")
-#' raw_csv_path <- tempfile(fileext = ".csv")
-#' validated_csv_path <- tempfile(fileext = ".csv")
-#' writeLines(c("# h1", "# h2", raw_csv_data), raw_csv_path)
-#' writeLines(c("# h1", "# h2", validated_csv_data), validated_csv_path)
+#' # Example using data frames directly
+#' raw_df <- dplyr::tibble(TrackID = 1:2, video_id = c("v1", "v1"), Species = c("ringed_seal", "ringed_seal"))
+#' validated_df <- dplyr::tibble(TrackID = 1:2, video_id = c("v1", "v1"), Species = c("harbor_seal", "ringed_seal"))
 #' 
-#' raw_df <- read_viame_csv(raw_csv_path)@data
-#' validated_df <- read_viame_csv(validated_csv_path)@data
-#' 
-#' effort_analysis <- analyze_reviewer_effort(raw_df, validated_df)
+#' effort_analysis <- analyze_reviewer_effort(raw_df, validated_df, group_vars = "video_id")
 #' print(effort_analysis)
-#' 
-#' unlink(raw_csv_path)
-#' unlink(validated_csv_path)
 setGeneric("analyze_reviewer_effort", function(raw_df, validated_df, ...) standardGeneric("analyze_reviewer_effort"))
 #' @rdname analyze_reviewer_effort
 #' @export
@@ -469,6 +471,10 @@ setMethod("analyze_reviewer_effort", signature(raw_df = "data.frame", validated_
 
 #' Get a Report of Disagreements
 #'
+#' @param aligned_df A data frame of aligned counts.
+#' @param group_vars Character vector of grouping variables.
+#' @param top_n Integer. Number of top disagreements to return.
+#' @param ... Additional arguments.
 #' @rdname get_disagreement_report
 #' @export
 #' @examples
@@ -501,6 +507,9 @@ setMethod("get_disagreement_report", "data.frame", function(aligned_df, group_va
 
 #' Analyze Performance Drivers
 #'
+#' @param aligned_df A data frame of aligned counts.
+#' @param group_vars Character vector of grouping variables.
+#' @param ... Additional arguments.
 #' @rdname analyze_performance_drivers
 #' @export
 #' @examples

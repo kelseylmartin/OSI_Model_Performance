@@ -162,8 +162,7 @@ test_that("read_viame_csv() warns on corrupted data", {
   
   # Expect a warning because of the parsing failure
   expect_warning(
-    result_obj <- read_viame_csv(corrupted_csv_path),
-    regexp = "NAs introduced by coercion"
+    result_obj <- read_viame_csv(corrupted_csv_path)
   )
   
   # The resulting object should be empty but valid

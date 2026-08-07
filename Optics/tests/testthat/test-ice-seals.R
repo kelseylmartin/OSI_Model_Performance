@@ -2,9 +2,9 @@ describe("Ice Seals custom ingestion and analysis", {
 
   test_that("ingest_ice_seals_csv reads and combines data correctly", {
     # Get paths to the example files
-    left_file <- system.file("extdata", "ice_seals_2025_fl223_L_ir_detections_validated.csv", package = "Optics")
-    center_file <- system.file("extdata", "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-    right_file <- system.file("extdata", "ice_seals_2025_fl223_R_ir_detections_validated.csv", package = "Optics")
+    left_file <- system.file("extdata", "AKFSC", "ice_seals_2025_fl223_L_ir_detections_validated.csv", package = "Optics")
+    center_file <- system.file("extdata", "AKFSC", "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+    right_file <- system.file("extdata", "AKFSC", "ice_seals_2025_fl223_R_ir_detections_validated.csv", package = "Optics")
 
     # Ingest the data
     ice_seals_detections <- ingest_ice_seals_csv(c(left_file, center_file, right_file))
@@ -29,9 +29,9 @@ describe("Ice Seals custom ingestion and analysis", {
 
   test_that("calculate_ice_seals_totals works correctly", {
     # Get paths to the example files
-    left_file <- system.file("extdata", "ice_seals_2025_fl223_L_ir_detections_validated.csv", package = "Optics")
-    center_file <- system.file("extdata", "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-    right_file <- system.file("extdata", "ice_seals_2025_fl223_R_ir_detections_validated.csv", package = "Optics")
+    left_file <- system.file("extdata", "AKFSC", "ice_seals_2025_fl223_L_ir_detections_validated.csv", package = "Optics")
+    center_file <- system.file("extdata", "AKFSC", "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+    right_file <- system.file("extdata", "AKFSC", "ice_seals_2025_fl223_R_ir_detections_validated.csv", package = "Optics")
 
     # Calculate totals
     totals <- calculate_ice_seals_totals(
@@ -56,9 +56,9 @@ describe("Ice Seals custom ingestion and analysis", {
 
   test_that("select_ice_seals_candidates works correctly", {
     # Get paths to the example files
-    left_file <- system.file("extdata", "ice_seals_2025_fl223_L_ir_detections_validated.csv", package = "Optics")
-    center_file <- system.file("extdata", "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
-    right_file <- system.file("extdata", "ice_seals_2025_fl223_R_ir_detections_validated.csv", package = "Optics")
+    left_file <- system.file("extdata", "AKFSC", "ice_seals_2025_fl223_L_ir_detections_validated.csv", package = "Optics")
+    center_file <- system.file("extdata", "AKFSC", "ice_seals_2025_fl223_C_ir_detections_validated.csv", package = "Optics")
+    right_file <- system.file("extdata", "AKFSC", "ice_seals_2025_fl223_R_ir_detections_validated.csv", package = "Optics")
     
     # Ingest the data
     ice_seals_detections <- ingest_ice_seals_csv(c(left_file, center_file, right_file))

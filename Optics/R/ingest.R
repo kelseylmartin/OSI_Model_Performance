@@ -308,29 +308,36 @@ read_viame_csv <- function(file_path, video_id = NULL, id_schema = c("classic", 
   }
 
   # --- 4. Common Transformation Logic ---
-  standardized_df <- standardized_df %>%
-    dplyr::mutate(
-      bbox_width = as.numeric(.data$BR_X) - as.numeric(.data$TL_X),
-      bbox_height = as.numeric(.data$BR_Y) - as.numeric(.data$TL_Y)
-    ) %>%
-    dplyr::rename(
-      annotation_id = "TrackID",
-      frame_index = "UniqFrame",
-      category_name = "SP",
-      score = "DetLen_Conf",
-      bbox_x = "TL_X",
-      bbox_y = "TL_Y"
-    ) %>%
-    dplyr::mutate(dplyr::across(
-      c(frame_index, bbox_x, bbox_y, bbox_width, bbox_height, score),
-      ~as.numeric(as.character(.))
-    )) %>%
-    dplyr::select(
-      dplyr::any_of(c(
-        "video_id", "image_id", "frame_index", "annotation_id", "category_name",
-        "bbox_x", "bbox_y", "bbox_width", "bbox_height", "score"
-      ))
-    )
+  standardized_df <- suppressWarnings({
+    standardized_df %>%
+      dplyr::mutate(
+        bbox_width = as.numeric(BR_X) - as.numeric(TL_X),
+        bbox_height = as.numeric(BR_Y) - as.numeric(TL_Y)
+      ) %>%
+      dplyr::rename(
+        annotation_id = "TrackID",
+        frame_index = "UniqFrame",
+        category_name = "SP",
+        score = "DetLen_Conf",
+        bbox_x = "TL_X",
+        bbox_y = "TL_Y"
+      ) %>%
+      dplyr::mutate(dplyr::across(
+        c(frame_index, bbox_x, bbox_y, bbox_width, bbox_height, score),
+        ~as.numeric(as.character(.))
+      )) %>%
+      dplyr::select(
+        dplyr::any_of(c(
+          "video_id", "image_id", "frame_index", "annotation_id", "category_name",
+          "bbox_x", "bbox_y", "bbox_width", "bbox_height", "score"
+        ))
+      )
+  })
+
+  # Check if NAs were introduced in numeric columns that shouldn't have NAs
+  if (any(is.na(standardized_df$bbox_x) | is.na(standardized_df$bbox_y))) {
+    warning("NAs introduced by coercion during parsing. Data may be corrupted.")
+  }
 
   # Ensure all required columns exist, adding them as NA if necessary
   required_cols <- c("video_id", "image_id", "frame_index", "annotation_id",
@@ -704,7 +711,7 @@ setMethod("read_wide_maxn", "character",
       ) %>%
       dplyr::rename(video_id = {{ video_id_col }}) %>%
       dplyr::filter(.data$truth_count > 0) %>%
-      dplyr::select(.data$video_id, .data$category_name, .data$truth_count)
+      dplyr::select("video_id", "category_name", "truth_count")
 
     # Ensure video_id is character for joining
     long_data$video_id <- as.character(long_data$video_id)

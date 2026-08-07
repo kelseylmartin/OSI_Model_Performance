@@ -9,6 +9,15 @@ get_disagreement_report(aligned_df, ...)
 
 \S4method{get_disagreement_report}{data.frame}(aligned_df, group_vars, top_n = 10)
 }
+\arguments{
+\item{aligned_df}{A data frame of aligned counts.}
+
+\item{...}{Additional arguments.}
+
+\item{group_vars}{Character vector of grouping variables.}
+
+\item{top_n}{Integer. Number of top disagreements to return.}
+}
 \description{
 Get a Report of Disagreements
 }

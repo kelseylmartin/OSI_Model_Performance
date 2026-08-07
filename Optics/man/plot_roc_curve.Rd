@@ -13,6 +13,10 @@ plot_roc_curve(detection_df, ...)
 \item{detection_df}{A data frame of classified detections.}
 
 \item{...}{Additional arguments.}
+
+\item{title}{Character. Plot title.}
+
+\item{model_col}{Symbol or character for model column.}
 }
 \description{
 Plot a Receiver Operating Characteristic (ROC) Curve

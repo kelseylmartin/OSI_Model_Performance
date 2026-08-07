@@ -23,8 +23,8 @@ Classify Detections as True/False Positives
 }
 \examples{
 # Example using Erin's ice seal data.
-model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-truth_csv_data <- c("2,video1,10,110,110,210,210,1,1.0,"ringed_seal",1")
+model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+truth_csv_data <- c("2,video1,10,110,110,210,210,1,1.0,\"ringed_seal\",1")
 model_csv_path <- tempfile(fileext = ".csv")
 truth_csv_path <- tempfile(fileext = ".csv")
 writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)

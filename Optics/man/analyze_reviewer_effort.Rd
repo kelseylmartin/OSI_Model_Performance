@@ -9,13 +9,22 @@ analyze_reviewer_effort(raw_df, validated_df, ...)
 
 \S4method{analyze_reviewer_effort}{data.frame,data.frame}(raw_df, validated_df, group_vars = NULL)
 }
+\arguments{
+\item{raw_df}{A data frame of raw detections.}
+
+\item{validated_df}{A data frame of validated detections.}
+
+\item{...}{Additional arguments.}
+
+\item{group_vars}{Character vector of grouping variables.}
+}
 \description{
 Analyze Reviewer Effort
 }
 \examples{
 # Example using Erin's ice seal data
-raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"harbor_seal",1")
+raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"harbor_seal\",1")
 raw_csv_path <- tempfile(fileext = ".csv")
 validated_csv_path <- tempfile(fileext = ".csv")
 writeLines(c("# h1", "# h2", raw_csv_data), raw_csv_path)

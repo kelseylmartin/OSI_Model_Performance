@@ -57,36 +57,47 @@ exportMethods(read_wide_maxn)
 exportMethods(summarize_performance_by_threshold)
 import(ggplot2)
 import(methods)
-importFrom(dplyr,across)
-importFrom(dplyr,all_of)
-importFrom(dplyr,anti_join)
-importFrom(dplyr,any_of)
-importFrom(dplyr,bind_cols)
-importFrom(dplyr,bind_rows)
-importFrom(dplyr,distinct)
-importFrom(dplyr,filter)
-importFrom(dplyr,full_join)
-importFrom(dplyr,group_by)
-importFrom(dplyr,inner_join)
-importFrom(dplyr,mutate)
-importFrom(dplyr,n)
-importFrom(dplyr,rename)
-importFrom(dplyr,select)
-importFrom(dplyr,semi_join)
-importFrom(dplyr,summarise)
-importFrom(dplyr,tibble)
-importFrom(jsonlite,fromJSON)
+importFrom(dplyr,
+  across,
+  all_of,
+  anti_join,
+  any_of,
+  bind_cols,
+  bind_rows,
+  distinct,
+  filter,
+  full_join,
+  group_by,
+  inner_join,
+  mutate,
+  n,
+  rename,
+  select,
+  semi_join,
+  summarise,
+  tibble
+)
+importFrom(jsonlite,
+  fromJSON,
+  write_json
+)
 importFrom(magrittr,"%>%")
 importFrom(purrr,map)
-importFrom(readr,cols)
-importFrom(readr,read_csv)
-importFrom(rlang,.data)
-importFrom(rlang,as_name)
-importFrom(rlang,enquo)
-importFrom(rlang,quo_is_null)
-importFrom(rlang,syms)
+importFrom(readr,
+  cols,
+  read_csv
+)
+importFrom(rlang,
+  .data,
+  as_name,
+  enquo,
+  quo_is_null,
+  syms
+)
 importFrom(stringr,str_extract)
-importFrom(tidyr,hoist)
-importFrom(tidyr,pivot_longer)
+importFrom(tidyr,
+  hoist,
+  pivot_longer
+)
 importFrom(tools,file_path_sans_ext)
 importFrom(utils,read.csv)

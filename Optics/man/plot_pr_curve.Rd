@@ -13,14 +13,18 @@ plot_pr_curve(detection_df, ...)
 \item{detection_df}{A data frame of classified detections.}
 
 \item{...}{Additional arguments.}
+
+\item{model_col}{Symbol or character for model column.}
+
+\item{title}{Character. Plot title.}
 }
 \description{
 Plot a Precision-Recall (PR) Curve
 }
 \examples{
 # Example using Erin's ice seal data.
-raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1")
+raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"ringed_seal\",1")
 raw_csv_path <- tempfile(fileext = ".csv")
 validated_csv_path <- tempfile(fileext = ".csv")
 writeLines(c("# h1", "# h2", raw_csv_data), raw_csv_path)

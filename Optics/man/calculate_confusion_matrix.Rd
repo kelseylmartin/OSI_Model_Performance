@@ -4,7 +4,8 @@
 \alias{calculate_confusion_matrix}
 \alias{calculate_confusion_matrix,data.frame-method}
 \title{The rest of the functions are utilities that operate on generic data.frames.
-They are converted to S4 generics for consistency.}
+They are converted to S4 generics for consistency.
+Calculate Confusion Matrix}
 \usage{
 calculate_confusion_matrix(aligned_df, ...)
 
@@ -16,9 +17,23 @@ calculate_confusion_matrix(aligned_df, ...)
   truth_col = truth_count
 )
 }
+\arguments{
+\item{aligned_df}{A data frame of aligned counts.}
+
+\item{...}{Additional arguments.}
+
+\item{group_vars}{Character vector of grouping variables.}
+
+\item{species_col}{Symbol or unquoted name of the species column.}
+
+\item{model_col}{Symbol or unquoted name of the model counts column.}
+
+\item{truth_col}{Symbol or unquoted name of the truth counts column.}
+}
 \description{
 The rest of the functions are utilities that operate on generic data.frames.
 They are converted to S4 generics for consistency.
+Calculate Confusion Matrix
 }
 \examples{
 # Example using Abi's AUV data
