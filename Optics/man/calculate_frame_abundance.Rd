@@ -30,10 +30,10 @@ where they appear.
 # Example using a sample of GFISHER data to calculate per-frame abundance.
 # This simulates reading a VIAME CSV output from a GFISHER survey.
 gfisher_csv_data <- c(
-  "1,video1,10,100,100,200,200,1,0.95,"Gadus morhua",1",
-  "1,video1,10,150,150,250,250,1,0.90,"Gadus morhua",1",
-  "2,video1,10,300,300,400,400,1,0.85,"Melanogrammus aeglefinus",1",
-  "1,video1,11,100,100,200,200,1,0.92,"Gadus morhua",1"
+  "1,video1,10,100,100,200,200,1,0.95,\"Gadus morhua\",1",
+  "1,video1,10,150,150,250,250,1,0.90,\"Gadus morhua\",1",
+  "2,video1,10,300,300,400,400,1,0.85,\"Melanogrammus aeglefinus\",1",
+  "1,video1,11,100,100,200,200,1,0.92,\"Gadus morhua\",1"
 )
 temp_csv_path <- tempfile(fileext = ".csv")
 writeLines(c("# header 1", "# header 2", gfisher_csv_data), temp_csv_path)

@@ -13,14 +13,18 @@ plot_confusion_matrix(metrics_df, ...)
 \item{metrics_df}{A data frame of metrics.}
 
 \item{...}{Additional arguments.}
+
+\item{title}{Character. Plot title.}
+
+\item{model_col}{Symbol or character for model column.}
 }
 \description{
 Plot a Confusion Matrix
 }
 \examples{
 # Example using Erin's ice seal data.
-model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1")
+model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"ringed_seal\",1")
 model_csv_path <- tempfile(fileext = ".csv")
 truth_csv_path <- tempfile(fileext = ".csv")
 writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)

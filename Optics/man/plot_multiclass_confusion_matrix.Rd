@@ -13,14 +13,16 @@ plot_multiclass_confusion_matrix(confusion_df, ...)
 \item{confusion_df}{A data frame from \code{calculate_confusion_matrix()}.}
 
 \item{...}{Additional arguments.}
+
+\item{title}{Character. Plot title.}
 }
 \description{
 Plot a Multi-Class Confusion Matrix Heatmap
 }
 \examples{
 # Example using Tom & Michael's coral survey data.
-model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"Acropora",1")
-truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"Pocillopora",1")
+model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"Acropora\",1")
+truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"Pocillopora\",1")
 model_csv_path <- tempfile(fileext = ".csv")
 truth_csv_path <- tempfile(fileext = ".csv")
 writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)

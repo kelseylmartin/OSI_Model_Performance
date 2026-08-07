@@ -45,12 +45,12 @@ evaluation.
 
 # 1. Create temporary VIAME CSV files for model and truth data.
 model_csv_data <- c(
-  "1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1",
-  "2,video1,15,150,150,250,250,1,0.90,"bearded_seal",1"
+  "1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1",
+  "2,video1,15,150,150,250,250,1,0.90,\"bearded_seal\",1"
 )
 truth_csv_data <- c(
-  "1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1",
-  "3,video1,20,300,300,400,400,1,1.0,"ringed_seal",1"
+  "1,video1,10,100,100,200,200,1,1.0,\"ringed_seal\",1",
+  "3,video1,20,300,300,400,400,1,1.0,\"ringed_seal\",1"
 )
 
 model_csv_path <- tempfile(fileext = ".csv")

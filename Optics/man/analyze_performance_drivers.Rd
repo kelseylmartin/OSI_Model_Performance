@@ -9,6 +9,13 @@ analyze_performance_drivers(aligned_df, ...)
 
 \S4method{analyze_performance_drivers}{data.frame}(aligned_df, group_vars)
 }
+\arguments{
+\item{aligned_df}{A data frame of aligned counts.}
+
+\item{...}{Additional arguments.}
+
+\item{group_vars}{Character vector of grouping variables.}
+}
 \description{
 Analyze Performance Drivers
 }

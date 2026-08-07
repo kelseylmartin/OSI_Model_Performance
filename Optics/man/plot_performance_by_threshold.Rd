@@ -17,14 +17,18 @@ plot_performance_by_threshold(summary_df, ...)
 \item{summary_df}{A data frame from \code{summarize_performance_by_threshold()}.}
 
 \item{...}{Additional arguments.}
+
+\item{model_col}{Symbol or character for model column.}
+
+\item{title}{Character. Plot title.}
 }
 \description{
 Plot Performance Metrics Across Confidence Thresholds
 }
 \examples{
 # Example using Erin's ice seal data.
-model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1")
+model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"ringed_seal\",1")
 model_csv_path <- tempfile(fileext = ".csv")
 truth_csv_path <- tempfile(fileext = ".csv")
 writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)

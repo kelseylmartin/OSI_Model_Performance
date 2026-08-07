@@ -8,8 +8,8 @@ NULL
 #' @rdname plot_counts_scatterplot
 #' @examples
 #' # Example using GFISHER data.
-#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"Gadus morhua",1")
-#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"Gadus morhua",1")
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"Gadus morhua\",1")
+#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"Gadus morhua\",1")
 #' model_csv_path <- tempfile(fileext = ".csv")
 #' truth_csv_path <- tempfile(fileext = ".csv")
 #' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
@@ -62,11 +62,13 @@ setMethod("plot_counts_scatterplot", "data.frame",
 #' @param detection_df A data frame of classified detections.
 #' @param ... Additional arguments.
 #' @export
+#' @param title Character. Plot title.
+#' @param model_col Symbol or character for model column.
 #' @rdname plot_pr_curve
 #' @examples
 #' # Example using Erin's ice seal data.
-#' raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-#' validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1")
+#' raw_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+#' validated_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"ringed_seal\",1")
 #' raw_csv_path <- tempfile(fileext = ".csv")
 #' validated_csv_path <- tempfile(fileext = ".csv")
 #' writeLines(c("# h1", "# h2", raw_csv_data), raw_csv_path)
@@ -131,11 +133,13 @@ setMethod("plot_pr_curve", "data.frame",
 #' @param aligned_df A data frame of aligned counts.
 #' @param ... Additional arguments.
 #' @export
+#' @param title Character. Plot title.
+#' @param model_col Symbol or character for model column.
 #' @rdname plot_bland_altman
 #' @examples
 #' # Example using Erin's ice seal data.
-#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1")
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"ringed_seal\",1")
 #' model_csv_path <- tempfile(fileext = ".csv")
 #' truth_csv_path <- tempfile(fileext = ".csv")
 #' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
@@ -196,11 +200,13 @@ setMethod("plot_bland_altman", "data.frame",
 #' @param metrics_df A data frame of metrics.
 #' @param ... Additional arguments.
 #' @export
+#' @param title Character. Plot title.
+#' @param model_col Symbol or character for model column.
 #' @rdname plot_confusion_matrix
 #' @examples
 #' # Example using Erin's ice seal data.
-#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1")
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"ringed_seal\",1")
 #' model_csv_path <- tempfile(fileext = ".csv")
 #' truth_csv_path <- tempfile(fileext = ".csv")
 #' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
@@ -254,6 +260,8 @@ setMethod("plot_confusion_matrix", "data.frame",
 #' @param detection_df A data frame of classified detections.
 #' @param ... Additional arguments.
 #' @export
+#' @param title Character. Plot title.
+#' @param model_col Symbol or character for model column.
 #' @rdname plot_roc_curve
 #' @examples
 #' # Example using Abi's AUV data.
@@ -318,11 +326,12 @@ setMethod("plot_roc_curve", "data.frame",
 #' @param confusion_df A data frame from `calculate_confusion_matrix()`.
 #' @param ... Additional arguments.
 #' @export
+#' @param title Character. Plot title.
 #' @rdname plot_multiclass_confusion_matrix
 #' @examples
 #' # Example using Tom & Michael's coral survey data.
-#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"Acropora",1")
-#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"Pocillopora",1")
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"Acropora\",1")
+#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"Pocillopora\",1")
 #' model_csv_path <- tempfile(fileext = ".csv")
 #' truth_csv_path <- tempfile(fileext = ".csv")
 #' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
@@ -375,11 +384,13 @@ setMethod("plot_multiclass_confusion_matrix", "data.frame",
 #' @param summary_df A data frame from `summarize_performance_by_threshold()`.
 #' @param ... Additional arguments.
 #' @export
+#' @param title Character. Plot title.
+#' @param model_col Symbol or character for model column.
 #' @rdname plot_performance_by_threshold
 #' @examples
 #' # Example using Erin's ice seal data.
-#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,"ringed_seal",1")
-#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,"ringed_seal",1")
+#' model_csv_data <- c("1,video1,10,100,100,200,200,1,0.95,\"ringed_seal\",1")
+#' truth_csv_data <- c("1,video1,10,100,100,200,200,1,1.0,\"ringed_seal\",1")
 #' model_csv_path <- tempfile(fileext = ".csv")
 #' truth_csv_path <- tempfile(fileext = ".csv")
 #' writeLines(c("# h1", "# h2", model_csv_data), model_csv_path)
