@@ -99,18 +99,22 @@ metrics_both <- bind_rows(
 print(metrics_both)
 
 # --- 5. Threshold summaries for each model ---
+comparison_thresholds <- c(seq(0.1, 0.9, by = 0.1), 0.95)
+
 perf_a <- summarize_performance_by_threshold(
   model_detections = model_a,
   truth_detections = truth,
   by = c("video_id", "frame_index", "category_name"),
-  metric_function = calculate_frame_abundance
+  metric_function = calculate_frame_abundance,
+  thresholds = comparison_thresholds
 ) %>% mutate(model_name = "model_a")
 
 perf_b <- summarize_performance_by_threshold(
   model_detections = model_b,
   truth_detections = truth,
   by = c("video_id", "frame_index", "category_name"),
-  metric_function = calculate_frame_abundance
+  metric_function = calculate_frame_abundance,
+  thresholds = comparison_thresholds
 ) %>% mutate(model_name = "model_b")
 
 perf_both <- bind_rows(perf_a, perf_b)

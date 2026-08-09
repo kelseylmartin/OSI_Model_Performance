@@ -3,6 +3,10 @@
 #' @include align.R
 NULL
 
+.default_confidence_thresholds <- function() {
+  c(seq(0.1, 0.9, by = 0.1), 0.95)
+}
+
 #' Calculate Binary Classification Metrics
 #'
 #' @param aligned_df An object containing aligned counts.
@@ -154,7 +158,7 @@ setMethod("summarize_performance_by_threshold",
           signature(model_detections = "OpticsDetections", truth_detections = "OpticsDetections"),
           function(model_detections, truth_detections, by,
                    metric_function = calculate_maxn,
-                   thresholds = seq(0.1, 0.9, by = 0.1)) {
+                   thresholds = .default_confidence_thresholds()) {
             
             model_df <- model_detections@data
             truth_df <- truth_detections@data
@@ -242,7 +246,7 @@ setGeneric("calculate_scalpred_metrics", function(model_detections, truth_detect
 setMethod("calculate_scalpred_metrics",
           signature(model_detections = "OpticsDetections", truth_detections = "OpticsDetections"),
           function(model_detections, truth_detections, by,
-                   thresholds = seq(0.5, 1.0, by = 0.01),
+                   thresholds = .default_confidence_thresholds(),
                    metric_function = calculate_maxn) {
             calculate_scalpred_metrics(
               model_detections = model_detections@data,
@@ -258,7 +262,7 @@ setMethod("calculate_scalpred_metrics",
 setMethod("calculate_scalpred_metrics",
           signature(model_detections = "data.frame", truth_detections = "data.frame"),
           function(model_detections, truth_detections, by,
-                   thresholds = seq(0.5, 1.0, by = 0.01),
+                   thresholds = .default_confidence_thresholds(),
                    metric_function = calculate_maxn) {
             required_model_cols <- c(by, "score")
             missing_model_cols <- setdiff(required_model_cols, names(model_detections))

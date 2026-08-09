@@ -426,6 +426,7 @@ setMethod("plot_performance_by_threshold", "data.frame",
             model_col_quo <- rlang::enquo(model_col)
             plot_data <- summary_df %>%
               tidyr::pivot_longer(cols = c("precision", "recall", "f1_score"), names_to = "metric", values_to = "value")
+            score_breaks <- sort(unique(summary_df$score))
             best_row <- summary_df %>%
               dplyr::filter(.data$f1_score == max(.data$f1_score, na.rm = TRUE)) %>%
               dplyr::arrange(dplyr::desc(.data$score)) %>%
@@ -433,6 +434,7 @@ setMethod("plot_performance_by_threshold", "data.frame",
             p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$score, y = .data$value, color = .data$metric)) +
               ggplot2::geom_line(linewidth = 1.1) +
               ggplot2::geom_point(size = 2) +
+              ggplot2::scale_x_continuous(breaks = score_breaks) +
               ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
               ggplot2::labs(title = title, x = "Confidence Threshold", y = "Metric Value", color = "Metric") +
               theme_optics() +
@@ -467,6 +469,7 @@ setMethod("plot_scalpred_f1_curve", "data.frame",
             }
 
             model_col_quo <- rlang::enquo(model_col)
+            score_breaks <- sort(unique(summary_df$score))
             best_row <- summary_df %>%
               dplyr::filter(.data$f1_score == max(.data$f1_score, na.rm = TRUE)) %>%
               dplyr::arrange(dplyr::desc(.data$score)) %>%
@@ -474,6 +477,7 @@ setMethod("plot_scalpred_f1_curve", "data.frame",
             p <- ggplot2::ggplot(summary_df, ggplot2::aes(x = .data$score, y = .data$f1_score)) +
               ggplot2::geom_line(linewidth = 1.1, color = "#4E79A7") +
               ggplot2::geom_point(size = 2, color = "#4E79A7") +
+              ggplot2::scale_x_continuous(breaks = score_breaks) +
               ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
               ggplot2::labs(title = title, x = "Confidence Threshold", y = "F1 Score") +
               theme_optics() +
