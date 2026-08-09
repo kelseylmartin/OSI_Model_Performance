@@ -12,7 +12,7 @@ summarize_performance_by_threshold(model_detections, truth_detections, ...)
   truth_detections,
   by,
   metric_function = calculate_maxn,
-  thresholds = seq(0.1, 0.9, by = 0.1)
+  thresholds = c(seq(0.1, 0.9, by = 0.1), 0.95)
 )
 }
 \arguments{
@@ -26,7 +26,8 @@ summarize_performance_by_threshold(model_detections, truth_detections, ...)
 
 \item{metric_function}{The function to use for aggregation (e.g., \code{calculate_maxn}).}
 
-\item{thresholds}{A numeric vector of confidence thresholds.}
+\item{thresholds}{A numeric vector of confidence thresholds. Defaults to
+\code{c(0.1, 0.2, \dots, 0.9, 0.95)}.}
 }
 \description{
 Summarize Performance Metrics Across Confidence Thresholds
