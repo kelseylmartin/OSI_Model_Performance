@@ -115,6 +115,12 @@ aligned_both <- bind_rows(aligned_a, aligned_b) %>%
   rename(deployment_reference_id = video_id, class_label = category_name, true_count = truth_count) %>%
   mutate(maxn_difference = model_count - true_count)
 
+# Extract deployment/species comparisons for a specific confidence score.
+selected_confidence <- stats::quantile(aligned_both$score, probs = 0.8, na.rm = TRUE)
+aligned_at_selected_confidence <- aligned_both %>%
+  filter(score == selected_confidence)
+print(head(aligned_at_selected_confidence))
+
 all_groups <- bind_rows(
   distinct(aligned_a, video_id, category_name),
   distinct(aligned_b, video_id, category_name)

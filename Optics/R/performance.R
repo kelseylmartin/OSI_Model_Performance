@@ -55,7 +55,19 @@ setMethod("calculate_binary_metrics", "data.frame",
             if (!all(required_cols %in% names(aligned_df))) {
               stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
             }
+            if (!"score" %in% names(aligned_df)) {
+              if ("threshold" %in% names(aligned_df)) {
+                aligned_df$score <- aligned_df$threshold
+              } else {
+                aligned_df$score <- NA_real_
+              }
+            }
+            stopifnot("score" %in% colnames(aligned_df))
             
+            if (is.null(group_vars) && "score" %in% names(aligned_df)) {
+              group_vars <- "score"
+            }
+
             if (!is.null(group_vars)) {
               aligned_df <- aligned_df %>%
                 dplyr::group_by(!!!rlang::syms(group_vars))
@@ -148,6 +160,8 @@ setMethod("summarize_performance_by_threshold",
             truth_df <- truth_detections@data
             
             truth_counts <- metric_function(truth_df)
+            stopifnot("score" %in% colnames(truth_counts))
+            truth_metric_col <- tail(setdiff(names(truth_counts), c(by, "score")), 1)
             
             all_groups <- dplyr::bind_rows(
               dplyr::distinct(model_df, !!!rlang::syms(by)),
@@ -157,23 +171,29 @@ setMethod("summarize_performance_by_threshold",
             
             all_metrics <- lapply(thresholds, function(thresh) {
               model_dets_filtered <- model_df %>%
-                dplyr::filter(.data$score >= thresh)
+                dplyr::filter(.data$score >= thresh) %>%
+                dplyr::mutate(score = thresh)
+
+              truth_counts_at_threshold <- truth_counts %>%
+                dplyr::mutate(score = thresh)
               
               if (nrow(model_dets_filtered) == 0) {
-                fn_count <- sum(truth_counts[[ncol(truth_counts)]] > 0)
+                fn_count <- sum(truth_counts_at_threshold[[truth_metric_col]] > 0)
                 metrics <- dplyr::tibble(
                   tp = 0, fp = 0, fn = fn_count,
                   precision = NA_real_, 
                   recall = 0,
                   f1_score = NA_real_,
-                  threshold = thresh
+                  score = thresh
                 )
               } else {
                 model_counts <- metric_function(model_dets_filtered)
-                aligned <- align_counts(model_counts, truth_counts, by = by)
+                stopifnot("score" %in% colnames(model_counts))
+                aligned <- align_counts(model_counts, truth_counts_at_threshold, by = unique(c(by, "score")))
                 metrics <- calculate_binary_metrics(aligned, total_comparisons = total_comparisons)
-                metrics$threshold <- thresh
+                metrics$score <- thresh
               }
+              metrics$threshold <- metrics$score
               return(metrics)
             })
             
@@ -263,6 +283,8 @@ setMethod("calculate_scalpred_metrics",
             }
 
             truth_counts <- metric_function(truth_detections)
+            stopifnot("score" %in% colnames(truth_counts))
+            truth_metric_col <- tail(setdiff(names(truth_counts), c(by, "score")), 1)
             all_groups <- dplyr::bind_rows(
               dplyr::distinct(model_detections, !!!rlang::syms(by)),
               dplyr::distinct(truth_detections, !!!rlang::syms(by))
@@ -270,27 +292,32 @@ setMethod("calculate_scalpred_metrics",
             total_comparisons <- nrow(dplyr::distinct(all_groups))
 
             metrics_by_threshold <- lapply(thresholds, function(thresh) {
-              model_filtered <- dplyr::filter(model_detections, .data$score >= thresh)
+              model_filtered <- dplyr::filter(model_detections, .data$score >= thresh) %>%
+                dplyr::mutate(score = thresh)
+              truth_counts_at_threshold <- truth_counts %>%
+                dplyr::mutate(score = thresh)
 
               if (nrow(model_filtered) == 0) {
-                fn_count <- sum(truth_counts[[ncol(truth_counts)]] > 0, na.rm = TRUE)
+                fn_count <- sum(truth_counts_at_threshold[[truth_metric_col]] > 0, na.rm = TRUE)
                 out <- .scalpred_prf_from_counts(tp = 0, fp = 0, fn = fn_count)
               } else {
                 model_counts <- metric_function(model_filtered)
-                aligned <- align_counts(model_counts, truth_counts, by = by)
+                stopifnot("score" %in% colnames(model_counts))
+                aligned <- align_counts(model_counts, truth_counts_at_threshold, by = unique(c(by, "score")))
                 tp <- sum(aligned$model_count > 0 & aligned$truth_count > 0, na.rm = TRUE)
                 fp <- sum(aligned$model_count > 0 & aligned$truth_count == 0, na.rm = TRUE)
                 fn <- sum(aligned$model_count == 0 & aligned$truth_count > 0, na.rm = TRUE)
                 out <- .scalpred_prf_from_counts(tp = tp, fp = fp, fn = fn)
               }
 
+              out$score <- thresh
               out$threshold <- thresh
               out$total_comparisons <- total_comparisons
               out
             })
 
             dplyr::bind_rows(metrics_by_threshold) %>%
-              dplyr::select("threshold", "tp", "fp", "fn",
+              dplyr::select("score", "threshold", "tp", "fp", "fn",
                             "precision", "recall", "f1_score",
                             "total_comparisons")
           })

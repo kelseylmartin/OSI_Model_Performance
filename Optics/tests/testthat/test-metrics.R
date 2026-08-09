@@ -47,7 +47,7 @@ test_that("calculate_maxn() works with correct inputs", {
 test_that("calculate_maxn() handles edge cases correctly", {
   #' @description Test that calculate_maxn() handles empty data frames.
   empty_df <- dplyr::tibble(
-    video_id = character(), frame_index = integer(), category_name = character()
+    video_id = character(), frame_index = integer(), category_name = character(), score = numeric()
   )
   expect_equal(
     nrow(calculate_maxn(empty_df)),

@@ -115,6 +115,12 @@ perf_b <- summarize_performance_by_threshold(
 
 perf_both <- bind_rows(perf_a, perf_b)
 
+# Extract metrics at a specific confidence threshold.
+selected_confidence <- 0.8
+perf_at_selected_confidence <- perf_both %>%
+  filter(threshold == selected_confidence)
+print(perf_at_selected_confidence)
+
 # --- 6. Detection-level classification + reviewer effort ---
 classified_a <- classify_detections(
   raw_detections = model_a@data,
