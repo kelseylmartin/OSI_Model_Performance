@@ -379,6 +379,8 @@ cat("Optimal confidence threshold:", if (length(optimal_confidence) == 0) NA els
 
 analysis_report_path <- file.path(script.dir, "e2e_gfisher_script_markdown.Rmd")
 if (file.exists(analysis_report_path)) {
+  report_species <- NULL
+  report_remove_large_schools <- "n"
   analysis_reports_dir <- file.path(outdir, "Part III - Data Analysis", "Analysis Reports")
   dir.create(analysis_reports_dir, recursive = TRUE, showWarnings = FALSE)
   rmarkdown::render(
@@ -387,9 +389,9 @@ if (file.exists(analysis_report_path)) {
     output_format = "html_document",
     quiet = TRUE,
     params = list(
-      species = NULL,
+      species = report_species,
       outdir = outdir,
-      remove_large_schools = "n"
+      remove_large_schools = report_remove_large_schools
     )
   )
 }
