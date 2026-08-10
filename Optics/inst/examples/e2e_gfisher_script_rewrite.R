@@ -322,12 +322,12 @@ aligned_threshold_runs <- purrr::map_dfr(comparison_thresholds, function(confide
       transmute(
         video_id = deployment_reference_compact,
         category_name = class_label,
-        true_count = true_count,
+        Manual = true_count,
         year = year
       ),
     by = c("video_id", "category_name"),
     model_col = maxn,
-    truth_col = true_count
+    truth_col = Manual
   )
 
   aligned_threshold %>%

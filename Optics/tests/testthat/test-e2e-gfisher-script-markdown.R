@@ -100,6 +100,8 @@ test_that("GFisher rewrite script includes legacy confidence-threshold loop outp
   expect_match(rewrite_text, "comparison_thresholds <- c(seq(0.1, 0.9, by = 0.1), 0.95)", fixed = TRUE)
   expect_match(rewrite_text, "filter(score > confidence_threshold)", fixed = TRUE)
   expect_match(rewrite_text, "mutate(score = confidence_threshold)", fixed = TRUE)
+  expect_match(rewrite_text, "Manual = true_count", fixed = TRUE)
+  expect_match(rewrite_text, "truth_col = Manual", fixed = TRUE)
   expect_match(rewrite_text, "combined_master <- aligned_threshold_runs", fixed = TRUE)
   expect_match(rewrite_text, "Version = dplyr::coalesce(model_version, year_model_version, \"unknown\")", fixed = TRUE)
   expect_match(rewrite_text, "Confidence = confidence_threshold", fixed = TRUE)
