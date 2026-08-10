@@ -33,7 +33,7 @@ jobs:
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
-          source: ./Optics       # Point directly to the subfolder containing your site
+          source: ./Optics/docs       # Point directly to the subfolder containing your site
           destination: ./_site   # Output directory
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
