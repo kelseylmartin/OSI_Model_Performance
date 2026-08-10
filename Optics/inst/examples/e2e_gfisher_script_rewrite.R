@@ -75,17 +75,17 @@ read_required_csv <- function(path, required_cols = NULL, label = basename(path)
   out
 }
 
-script.dir <- get_script_dir()
+script.dir <- "C:\\Users\\Kelsey.l.martin.NMFS\\Documents\\NMFS\\Automation\\VIAME Output Analysis"
 sefsc_extdata <- system.file("extdata/SEFSC", package = "Optics")
 data_root_candidates <- c(
-  if (nzchar(sefsc_extdata)) sefsc_extdata,
-  file.path(getwd(), "inst", "extdata", "SEFSC"),
+  #if (nzchar(sefsc_extdata)) sefsc_extdata,
+  #file.path(getwd(), "inst", "extdata", "SEFSC"),
   file.path(script.dir, "..", "extdata", "SEFSC"),
   file.path(script.dir, "..", "..", "extdata", "SEFSC"),
   file.path(script.dir, "Data"),
   file.path(script.dir, "..", "..", "..", "Data"),
-  file.path(script.dir, "..", "..", "Data"),
-  file.path(getwd(), "Data")
+  file.path(script.dir, "..", "..", "Data")#,
+  #file.path(getwd(), "Data")
 )
 data_root <- resolve_first_existing(data_root_candidates, "SEFSC extdata/Data directory")
 
@@ -181,18 +181,7 @@ normalize_compact_id <- function(x) {
 
 extract_model_version <- function(track_file, deployment_id = NULL) {
   folder_name <- basename(dirname(track_file))
-  expected_prefix <- if (!is.null(deployment_id)) str_extract(deployment_id, "^\\d{4}") else NA_character_
-  prefixed_pattern <- if (!is.na(expected_prefix)) paste0("^", expected_prefix, "_(.+)$") else "^\\d{4}_(.+)$"
-
-  if (grepl(prefixed_pattern, folder_name)) {
-    return(sub(prefixed_pattern, "\\1", folder_name))
-  }
-
-  if (grepl("^\\d{4}_(.+)$", folder_name)) {
-    return(sub("^\\d{4}_(.+)$", "\\1", folder_name))
-  }
-
-  folder_name
+  sub('.*_', '', folder_name)
 }
 
 kwcoco_preview <- convert_track_csv_to_kwcoco(
