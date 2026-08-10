@@ -47,7 +47,7 @@ get_script_dir <- function() {
   normalizePath(getwd())
 }
 
-script.dir <- get_script_dir()
+script.dir <- "C:\\Users\\Kelsey.l.martin.NMFS\\Documents\\NMFS\\Automation\\VIAME Output Analysis"
 data_root_candidates <- c(
   file.path(script.dir, "Data"),
   file.path(script.dir, "..", "..", "..", "Data"),
@@ -234,9 +234,9 @@ deployment_label_lookup <- truth_aligned %>%
   distinct(deployment_reference_compact, deployment_reference_id)
 
 aligned_maxn <- model_vs_truth_aligned %>%
-  rename(deployment_reference_compact = video_id) %>%
-  left_join(deployment_label_lookup, by = "deployment_reference_compact") %>%
-  mutate(
+  dplyr::rename(deployment_reference_compact = video_id) %>%
+  dplyr::left_join(deployment_label_lookup, by = "deployment_reference_compact") %>%
+  dplyr::mutate(
     deployment_reference_id = ifelse(
       is.na(deployment_reference_id),
       deployment_reference_compact,
@@ -264,7 +264,7 @@ print(model_vs_manual_maxn)
 # 5) Optional summary metric table for this aligned MaxN comparison.
 total_comparisons <- nrow(distinct(aligned_maxn, deployment_reference_compact, category_name))
 maxn_binary_metrics <- calculate_binary_metrics(
-  aligned_maxn %>% rename(video_id = deployment_reference_compact),
+  aligned_maxn %>% dplyr::rename(video_id = deployment_reference_compact),
   total_comparisons = total_comparisons
 )
 
