@@ -154,12 +154,6 @@ aligned_threshold_runs <- purrr::map_dfr(comparison_thresholds, function(confide
     )
 })
 
-# Extract deployment/species comparisons for a specific confidence score.
-selected_confidence <- 0.8
-aligned_at_selected_confidence <- aligned_threshold_runs %>%
-  filter(threshold == selected_confidence)
-print(head(aligned_at_selected_confidence))
-
 all_groups <- bind_rows(
   distinct(aligned_a, video_id, category_name),
   distinct(aligned_b, video_id, category_name)
@@ -187,6 +181,15 @@ threshold_metrics <- calculate_binary_metrics(
 )
 
 print(threshold_metrics)
+
+# Extract deployment/species comparisons at the optimal confidence score.
+optimal_confidence <- threshold_metrics %>%
+  filter(f1_score == max(f1_score, na.rm = TRUE)) %>%
+  slice_max(order_by = threshold, n = 1, with_ties = FALSE) %>%
+  pull(threshold)
+aligned_at_optimal_confidence <- aligned_threshold_runs %>%
+  filter(threshold == optimal_confidence)
+print(head(aligned_at_optimal_confidence))
 
 # Additional utility demos relevant to MaxN-aligned data.
 aligned_a_density <- calculate_density(aligned_a, count_col = model_count, area = 1)

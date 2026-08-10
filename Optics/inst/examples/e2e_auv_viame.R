@@ -119,11 +119,13 @@ perf_b <- summarize_performance_by_threshold(
 
 perf_both <- bind_rows(perf_a, perf_b)
 
-# Extract metrics at a specific confidence threshold.
-selected_confidence <- 0.8
-perf_at_selected_confidence <- perf_both %>%
-  filter(threshold == selected_confidence)
-print(perf_at_selected_confidence)
+# Extract metrics at the optimal confidence threshold for each model.
+perf_at_optimal_confidence <- perf_both %>%
+  group_by(model_name) %>%
+  filter(f1_score == max(f1_score, na.rm = TRUE)) %>%
+  slice_max(order_by = threshold, n = 1, with_ties = FALSE) %>%
+  ungroup()
+print(perf_at_optimal_confidence)
 
 # --- 6. Detection-level classification + reviewer effort ---
 classified_a <- classify_detections(
