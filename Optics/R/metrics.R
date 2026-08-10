@@ -308,3 +308,94 @@ setMethod("calculate_density", "data.frame",
               return(dplyr::mutate(object, density = !!count_col_quo / !!area_col_quo))
             }
           })
+
+#' Calculate Legacy GFisher Summary Metrics
+#'
+#' Produces the legacy-style summary table used by the GFisher workflow while
+#' relying on package metric calculations for binary-count performance terms.
+#'
+#' @param df A data frame containing at least `Manual`, `VIAME_MaxN`, `year`,
+#'   `Version`, `Confidence`, and `Species`.
+#' @param species Character filter mode: `"none"`, `"all"`, or a single species
+#'   name.
+#'
+#' @return A `tibble` containing legacy metric columns.
+#' @export
+calculate_legacy_metrics <- function(df, species = "none") {
+  required_cols <- c("Manual", "VIAME_MaxN", "year", "Version", "Confidence", "Species")
+  if (!all(required_cols %in% names(df))) {
+    stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
+  }
+
+  if (species == "none") {
+    group_vars <- c("year", "Version", "Confidence")
+    df_in <- df
+  } else if (species == "all") {
+    group_vars <- c("year", "Version", "Confidence", "Species")
+    df_in <- df
+  } else if (any(species %in% df$Species) == TRUE) {
+    group_vars <- c("year", "Version", "Confidence", "Species")
+    df_in <- dplyr::filter(df, .data$Species == species)
+  } else {
+    print("No species detected with that name. Check spelling and try again.")
+    return(NULL)
+  }
+
+  df_in %>%
+    dplyr::mutate(
+      Agree = ifelse(.data$Manual == .data$VIAME_MaxN, 1, 0),
+      Difference = .data$Manual - .data$VIAME_MaxN,
+      Relaxed = ifelse(.data$Difference %in% c(-1, 0, 1), 1, 0)
+    ) %>%
+    dplyr::group_by(!!!rlang::syms(group_vars)) %>%
+    dplyr::group_modify(~ {
+      binary <- calculate_binary_metrics(
+        .x %>% dplyr::transmute(model_count = .data$VIAME_MaxN, truth_count = .data$Manual),
+        total_comparisons = nrow(.x)
+      )
+
+      dplyr::tibble(
+        Agree = mean(.x$Agree, na.rm = TRUE),
+        Difference = mean(.x$Difference, na.rm = TRUE),
+        Relaxed = mean(.x$Relaxed, na.rm = TRUE),
+        TP = binary$tp,
+        FP = binary$fp,
+        FN = binary$fn,
+        TN = binary$tn,
+        Precision = binary$precision,
+        Recall_TPR = binary$recall,
+        FPR = binary$fpr,
+        FNR = binary$fnr,
+        Accuracy = binary$accuracy,
+        False_P_Ratio = binary$false_positive_ratio,
+        False_N_Ratio = binary$false_negative_ratio,
+        Total_Actual_Positives = binary$tp + binary$fn,
+        Total_Actual_Negatives = binary$fp + binary$tn
+      )
+    }) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(across(where(is.numeric), ~ ifelse(is.nan(.x), NA, .x))) %>%
+    dplyr::mutate(across(where(is.numeric), ~ ifelse(is.infinite(.x), NA, .x)))
+}
+
+#' Summarize Binary Metric Percentages
+#'
+#' Calculates percent-1 and percent-0 summaries for a binary metric grouped by
+#' two index variables and a third grouping variable.
+#'
+#' @param df A data frame containing the grouping variables and binary metric.
+#' @param variable1,variable2,group Unquoted grouping variables.
+#' @param metric Unquoted binary metric column (0/1).
+#'
+#' @return A `tibble` with grouped percentage summaries.
+#' @export
+calculate_percent_metric <- function(df, variable1, variable2, group, metric) {
+  df %>%
+    dplyr::group_by({{ variable1 }}, {{ variable2 }}, {{ group }}) %>%
+    dplyr::summarise(
+      percentage_1s = mean({{ metric }}) * 100,
+      percentage_0s = (1 - mean({{ metric }})) * 100,
+      count = dplyr::n(),
+      .groups = "drop"
+    )
+}
