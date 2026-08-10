@@ -34,8 +34,11 @@ reference:
     contents:
       - OpticsDetections-class
       - OpticsDetections
+      - convert_track_csv_to_kwcoco
+      - ice_seals
       - read_kwcoco
       - read_viame_csv
+      - read_wide_maxn
 
   - title: "Alignment & Transformation"
     desc:  "Functions for aligning model and ground truth data."
@@ -55,6 +58,7 @@ reference:
     contents:
       - summarize_performance_by_threshold
       - calculate_binary_metrics
+      - calculate_scalpred_metrics
       - calculate_confusion_matrix
       - get_disagreement_report
       - analyze_reviewer_effort
@@ -66,10 +70,12 @@ reference:
       - plot_counts_scatterplot
       - plot_bland_altman
       - plot_pr_curve
+      - plot_scalpred_pr_curve
       - plot_roc_curve
       - plot_confusion_matrix
       - plot_multiclass_confusion_matrix
       - plot_performance_by_threshold
+      - plot_scalpred_f1_curve
 
   - title: "Plot Theming"
     desc: "Custom `ggplot2` theme for consistent branding."
@@ -80,4 +86,3 @@ reference:
     desc: "Other exported operators and utilities."
     contents:
       - '%>%'
-
