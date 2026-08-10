@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Build job
+# Build job
   build:
     runs-on: ubuntu-latest
     steps:
@@ -33,12 +33,12 @@ jobs:
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
-          source: ./
-          working-directory: ./Optics/
-          destination: ./_site
-          extra-packages: any::pkgdown, local::.
+          source: ./Optics       # Point directly to the subfolder containing your site
+          destination: ./_site   # Output directory
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site          # Explicitly tell GitHub which folder to upload
 
   # Deployment job
   deploy:
