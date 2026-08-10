@@ -129,26 +129,12 @@ Readtimekey <- read_required_csv(
 ) %>%
   mutate(Videotime = sub("\\..*", "", Timestamp))
 
-species_list_candidates <- c(
+Species_List <- read_required_csv(
   file.path(wrkdir, "Species List.csv"),
-  file.path(wrkdir, "Species List Match.csv")
-)
-species_list_path <- species_list_candidates[file.exists(species_list_candidates)][1]
-if (is.na(species_list_path)) {
-  stop("Missing required helper CSV: Species List.csv or Species List Match.csv")
-}
-Species_List_raw <- read_required_csv(species_list_path, label = basename(species_list_path))
-Species_List <- if (all(c("Spec_Viame_Dash", "Species") %in% names(Species_List_raw))) {
-  Species_List_raw %>% dplyr::select(Spec_Viame_Dash, Species)
-} else if (all(c("VIAME", "Truth") %in% names(Species_List_raw))) {
-  Species_List_raw %>%
-    dplyr::transmute(
-      Spec_Viame_Dash = trimws(VIAME),
-      Species = trimws(Truth)
-    )
-} else {
-  stop("Malformed helper CSV '", basename(species_list_path), "': expected either {Spec_Viame_Dash, Species} or {VIAME, Truth} columns.")
-}
+  required_cols = c("Spec_Viame_Dash", "Species"),
+  label = "Species List.csv"
+) %>%
+  dplyr::select(Spec_Viame_Dash, Species)
 
 fwri_ref_key <- read_required_csv(
   file.path(wrkdir, "env3LABS_93to24.csv"),
