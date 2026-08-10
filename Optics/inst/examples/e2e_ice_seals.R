@@ -118,21 +118,33 @@ metrics_both <- bind_rows(
 )
 print(metrics_both)
 
+comparison_thresholds <- c(seq(0.1, 0.9, by = 0.1), 0.95)
+
 perf_a <- summarize_performance_by_threshold(
   model_detections = model_a,
   truth_detections = truth,
   by = c("video_id", "frame_index", "category_name"),
-  metric_function = calculate_frame_abundance
+  metric_function = calculate_frame_abundance,
+  thresholds = comparison_thresholds
 ) %>% mutate(model_name = "model_a")
 
 perf_b <- summarize_performance_by_threshold(
   model_detections = model_b,
   truth_detections = truth,
   by = c("video_id", "frame_index", "category_name"),
-  metric_function = calculate_frame_abundance
+  metric_function = calculate_frame_abundance,
+  thresholds = comparison_thresholds
 ) %>% mutate(model_name = "model_b")
 
 perf_both <- bind_rows(perf_a, perf_b)
+
+# Extract metrics at the optimal confidence threshold for each model.
+perf_at_optimal_confidence <- perf_both %>%
+  group_by(model_name) %>%
+  filter(f1_score == max(f1_score, na.rm = TRUE)) %>%
+  slice_max(order_by = threshold, n = 1, with_ties = FALSE) %>%
+  ungroup()
+print(perf_at_optimal_confidence)
 
 # --- 5. Detection overlap analysis (many model detections to one GT target) ---
 bbox_iou <- function(ax, ay, aw, ah, bx, by, bw, bh) {

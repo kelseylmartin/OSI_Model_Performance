@@ -71,6 +71,15 @@ setMethod("align_counts",
           signature(model_counts = "data.frame", truth_counts = "data.frame"),
           function(model_counts, truth_counts, by, model_col = maxn, truth_col = maxn) {
 
+  if (!"score" %in% names(model_counts)) {
+    model_counts$score <- if ("Confidence" %in% names(model_counts)) as.numeric(model_counts$Confidence) else NA_real_
+  }
+  if (!"score" %in% names(truth_counts)) {
+    truth_counts$score <- if ("Confidence" %in% names(truth_counts)) as.numeric(truth_counts$Confidence) else NA_real_
+  }
+  stopifnot("score" %in% colnames(model_counts))
+  stopifnot("score" %in% colnames(truth_counts))
+
   model_col_quo <- rlang::enquo(model_col)
   truth_col_quo <- rlang::enquo(truth_col)
 

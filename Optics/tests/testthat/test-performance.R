@@ -67,6 +67,17 @@ test_that("summarize_performance_by_threshold() works with correct inputs", {
   expect_equal(metrics_at_08$fn, 1)
 })
 
+test_that("summarize_performance_by_threshold() uses grouped confidence thresholds by default", {
+  #' @description Test that summarize_performance_by_threshold() defaults to legacy grouped confidence thresholds.
+  summary_df <- summarize_performance_by_threshold(
+    model_detections = model_detections_perf,
+    truth_detections = truth_detections_perf,
+    by = c("video_id", "category_name")
+  )
+
+  expect_equal(summary_df$threshold, c(seq(0.1, 0.9, by = 0.1), 0.95))
+})
+
 # {{{ calculate_scalpred_metrics }}} ----
 test_that("calculate_scalpred_metrics() computes threshold metrics for OpticsDetections", {
   #' @description Test that ScalPred metrics return expected TP/FP/FN and PR/F1 values.
@@ -87,6 +98,17 @@ test_that("calculate_scalpred_metrics() computes threshold metrics for OpticsDet
   expect_equal(metrics_08$precision, 0.5)
   expect_equal(metrics_08$recall, 0.5)
   expect_equal(metrics_08$f1_score, 0.5)
+})
+
+test_that("calculate_scalpred_metrics() uses grouped confidence thresholds by default", {
+  #' @description Test that ScalPred metrics default to legacy grouped confidence thresholds.
+  metrics_df <- calculate_scalpred_metrics(
+    model_detections = model_detections_perf,
+    truth_detections = truth_detections_perf,
+    by = c("video_id", "category_name")
+  )
+
+  expect_equal(metrics_df$threshold, c(seq(0.1, 0.9, by = 0.1), 0.95))
 })
 
 # {{{ classify_detections }}} ----

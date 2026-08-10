@@ -13,6 +13,7 @@
 model_df <- dplyr::tibble(
   video_id = c("v1", "v1", "v2"),
   category_name = c("FishA", "FishB", "FishA"),
+  score = c(0.9, 0.8, 0.7),
   model_maxn = c(10, 1, 5)
 )
 truth_df <- dplyr::tibble(
@@ -22,13 +23,13 @@ truth_df <- dplyr::tibble(
 )
 
 expected_aligned_df <- dplyr::tribble(
-  ~video_id, ~category_name, ~model_count, ~truth_count,
-  "v1", "FishA", 10, 12,
-  "v1", "FishB", 1, 0,
-  "v2", "FishA", 5, 0,
-  "v1", "FishC", 0, 2,
-  "v3", "FishA", 0, 8
-) %>% dplyr::arrange(video_id, category_name)
+  ~video_id, ~category_name, ~score, ~model_count, ~truth_count,
+  "v1", "FishA", 0.9, 10, 12,
+  "v1", "FishB", 0.8, 1, 0,
+  "v2", "FishA", 0.7, 5, 0,
+  "v1", "FishC", NA_real_, 0, 2,
+  "v3", "FishA", NA_real_, 0, 8
+) %>% dplyr::arrange(video_id, category_name, score)
 
 
 ## IO correctness ----
@@ -40,7 +41,7 @@ test_that("align_counts() works with correct inputs", {
     by = c("video_id", "category_name"),
     model_col = model_maxn,
     truth_col = truth_maxn
-  ) %>% dplyr::arrange(video_id, category_name)
+  ) %>% dplyr::arrange(video_id, category_name, score)
 
   expect_equal(
     object = result,
@@ -51,7 +52,7 @@ test_that("align_counts() works with correct inputs", {
 ## Edge handling ----
 test_that("align_counts() returns correct outputs for edge cases", {
   #' @description Test that align_counts() handles empty data frames correctly.
-  empty_model <- dplyr::tibble(video_id = character(), category_name = character(), model_maxn = numeric())
+  empty_model <- dplyr::tibble(video_id = character(), category_name = character(), score = numeric(), model_maxn = numeric())
   empty_truth <- dplyr::tibble(video_id = character(), category_name = character(), truth_maxn = numeric())
 
   expect_equal(

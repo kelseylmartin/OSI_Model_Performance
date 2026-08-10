@@ -12,7 +12,7 @@ calculate_scalpred_metrics(model_detections, truth_detections, ...)
   model_detections,
   truth_detections,
   by,
-  thresholds = seq(0.5, 1, by = 0.01),
+  thresholds = c(seq(0.1, 0.9, by = 0.1), 0.95),
   metric_function = calculate_maxn
 )
 
@@ -20,7 +20,7 @@ calculate_scalpred_metrics(model_detections, truth_detections, ...)
   model_detections,
   truth_detections,
   by,
-  thresholds = seq(0.5, 1, by = 0.01),
+  thresholds = c(seq(0.1, 0.9, by = 0.1), 0.95),
   metric_function = calculate_maxn
 )
 }
@@ -35,7 +35,8 @@ validated \code{data.frame}.}
 
 \item{by}{Character vector of join/group columns used for alignment.}
 
-\item{thresholds}{Numeric confidence thresholds to evaluate.}
+\item{thresholds}{Numeric confidence thresholds to evaluate. Defaults to
+\code{c(0.1, 0.2, \dots, 0.9, 0.95)}.}
 
 \item{metric_function}{Aggregation function (default \code{calculate_maxn}).}
 }

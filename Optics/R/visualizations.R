@@ -416,19 +416,29 @@ setGeneric("plot_performance_by_threshold", function(summary_df, ...) standardGe
 setMethod("plot_performance_by_threshold", "data.frame",
           function(summary_df, model_col = NULL, title = "Performance by Confidence Threshold") {
             # ... implementation from original function ...
-            required_cols <- c("threshold", "precision", "recall", "f1_score")
+            if (!"score" %in% names(summary_df) && "threshold" %in% names(summary_df)) {
+              summary_df$score <- summary_df$threshold
+            }
+            required_cols <- c("score", "precision", "recall", "f1_score")
             if (!all(required_cols %in% names(summary_df))) {
-              stop("Input data frame must contain 'threshold', 'precision', 'recall', and 'f1_score' columns.")
+              stop("Input data frame must contain 'score', 'precision', 'recall', and 'f1_score' columns.")
             }
             model_col_quo <- rlang::enquo(model_col)
             plot_data <- summary_df %>%
               tidyr::pivot_longer(cols = c("precision", "recall", "f1_score"), names_to = "metric", values_to = "value")
-            p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$threshold, y = .data$value, color = .data$metric)) +
+            score_breaks <- sort(unique(summary_df$score[is.finite(summary_df$score)]))
+            best_row <- summary_df %>%
+              dplyr::filter(.data$f1_score == max(.data$f1_score, na.rm = TRUE)) %>%
+              dplyr::arrange(dplyr::desc(.data$score)) %>%
+              dplyr::slice(1)
+            p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$score, y = .data$value, color = .data$metric)) +
               ggplot2::geom_line(linewidth = 1.1) +
               ggplot2::geom_point(size = 2) +
+              ggplot2::scale_x_continuous(breaks = score_breaks) +
               ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
               ggplot2::labs(title = title, x = "Confidence Threshold", y = "Metric Value", color = "Metric") +
-              theme_optics()
+              theme_optics() +
+              ggplot2::geom_vline(xintercept = best_row$score[[1]], linetype = "dashed", color = "#E15759")
             if (!rlang::quo_is_null(model_col_quo)) {
               p <- p + ggplot2::facet_wrap(rlang::quo_get_expr(model_col_quo))
             }
@@ -450,18 +460,28 @@ setGeneric("plot_scalpred_f1_curve", function(summary_df, ...) standardGeneric("
 #' @export
 setMethod("plot_scalpred_f1_curve", "data.frame",
           function(summary_df, model_col = NULL, title = "ScalPred F1 by Threshold") {
-            required_cols <- c("threshold", "f1_score")
+            if (!"score" %in% names(summary_df) && "threshold" %in% names(summary_df)) {
+              summary_df$score <- summary_df$threshold
+            }
+            required_cols <- c("score", "f1_score")
             if (!all(required_cols %in% names(summary_df))) {
-              stop("Input data frame must contain 'threshold' and 'f1_score' columns.")
+              stop("Input data frame must contain 'score' and 'f1_score' columns.")
             }
 
             model_col_quo <- rlang::enquo(model_col)
-            p <- ggplot2::ggplot(summary_df, ggplot2::aes(x = .data$threshold, y = .data$f1_score)) +
+            score_breaks <- sort(unique(summary_df$score[is.finite(summary_df$score)]))
+            best_row <- summary_df %>%
+              dplyr::filter(.data$f1_score == max(.data$f1_score, na.rm = TRUE)) %>%
+              dplyr::arrange(dplyr::desc(.data$score)) %>%
+              dplyr::slice(1)
+            p <- ggplot2::ggplot(summary_df, ggplot2::aes(x = .data$score, y = .data$f1_score)) +
               ggplot2::geom_line(linewidth = 1.1, color = "#4E79A7") +
               ggplot2::geom_point(size = 2, color = "#4E79A7") +
+              ggplot2::scale_x_continuous(breaks = score_breaks) +
               ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
               ggplot2::labs(title = title, x = "Confidence Threshold", y = "F1 Score") +
-              theme_optics()
+              theme_optics() +
+              ggplot2::geom_vline(xintercept = best_row$score[[1]], linetype = "dashed", color = "#E15759")
 
             if (!rlang::quo_is_null(model_col_quo)) {
               p <- p + ggplot2::facet_wrap(rlang::quo_get_expr(model_col_quo))

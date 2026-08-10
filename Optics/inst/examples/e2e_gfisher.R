@@ -77,6 +77,8 @@ truth_aligned <- truth_maxn %>%
 cat("Matched truth deployments:", n_distinct(truth_aligned$deployment_reference_id), "\n")
 
 # --- 4. Calculate MaxN for both models and compare to manual truth ---
+comparison_thresholds <- c(seq(0.1, 0.9, by = 0.1), 0.95)
+
 model_a_maxn <- calculate_maxn(model_a) %>%
   transmute(
     deployment_reference_id = normalize_reference_id(video_id),
@@ -115,6 +117,43 @@ aligned_both <- bind_rows(aligned_a, aligned_b) %>%
   rename(deployment_reference_id = video_id, class_label = category_name, true_count = truth_count) %>%
   mutate(maxn_difference = model_count - true_count)
 
+aligned_threshold_runs <- purrr::map_dfr(comparison_thresholds, function(confidence_threshold) {
+  threshold_model_df <- stitched_model_df %>%
+    filter(score >= confidence_threshold) %>%
+    mutate(score = confidence_threshold)
+
+  threshold_maxn <- if (nrow(threshold_model_df) == 0) {
+    tibble(
+      deployment_reference_id = character(),
+      class_label = character(),
+      maxn = numeric()
+    )
+  } else {
+    calculate_maxn(threshold_model_df) %>%
+      transmute(
+        deployment_reference_id = normalize_reference_id(video_id),
+        class_label = category_name,
+        maxn = maxn
+      )
+  }
+
+  align_counts(
+    model_counts = threshold_maxn %>%
+      transmute(video_id = deployment_reference_id, category_name = class_label, maxn = maxn),
+    truth_counts = truth_aligned %>%
+      transmute(video_id = deployment_reference_id, category_name = class_label, true_count = true_count),
+    by = c("video_id", "category_name"),
+    model_col = maxn,
+    truth_col = true_count
+  ) %>%
+    rename(deployment_reference_id = video_id, class_label = category_name, true_count = truth_count) %>%
+    mutate(
+      threshold = confidence_threshold,
+      score = confidence_threshold,
+      maxn_difference = model_count - true_count
+    )
+})
+
 all_groups <- bind_rows(
   distinct(aligned_a, video_id, category_name),
   distinct(aligned_b, video_id, category_name)
@@ -129,6 +168,28 @@ metrics_both <- bind_rows(
 )
 
 print(metrics_both)
+
+threshold_groups <- bind_rows(
+  distinct(stitched_model_df, deployment_reference_id, class_label = category_name),
+  distinct(truth_aligned, deployment_reference_id, class_label)
+)
+total_threshold_comparisons <- nrow(distinct(threshold_groups))
+threshold_metrics <- calculate_binary_metrics(
+  aligned_threshold_runs,
+  group_vars = "threshold",
+  total_comparisons = total_threshold_comparisons
+)
+
+print(threshold_metrics)
+
+# Extract deployment/species comparisons at the optimal confidence score.
+optimal_confidence <- threshold_metrics %>%
+  filter(f1_score == max(f1_score, na.rm = TRUE)) %>%
+  slice_max(order_by = threshold, n = 1, with_ties = FALSE) %>%
+  pull(threshold)
+aligned_at_optimal_confidence <- aligned_threshold_runs %>%
+  filter(threshold == optimal_confidence)
+print(head(aligned_at_optimal_confidence))
 
 # Additional utility demos relevant to MaxN-aligned data.
 aligned_a_density <- calculate_density(aligned_a, count_col = model_count, area = 1)
@@ -162,10 +223,12 @@ if (requireNamespace("ggpubr", quietly = TRUE)) {
 }
 
 p_bland <- plot_bland_altman(aligned_both, model_col = model_name)
+p_perf <- plot_performance_by_threshold(threshold_metrics)
 p_confusion_binary <- plot_confusion_matrix(metrics_both, model_col = model_name)
 p_confusion_multiclass <- plot_multiclass_confusion_matrix(confusion_df)
 
 print(p_bland)
+print(p_perf)
 print(p_confusion_binary)
 print(p_confusion_multiclass)
 
