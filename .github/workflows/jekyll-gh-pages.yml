@@ -33,7 +33,7 @@ jobs:
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
-          source: ./Optics/
+          source: ./
           working-directory: ./Optics/
           destination: ./_site
           extra-packages: any::pkgdown, local::.
