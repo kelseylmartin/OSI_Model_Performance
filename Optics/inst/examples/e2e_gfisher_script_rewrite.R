@@ -178,6 +178,22 @@ normalize_compact_id <- function(x) {
     gsub("_|-", "", .)
 }
 
+extract_model_version <- function(track_file, deployment_id = NULL) {
+  folder_name <- basename(dirname(track_file))
+  expected_prefix <- if (!is.null(deployment_id)) str_extract(deployment_id, "^\\d{4}") else NA_character_
+  prefixed_pattern <- if (!is.na(expected_prefix)) paste0("^", expected_prefix, "_(.+)$") else "^\\d{4}_(.+)$"
+
+  if (grepl(prefixed_pattern, folder_name)) {
+    return(sub(prefixed_pattern, "\\1", folder_name))
+  }
+
+  if (grepl("^\\d{4}_(.+)$", folder_name)) {
+    return(sub("^\\d{4}_(.+)$", "\\1", folder_name))
+  }
+
+  folder_name
+}
+
 kwcoco_preview <- convert_track_csv_to_kwcoco(
   track_files[[1]],
   video_name = extract_deployment_id(track_files[[1]])
@@ -208,7 +224,8 @@ stitched_model_df <- map2_dfr(track_files, extract_deployment_id(track_files), f
       deployment_reference_id = normalize_reference_id(deployment_id),
       deployment_reference_compact = normalize_compact_id(deployment_reference_id),
       source_track_file = basename(track_file),
-      year = as.numeric(str_extract(deployment_id, "^\\d{4}"))
+      year = as.numeric(str_extract(deployment_id, "^\\d{4}")),
+      model_version = extract_model_version(track_file, deployment_id)
     )
 })
 
@@ -252,18 +269,27 @@ truth_aligned <- truth_maxn %>%
 deployment_label_lookup <- truth_aligned %>%
   distinct(deployment_reference_compact, deployment_reference_id)
 
+version_by_year <- stitched_model@data %>%
+  filter(!is.na(year), !is.na(model_version), model_version != "") %>%
+  group_by(year) %>%
+  summarise(year_model_version = dplyr::first(model_version), .groups = "drop")
+
 comparison_thresholds <- c(seq(0.1, 0.9, by = 0.1), 0.95)
 aligned_threshold_runs <- purrr::map_dfr(comparison_thresholds, function(confidence_threshold) {
   threshold_model_df <- stitched_model@data %>%
     filter(score > confidence_threshold) %>%
     mutate(score = confidence_threshold)
 
+  threshold_version_lookup <- threshold_model_df %>%
+    distinct(deployment_reference_compact, model_version)
+
   threshold_maxn <- if (nrow(threshold_model_df) == 0) {
     dplyr::tibble(
       deployment_reference_compact = character(),
       class_label = character(),
       maxn = numeric(),
-      year = numeric()
+      year = numeric(),
+      model_version = character()
     )
   } else {
     calculate_maxn(threshold_model_df) %>%
@@ -273,13 +299,14 @@ aligned_threshold_runs <- purrr::map_dfr(comparison_thresholds, function(confide
         maxn = maxn,
         year = as.numeric(str_extract(video_id, "^\\d{4}"))
       ) %>%
+      left_join(threshold_version_lookup, by = "deployment_reference_compact") %>%
       left_join(
         Species_List %>%
           transmute(class_label_raw = trimws(Spec_Viame_Dash), class_label = trimws(Species)),
         by = "class_label_raw"
       ) %>%
       mutate(class_label = ifelse(is.na(class_label) | class_label == "", class_label_raw, class_label)) %>%
-      select(deployment_reference_compact, class_label, maxn, year)
+      select(deployment_reference_compact, class_label, maxn, year, model_version)
   }
 
   aligned_threshold <- align_counts(
@@ -288,7 +315,8 @@ aligned_threshold_runs <- purrr::map_dfr(comparison_thresholds, function(confide
         video_id = deployment_reference_compact,
         category_name = class_label,
         maxn = maxn,
-        year = year
+        year = year,
+        model_version = model_version
       ),
     truth_counts = truth_aligned %>%
       transmute(
@@ -311,8 +339,11 @@ aligned_threshold_runs <- purrr::map_dfr(comparison_thresholds, function(confide
         deployment_reference_compact,
         deployment_reference_id
       ),
-      year = dplyr::coalesce(year.x, year.y, as.numeric(str_extract(deployment_reference_id, "^\\d{4}"))),
-      Version = "Optics package pipeline",
+      year = dplyr::coalesce(year.x, year.y, as.numeric(str_extract(deployment_reference_id, "^\\d{4}")))
+    ) %>%
+    left_join(version_by_year, by = "year") %>%
+    mutate(
+      Version = dplyr::coalesce(model_version, year_model_version, "unknown"),
       Confidence = confidence_threshold,
       Species = trimws(category_name),
       Deployment = deployment_reference_id,
@@ -332,52 +363,6 @@ if (nrow(combined_master) == 0) {
   stop("No deployment-level MaxN comparisons were generated from the stitched model tracks and REFERENCE data.")
 }
 
-calculate_metrics <- function(df, species = "none") {
-  summarize_metrics <- function(.data) {
-    .data %>% dplyr::summarise(
-      Agree = ifelse(Manual == VIAME_MaxN, 1, 0),
-      Difference = Manual - VIAME_MaxN,
-      Relaxed = ifelse(Difference == 1 | Difference == -1 | Difference == 0, 1, 0),
-      TP = sum(Manual > 0 & VIAME_MaxN > 0, na.rm = TRUE),
-      FP = sum(Manual == 0 & VIAME_MaxN > 0, na.rm = TRUE),
-      FN = sum(Manual > 0 & VIAME_MaxN == 0, na.rm = TRUE),
-      TN = sum(Manual == 0 & VIAME_MaxN == 0, na.rm = TRUE),
-      Precision = TP / (TP + FP),
-      Recall_TPR = TP / (TP + FN),
-      FPR = FP / (FP + TN),
-      FNR = FN / (TP + FN),
-      Accuracy = (TP + TN) / (TP + FP + FN + TN),
-      False_P_Ratio = FP / (TP + FN + TN),
-      False_N_Ratio = FN / (TP + FP + TN),
-      Total_Actual_Positives = TP + FN,
-      Total_Actual_Negatives = FP + TN,
-      .groups = "drop"
-    )
-  }
-
-  if (species == "none") {
-    df_out <- df %>%
-      dplyr::group_by(year, Version, Confidence) %>%
-      summarize_metrics()
-  } else if (species == "all") {
-    df_out <- df %>%
-      dplyr::group_by(year, Version, Confidence, Species) %>%
-      summarize_metrics()
-  } else if (any(species %in% df$Species) == TRUE) {
-    df_out <- df %>%
-      dplyr::filter(Species == species) %>%
-      dplyr::group_by(year, Version, Confidence, Species) %>%
-      summarize_metrics()
-  } else {
-    print("No species detected with that name. Check spelling and try again.")
-    return(NULL)
-  }
-
-  df_out %>%
-    dplyr::mutate(across(where(is.numeric), ~ ifelse(is.nan(.), NA, .))) %>%
-    dplyr::mutate(across(where(is.numeric), ~ ifelse(is.infinite(.), NA, .)))
-}
-
 percent_metric <- function(df, variable1, variable2, group, metric) {
   df %>%
     group_by({{ variable1 }}, {{ variable2 }}, {{ group }}) %>%
@@ -389,7 +374,7 @@ percent_metric <- function(df, variable1, variable2, group, metric) {
     )
 }
 
-metrics <- calculate_metrics(combined_master, species = "all")
+metrics <- calculate_legacy_metrics(combined_master, species = "all")
 percent_agreement <- percent_metric(metrics, year, Species, Confidence, Agree)
 relaxed_agreement <- percent_metric(metrics, year, Species, Confidence, Relaxed)
 

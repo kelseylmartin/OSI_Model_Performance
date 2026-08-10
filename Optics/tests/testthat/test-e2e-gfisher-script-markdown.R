@@ -101,6 +101,13 @@ test_that("GFisher rewrite script includes legacy confidence-threshold loop outp
   expect_match(rewrite_text, "filter(score > confidence_threshold)", fixed = TRUE)
   expect_match(rewrite_text, "mutate(score = confidence_threshold)", fixed = TRUE)
   expect_match(rewrite_text, "combined_master <- aligned_threshold_runs", fixed = TRUE)
-  expect_match(rewrite_text, "Version = \"Optics package pipeline\"", fixed = TRUE)
+  expect_match(rewrite_text, "Version = dplyr::coalesce(model_version, year_model_version, \"unknown\")", fixed = TRUE)
   expect_match(rewrite_text, "Confidence = confidence_threshold", fixed = TRUE)
+})
+
+test_that("GFisher rewrite script derives version from model folder and uses package metrics", {
+  rewrite_text <- paste(readLines(rewrite_script, warn = FALSE), collapse = "\n")
+
+  expect_match(rewrite_text, "extract_model_version <- function", fixed = TRUE)
+  expect_match(rewrite_text, "calculate_legacy_metrics(combined_master, species = \"all\")", fixed = TRUE)
 })
