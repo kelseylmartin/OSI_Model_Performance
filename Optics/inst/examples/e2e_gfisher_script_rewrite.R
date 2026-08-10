@@ -153,17 +153,12 @@ track_files <- if (dir.exists(trkdir)) {
   character(0)
 }
 
-truth_candidates <- c(
-  file.path(trthdir, "maxn3LABS_93to24.csv"),
-  file.path(wrkdir, "maxn3LABS_93to24.csv"),
-  file.path(trkdir, "maxn3LABS_93to24.csv")
-)
-truth_path <- truth_candidates[file.exists(truth_candidates)][1]
+truth_path <- file.path(trthdir, "maxn3LABS_93to24.csv")
 
 if (length(track_files) == 0) {
   stop("No SEFSC track files found. Looked for *_tracks.csv under: ", trkdir)
 }
-if (is.na(truth_path)) {
+if (!file.exists(truth_path)) {
   stop("Missing truth file: maxn3LABS_93to24.csv")
 }
 
