@@ -93,3 +93,14 @@ test_that("GFisher example scripts bootstrap their required packages", {
   expect_match(report_text, "library(FSA)", fixed = TRUE)
   expect_match(rewrite_text, "\"rmarkdown\"", fixed = TRUE)
 })
+
+test_that("GFisher rewrite script includes legacy confidence-threshold loop outputs", {
+  rewrite_text <- paste(readLines(rewrite_script, warn = FALSE), collapse = "\n")
+
+  expect_match(rewrite_text, "comparison_thresholds <- c(seq(0.1, 0.9, by = 0.1), 0.95)", fixed = TRUE)
+  expect_match(rewrite_text, "filter(score > confidence_threshold)", fixed = TRUE)
+  expect_match(rewrite_text, "mutate(score = confidence_threshold)", fixed = TRUE)
+  expect_match(rewrite_text, "combined_master <- aligned_threshold_runs", fixed = TRUE)
+  expect_match(rewrite_text, "Version = \"Optics package pipeline\"", fixed = TRUE)
+  expect_match(rewrite_text, "Confidence = confidence_threshold", fixed = TRUE)
+})
