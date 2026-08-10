@@ -114,6 +114,7 @@ test_that("GFisher rewrite script derives version from model folder and uses pac
   expect_match(rewrite_text, "calculate_legacy_metrics(combined_master, species = \"all\")", fixed = TRUE)
   expect_match(rewrite_text, "calculate_percent_metric(metrics, year, Species, Confidence, Agree)", fixed = TRUE)
   expect_false(grepl("percent_metric <- function", rewrite_text, fixed = TRUE))
-  expect_match(rewrite_text, "report_remove_large_schools <- \"n\"", fixed = TRUE)
+  expect_match(rewrite_text, "rstudioapi::showPrompt(", fixed = TRUE)
+  expect_false(grepl("remove_large_schools = \"n\"", rewrite_text, fixed = TRUE))
   expect_match(rewrite_text, "remove_large_schools = report_remove_large_schools", fixed = TRUE)
 })

@@ -6,7 +6,8 @@ required_packages <- c(
   "dplyr",
   "purrr",
   "stringr",
-  "rmarkdown"
+  "rmarkdown",
+  "rstudioapi"
 )
 
 ensure_example_packages <- function(packages, non_cran_packages = "Optics", repos = "https://cloud.r-project.org") {
@@ -380,7 +381,18 @@ cat("Optimal confidence threshold:", if (length(optimal_confidence) == 0) NA els
 analysis_report_path <- file.path(script.dir, "e2e_gfisher_script_markdown.Rmd")
 if (file.exists(analysis_report_path)) {
   report_species <- NULL
-  report_remove_large_schools <- "n"
+  print("Would you like to remove counts with large schools (i.e., 299, 399, and 999)? (y, n)")
+  report_remove_large_schools <- if (rstudioapi::isAvailable()) {
+    rstudioapi::showPrompt(
+      title = "Manual Input Required",
+      message = "Would you like to remove counts with large schools (i.e., 299, 399, and 999)? Please enter y or n."
+    )
+  } else {
+    readline("Would you like to remove counts with large schools (i.e., 299, 399, and 999)? Please enter y or n: ")
+  }
+  if (is.null(report_remove_large_schools)) {
+    stop("Script cancelled by user.", call. = FALSE)
+  }
   analysis_reports_dir <- file.path(outdir, "Part III - Data Analysis", "Analysis Reports")
   dir.create(analysis_reports_dir, recursive = TRUE, showWarnings = FALSE)
   rmarkdown::render(
