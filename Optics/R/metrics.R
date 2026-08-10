@@ -377,3 +377,25 @@ calculate_legacy_metrics <- function(df, species = "none") {
     dplyr::mutate(across(where(is.numeric), ~ ifelse(is.nan(.x), NA, .x))) %>%
     dplyr::mutate(across(where(is.numeric), ~ ifelse(is.infinite(.x), NA, .x)))
 }
+
+#' Summarize Binary Metric Percentages
+#'
+#' Calculates percent-1 and percent-0 summaries for a binary metric grouped by
+#' two index variables and a third grouping variable.
+#'
+#' @param df A data frame containing the grouping variables and binary metric.
+#' @param variable1,variable2,group Unquoted grouping variables.
+#' @param metric Unquoted binary metric column (0/1).
+#'
+#' @return A `tibble` with grouped percentage summaries.
+#' @export
+calculate_percent_metric <- function(df, variable1, variable2, group, metric) {
+  df %>%
+    dplyr::group_by({{ variable1 }}, {{ variable2 }}, {{ group }}) %>%
+    dplyr::summarise(
+      percentage_1s = mean({{ metric }}) * 100,
+      percentage_0s = (1 - mean({{ metric }})) * 100,
+      count = dplyr::n(),
+      .groups = "drop"
+    )
+}

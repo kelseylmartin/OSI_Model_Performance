@@ -363,20 +363,9 @@ if (nrow(combined_master) == 0) {
   stop("No deployment-level MaxN comparisons were generated from the stitched model tracks and REFERENCE data.")
 }
 
-percent_metric <- function(df, variable1, variable2, group, metric) {
-  df %>%
-    group_by({{ variable1 }}, {{ variable2 }}, {{ group }}) %>%
-    summarise(
-      percentage_1s = mean({{ metric }}) * 100,
-      percentage_0s = (1 - mean({{ metric }})) * 100,
-      count = n(),
-      .groups = "drop"
-    )
-}
-
 metrics <- calculate_legacy_metrics(combined_master, species = "all")
-percent_agreement <- percent_metric(metrics, year, Species, Confidence, Agree)
-relaxed_agreement <- percent_metric(metrics, year, Species, Confidence, Relaxed)
+percent_agreement <- calculate_percent_metric(metrics, year, Species, Confidence, Agree)
+relaxed_agreement <- calculate_percent_metric(metrics, year, Species, Confidence, Relaxed)
 
 confidence_summary <- percent_agreement %>%
   group_by(Confidence) %>%

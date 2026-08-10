@@ -110,4 +110,6 @@ test_that("GFisher rewrite script derives version from model folder and uses pac
 
   expect_match(rewrite_text, "extract_model_version <- function", fixed = TRUE)
   expect_match(rewrite_text, "calculate_legacy_metrics(combined_master, species = \"all\")", fixed = TRUE)
+  expect_match(rewrite_text, "calculate_percent_metric(metrics, year, Species, Confidence, Agree)", fixed = TRUE)
+  expect_false(grepl("percent_metric <- function", rewrite_text, fixed = TRUE))
 })
