@@ -122,18 +122,10 @@ Allreadtimes <- read_required_csv(
     EndTime = format(as.POSIXct(EndTime, format = "%H:%M:%S"), "%H:%M:%S")
   )
 
-readtime_key_candidates <- c(
-  file.path(wrkdir, "final_filled_key_v3.csv"),
-  file.path(wrkdir, "final_filled_key_v2.csv")
-)
-readtime_key_path <- readtime_key_candidates[file.exists(readtime_key_candidates)][1]
-if (is.na(readtime_key_path)) {
-  stop("Missing required helper CSV: final_filled_key_v3.csv/final_filled_key_v2.csv")
-}
 Readtimekey <- read_required_csv(
-  readtime_key_path,
+  file.path(wrkdir, "final_filled_key_v3.csv"),
   required_cols = c("Frame", "Timestamp"),
-  label = basename(readtime_key_path)
+  label = "final_filled_key_v3.csv"
 ) %>%
   mutate(Videotime = sub("\\..*", "", Timestamp))
 
