@@ -370,7 +370,7 @@ convert_folder_to_kwcoco_r <- function(folder_path,
   
   # 1. Find all CSV files in the folder
   cat(sprintf("Scanning for CSV files in '%s'...\n", folder_path))
-  csv_files <- list.files(path = folder_path, pattern = "\\.csv$", full.names = TRUE)
+  csv_files <- list.files(path = folder_path, pattern = "\\.csv$", full.names = TRUE, recursive = T)
   
   if (length(csv_files) == 0) {
     cat("No CSV files found in the specified folder.\n")
@@ -487,7 +487,7 @@ convert_folder_to_individual_kwcoco_r <- function(input_folder,
   
   # 1. Find all CSV files in the input folder
   cat(sprintf("Scanning for CSV files in '%s'...\n", input_folder))
-  csv_files <- list.files(path = input_folder, pattern = "\\.csv$", full.names = TRUE)
+  csv_files <- list.files(path = input_folder, pattern = "\\.csv$", full.names = TRUE, recursive = TRUE)
   
   if (length(csv_files) == 0) {
     cat("No CSV files found in the specified input folder.\n")
@@ -577,11 +577,17 @@ convert_folder_to_individual_kwcoco_r(
 )
 
 convert_track_csv_to_kwcoco_r(
-  csv_path = "C:/Users/Kelsey.l.martin.NMFS/Downloads/AUV_viame_test_detections.csv",
+  csv_path = "G:/.shortcut-targets-by-id/1NQbXTERaMRHyQASygwppJ54a6DoC2n0H/AI ML Materials/Reef Fish Training Library/training library/For_Training/JP_1/JP_1.csv",
   video_info = list(id = 1, name = "/AUV_viame_test_detections", width = 1920, height = 1080),
-  output_path = "C:/Users/Kelsey.l.martin.NMFS/Downloads/AUV_viame_test_detections.coco.json",
-  col_mapping = your_column_map
+  output_path = "G:/.shortcut-targets-by-id/1NQbXTERaMRHyQASygwppJ54a6DoC2n0H/AI ML Materials/Reef Fish Training Library/training library/Test/JP_1.coco.json",  col_mapping = your_column_map
 )
+
+# convert_track_csv_to_kwcoco_r(
+#   csv_path = "C:/Users/Kelsey.l.martin.NMFS/Downloads/AUV_viame_test_detections.csv",
+#   video_info = list(id = 1, name = "/AUV_viame_test_detections", width = 1920, height = 1080),
+#   output_path = "C:/Users/Kelsey.l.martin.NMFS/Downloads/AUV_viame_test_detections.coco.json",
+#   col_mapping = your_column_map
+# )
 
 
 
