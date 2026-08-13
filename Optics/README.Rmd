@@ -66,8 +66,8 @@ truth_totals <- calculate_ice_seals_totals(
 
 candidate_detections <- select_ice_seals_candidates(
   model_detections,
-  score_threshold = 0.9,
-  candidate_class = "animal"
+  score_threshold = 0.7,
+  candidate_class = "hotspot"
 )
 
 print(truth_totals)
@@ -79,63 +79,63 @@ candidate_detections %>%
 
 ## 3. Summarizing Performance by Threshold
 
-A key task is to evaluate how a model performs at different confidence thresholds. Here we compare the full model output with a stricter high-confidence subset, then summarize frame-abundance performance across thresholds with `summarize_performance_by_threshold()`.
+A key task is to evaluate how a model performs at different confidence thresholds. For a compact homepage example, we'll create small in-memory detection tables, convert them to `OpticsDetections` objects, and summarize performance across thresholds with `summarize_performance_by_threshold()`.
 
 ```{r summarize-performance}
-model_df <- model_detections@data %>%
-  mutate(camera = camera_from_path(image_id))
-truth_df <- truth_detections@data %>%
-  mutate(camera = camera_from_path(image_id))
+# Sample model detections with scores
+model_detections_df <- tibble(
+  video_id = "vid01",
+  image_id = "img01",
+  annotation_id = 1:8,
+  category_name = c("Gadus morhua", "Gadus morhua", "Melanogrammus aeglefinus", "Gadus morhua", "Pollachius virens", "Gadus morhua", "Melanogrammus aeglefinus", "Melanogrammus aeglefinus"),
+  score = c(0.95, 0.85, 0.80, 0.65, 0.50, 0.92, 0.75, 0.60),
+  frame_index = c(10, 10, 15, 20, 20, 10, 15, 15),
+  model_name = c(rep("Model A", 5), rep("Model B", 3)),
+  bbox_x = 0, bbox_y = 0, bbox_width = 1, bbox_height = 1
+)
 
-matched_images <- truth_df %>%
-  distinct(camera, image_id)
+# Sample ground truth detections
+truth_detections_df <- tibble(
+  video_id = "vid01",
+  image_id = "img01",
+  annotation_id = 9:12,
+  category_name = c("Gadus morhua", "Gadus morhua", "Gadus morhua", "Urophycis tenuis"),
+  frame_index = c(10, 10, 20, 30),
+  score = 1.0,
+  bbox_x = 0, bbox_y = 0, bbox_width = 1, bbox_height = 1
+)
 
-model_a_df <- model_df %>%
-  semi_join(matched_images, by = c("camera", "image_id"))
-
-truth_matched_df <- truth_df %>%
-  semi_join(
-    distinct(model_a_df, camera, image_id),
-    by = c("camera", "image_id")
-  )
-
-score_cutoff <- stats::quantile(model_a_df$score, probs = 0.75, na.rm = TRUE)
-model_b_df <- model_a_df %>%
-  filter(score >= score_cutoff)
+thresholds_to_test <- seq(0.5, 1.0, by = 0.1)
 
 model_a <- OpticsDetections(
-  data = select(model_a_df, -camera),
-  source_file = paste(camera_file_map$model_file, collapse = ", "),
-  ingest_format = "viame_csv_ice_seals_model_a"
+  data = filter(model_detections_df, model_name == "Model A"),
+  source_file = "manual",
+  ingest_format = "manual"
 )
 model_b <- OpticsDetections(
-  data = select(model_b_df, -camera),
-  source_file = paste(camera_file_map$model_file, collapse = ", "),
-  ingest_format = "viame_csv_ice_seals_model_b"
+  data = filter(model_detections_df, model_name == "Model B"),
+  source_file = "manual",
+  ingest_format = "manual"
 )
 truth <- OpticsDetections(
-  data = select(truth_matched_df, -camera),
-  source_file = paste(camera_file_map$truth_file, collapse = ", "),
-  ingest_format = "viame_csv_ice_seals_truth"
+  data = truth_detections_df,
+  source_file = "manual",
+  ingest_format = "manual"
 )
-
-thresholds_to_test <- c(seq(0.1, 0.9, by = 0.1), 0.95)
 
 perf_model_a <- summarize_performance_by_threshold(
   model_detections = model_a,
   truth_detections = truth,
-  by = c("video_id", "frame_index", "category_name"),
-  metric_function = calculate_frame_abundance,
+  by = c("video_id", "category_name"),
   thresholds = thresholds_to_test
-) %>% mutate(model_name = "All detections")
+) %>% mutate(model_name = "Model A")
 
 perf_model_b <- summarize_performance_by_threshold(
   model_detections = model_b,
   truth_detections = truth,
-  by = c("video_id", "frame_index", "category_name"),
-  metric_function = calculate_frame_abundance,
+  by = c("video_id", "category_name"),
   thresholds = thresholds_to_test
-) %>% mutate(model_name = "High-confidence subset")
+) %>% mutate(model_name = "Model B")
 
 performance_summary <- bind_rows(perf_model_a, perf_model_b)
 
@@ -152,54 +152,43 @@ With the summary data, we can now create plots to compare the model views. The p
 
 The `plot_performance_by_threshold()` function visualizes the trade-offs between precision, recall, and F1-score.
 
-```{r plot-performance, fig.cap="Precision, Recall, and F1-score for the full and high-confidence ice seal model views across confidence thresholds."}
+```{r plot-performance, fig.cap="Precision, Recall, and F1-score for Model A and Model B across different confidence thresholds."}
 plot_performance_by_threshold(
-  performance_summary %>%
-    filter(!is.na(precision), !is.na(recall), !is.na(f1_score)),
+  performance_summary,
   model_col = model_name,
-  title = "Ice Seal Frame-Abundance Performance"
+  title = "Model Performance Comparison"
 )
 ```
 
 ### Count Comparison Scatterplot
 
-To see how well the model counts match the truth counts at a specific threshold, we can generate a scatterplot after converting both model views to frame-abundance counts and aligning them to the validated detections.
+To see how well the model counts match the truth counts at a specific threshold, we can generate a scatterplot. The `calculate_maxn()` generic works on both `OpticsDetections` objects and standard `data.frame`s.
 
-```{r plot-scatterplot, fig.cap="Model vs. truth frame-abundance counts at a 0.9 confidence threshold."}
-selected_threshold <- 0.9
+```{r plot-scatterplot, fig.cap="Model vs. truth MaxN counts at a 0.8 confidence threshold."}
+model_counts_at_08 <- model_detections_df %>%
+  filter(score >= 0.8) %>%
+  calculate_maxn(group_cols = "model_name")
 
-model_a_counts <- model_a@data %>%
-  filter(score >= selected_threshold) %>%
-  calculate_frame_abundance()
-
-model_b_counts <- model_b@data %>%
-  filter(score >= selected_threshold) %>%
-  calculate_frame_abundance()
-
-truth_counts <- calculate_frame_abundance(truth)
+truth_counts <- calculate_maxn(truth_detections_df)
 
 aligned_a <- align_counts(
-  model_counts = model_a_counts,
+  model_counts = filter(model_counts_at_08, model_name == "Model A"),
   truth_counts = truth_counts,
-  by = c("video_id", "frame_index", "category_name"),
-  model_col = abundance,
-  truth_col = abundance
-) %>% mutate(model_name = "All detections")
+  by = c("video_id", "category_name")
+) %>% mutate(model_name = "Model A")
 
 aligned_b <- align_counts(
-  model_counts = model_b_counts,
+  model_counts = filter(model_counts_at_08, model_name == "Model B"),
   truth_counts = truth_counts,
-  by = c("video_id", "frame_index", "category_name"),
-  model_col = abundance,
-  truth_col = abundance
-) %>% mutate(model_name = "High-confidence subset")
+  by = c("video_id", "category_name")
+) %>% mutate(model_name = "Model B")
 
 aligned_counts <- bind_rows(aligned_a, aligned_b)
 
 plot_counts_scatterplot(
   aligned_counts,
   model_col = model_name,
-  title = "Frame-Abundance Counts at 0.9 Confidence"
+  title = "MaxN Counts at 0.8 Confidence"
 )
 ```
 

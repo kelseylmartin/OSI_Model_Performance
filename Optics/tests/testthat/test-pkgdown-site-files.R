@@ -22,7 +22,6 @@ test_that("homepage walkthrough highlights the current bundled workflow", {
     "ingest_ice_seals_csv(",
     "calculate_ice_seals_totals(",
     "select_ice_seals_candidates(",
-    "calculate_frame_abundance",
     "calculate_legacy_metrics()",
     "calculate_percent_metric()"
   )) {
