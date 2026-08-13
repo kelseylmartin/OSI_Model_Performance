@@ -35,7 +35,6 @@ reference:
       - OpticsDetections-class
       - OpticsDetections
       - convert_track_csv_to_kwcoco
-      - ice_seals
       - read_kwcoco
       - read_viame_csv
       - read_wide_maxn
@@ -56,13 +55,22 @@ reference:
   - title: "Performance Evaluation"
     desc:  "Functions for assessing model performance."
     contents:
+      - calculate_legacy_metrics
       - calculate_scalpred_metrics
+      - calculate_percent_metric
       - summarize_performance_by_threshold
       - calculate_binary_metrics
       - calculate_confusion_matrix
       - get_disagreement_report
       - analyze_reviewer_effort
       - analyze_performance_drivers
+
+  - title: "Dataset-Specific Helpers"
+    desc: "Workflow helpers for Ice Seal data ingestion and review preparation."
+    contents:
+      - ingest_ice_seals_csv
+      - calculate_ice_seals_totals
+      - select_ice_seals_candidates
 
   - title: "Visualizations"
     desc:  "Functions for plotting and visualizing results."
