@@ -246,25 +246,34 @@ read_plus_mixed <- function(flnm) {
 
 ## Naming your directories. These will be consistent throughout the script and will prevent each user from having to change paths for every file
 script.dir <- dirname(rstudioapi::getSourceEditorContext()$path)
-data_root <- file.path(script.dir, "Data")
-wrkdir  <- file.path(data_root, "/") # working directory (folder where data files are located)
-trkdir  <- file.path(data_root, "Tracks/") # track directory (folder where all track data files are located)
-trthdir <- file.path(data_root, "Truth/") # truth directory (folder where all groundtruthed data files are located)
+data.dir <- get_script_dir()
+sefsc_extdata <- system.file("extdata/SEFSC", package = "Optics")
+data_root_candidates <- c(
+  if (nzchar(sefsc_extdata)) sefsc_extdata,
+  file.path(data.dir, "inst", "extdata", "SEFSC"),
+  file.path(data.dir, "..", "extdata", "SEFSC")#,
+  #file.path(getwd(), "Data")
+)
+data_root <- resolve_first_existing(data_root_candidates, "SEFSC extdata/Data directory")
+wrkdir  <- file.path(data.dir, "inst", "extdata", "SEFSC") # working directory (folder where data files are located)
+trkdir  <- file.path("~/my_gcs_bucket", "GFISHER/Model_predictions/2025_2.5") # track directory (folder where all track data files are located)
+trthdir <- file.path(data.dir, "inst", "extdata", "SEFSC") # truth directory (folder where all groundtruthed data files are located)
 
+output.directory <- file.path("~/my_gcs_bucket", "GFISHER/Processed_model_predictions/")
 # Create output directories - this will create the appropriate output folders wherever you have this R script located
-dir.create(paste0(script.dir, "/Output")) # output directory
-dir.create(paste0(script.dir, "/Output/Part I - Counts")) # part I output directory (count data per model run and confidence)
-dir.create(paste0(script.dir, "/Output/Part II - Groundtruthing")) # part II output directory (groundtruthed data)
-dir.create(paste0(script.dir, "/Output/Part III - Data Analysis")) # part III output directory (data analysis)
-dir.create(paste0(script.dir, "/Output/Part III - Data Analysis/Figures")) # part III output directory (data analysis figures)
-outdir <- paste0(script.dir, "/Output/")  # (where you want new data output files to go) 
+dir.create(paste0(output.directory, "/Output")) # output directory
+dir.create(paste0(output.directory, "/Output/Part I - Counts")) # part I output directory (count data per model run and confidence)
+dir.create(paste0(output.directory, "/Output/Part II - Groundtruthing")) # part II output directory (groundtruthed data)
+dir.create(paste0(output.directory, "/Output/Part III - Data Analysis")) # part III output directory (data analysis)
+dir.create(paste0(output.directory, "/Output/Part III - Data Analysis/Figures")) # part III output directory (data analysis figures)
+outdir <- paste0(output.directory, "/Output/")  # (where you want new data output files to go) 
 
 
 ## Bringing in important csv files
-Allreadtimes <- read.csv(file.path(wrkdir, "All GFISHER Read Times.csv"))
-Readtimekey <- read.csv(file.path(wrkdir, "final_filled_key_v2.csv")) %>% mutate(Videotime = sub("\\..*", "", Timestamp))
-Species_List <- read.csv(file.path(wrkdir, "Species List.csv"))
-fwri_ref_key <- read.csv(paste0(wrkdir, "env3LABS_93to24.csv")) %>%
+Allreadtimes <- read.csv(file.path(wrkdir, "/All GFISHER Read Times.csv"))
+Readtimekey <- read.csv(file.path(wrkdir, "/final_filled_key_v3.csv")) %>% mutate(Videotime = sub("\\..*", "", Timestamp))
+Species_List <- read.csv(file.path(wrkdir, "/Species List.csv"))
+fwri_ref_key <- read.csv(paste0(wrkdir, "/env3LABS_93to24.csv")) %>%
   dplyr::mutate(SITE_ID = gsub("_|-", "", SITE_ID),
                 REFERENCE = gsub("_|-", "", REFERENCE),
                 Deployment = ifelse(YEAR < 2024|LAB == "FWRI", REFERENCE, SITE_ID)) 
@@ -291,70 +300,9 @@ for (t in 1:length(dts)) {
   print(paste0("Loading in track files for ", year, " v", model.run))
   
   # loading all CSVs into a table
-  tbl.raw <- list.files(dt, pattern = "\\.csv$|\\.json$", full.names = T, ignore.case = T)
-  
-  # Define column names and mapping for KWCOCO conversion
-  col.names.initial <- c("TrackID", "VidIdent", "UniqFrame", "TL_X", "TL_Y", "BR_X", "BR_Y", "DetLen_Conf", "Tar_Len", "SP", "CP")
-  col_map <- list(frame = "UniqFrame", track_id = "TrackID", tl_x = "TL_X", tl_y = "TL_Y", br_x = "BR_X", br_y = "BR_Y", score = "DetLen_Conf", species_name = "SP")
-  
-  tbl <- tbl.raw %>%
-    map_df(function(flnm) {
-      
-      final_df <- NULL # Initialize
-      
-      # --- Process based on file type ---
-      if (grepl("\\.csv$", flnm, ignore.case = TRUE)) {
-        cat(sprintf("Processing CSV file: %s\n", basename(flnm)))
-        df <- read_plus(flnm)
-        if (is.null(df) || nrow(df) == 0) return(NULL)
-        
-        names(df)[1:11] <- col.names.initial
-        video_meta <- list(id = 1, name = basename(flnm), width = 1920, height = 1080)
-        kwcoco_list <- convert_df_to_kwcoco_r(df, video_meta, col_map)
-        final_df <- convert_kwcoco_to_df_r(kwcoco_list)
-        
-      } else if (grepl("\\.json$", flnm, ignore.case = TRUE)) {
-        cat(sprintf("Processing KWCOCO JSON file: %s\n", basename(flnm)))
-        kwcoco_list <- tryCatch({
-          jsonlite::fromJSON(flnm, simplifyDataFrame = FALSE)
-        }, error = function(e) {
-          warning(paste("Error reading JSON file:", flnm, "-", e$message))
-          return(NULL)
-        })
-        
-        if (is.null(kwcoco_list) || length(kwcoco_list$annotations) == 0) return(NULL)
-        final_df <- convert_kwcoco_to_df_r(kwcoco_list)
-        
-      } else {
-        warning(paste("Skipping unsupported file type:", flnm))
-        return(NULL)
-      }
-      
-      # --- Common post-processing for both formats ---
-      if (is.null(final_df) || nrow(final_df) == 0) return(NULL)
-      
-      missing_cols <- setdiff(col.names.initial, names(final_df))
-      if (length(missing_cols) > 0) {
-        for (col in missing_cols) {
-          final_df[[col]] <- NA
-        }
-      }
-      
-      processed_df <- final_df[, col.names.initial]
-      processed_df$filename <- flnm
-      processed_df %>% mutate(across(everything(), as.character))
-    })
-  # if all CSVs come from same source web or desktop use this read function
-  read_plus <- function(flnm) {
-    tryCatch({
-      read_csv(flnm,skip=2,col_names = FALSE, col_select = c(1,2,3,4,5,6,7,8,9,10,11), show_col_types = FALSE) %>%  #Original run has 2 header rows
-        mutate(filename = flnm) %>% 
-        mutate(across(everything(), as.character))
-    }, error = function(e) {
-      print(paste("Error reading file: ", flnm)) # this has been happening when files don't have any observations. Saw it only in NGI files
-      return(NULL)  # If there's an error reading the file, return NULL
-    })
-  }
+  tbl.raw <- list.files(trkdir, pattern = "*.csv", full.names = T) 
+  tbl <- tbl.raw %>% 
+    map_df(~read_plus(.))
   # note that the table will not be produced if all columns are not formatted correctly 
   
   # renaming and fixing columns and column headers
