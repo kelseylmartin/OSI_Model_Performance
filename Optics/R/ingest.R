@@ -352,6 +352,114 @@ read_viame_csv <- function(file_path, video_id = NULL, id_schema = c("classic", 
   return(OpticsDetections(standardized_df, file_path, "viame_csv"))
 }
 
+# Internal helper to keep GCS dependency optional and testable.
+.list_gcs_objects <- function(bucket_name, prefix) {
+  if (!requireNamespace("googleCloudStorageR", quietly = TRUE)) {
+    stop(
+      "Package 'googleCloudStorageR' is required to scrape GCP bucket URIs. ",
+      "Please install it before calling scrape_gcp_uris().",
+      call. = FALSE
+    )
+  }
+
+  googleCloudStorageR::gcs_list_objects(
+    bucket = bucket_name,
+    prefix = prefix
+  )
+}
+
+#' Scrape Media URIs from a GCP Bucket Prefix
+#'
+#' Lists blobs in a Google Cloud Storage bucket under a prefix, filters by
+#' file extension, and returns a standardized data frame with parent folder,
+#' file name, and full `gs://` URI for each match.
+#'
+#' @param bucket_name A single bucket name.
+#' @param prefix A prefix within the bucket to scan (for example,
+#'   `"GFISHER/Video_data/"`).
+#' @param extensions Character vector of file extensions to keep (for example,
+#'   `c(".mp4", ".avi", ".jpg")`). Case-insensitive.
+#' @return A `data.frame` with exactly three columns:
+#'   `folder_name`, `file_name`, and `bucket_uri`.
+#' @export
+scrape_gcp_uris <- function(bucket_name, prefix = "", extensions = c(".mp4", ".avi", ".jpg")) {
+  if (!is.character(bucket_name) || length(bucket_name) != 1 || is.na(bucket_name) || bucket_name == "") {
+    stop("`bucket_name` must be a single, non-empty character value.", call. = FALSE)
+  }
+  if (!is.character(prefix) || length(prefix) != 1 || is.na(prefix)) {
+    stop("`prefix` must be a single character value.", call. = FALSE)
+  }
+  if (!is.character(extensions) || length(extensions) == 0 || anyNA(extensions)) {
+    stop("`extensions` must be a non-empty character vector.", call. = FALSE)
+  }
+
+  normalized_extensions <- tolower(extensions)
+  normalized_extensions <- ifelse(
+    startsWith(normalized_extensions, "."),
+    normalized_extensions,
+    paste0(".", normalized_extensions)
+  )
+
+  object_listing <- tryCatch(
+    .list_gcs_objects(bucket_name = bucket_name, prefix = prefix),
+    error = function(e) {
+      stop(
+        "Failed to list objects from bucket '", bucket_name, "' with prefix '", prefix,
+        "'. Check GCP authentication and bucket/prefix access. Original error: ",
+        e$message,
+        call. = FALSE
+      )
+    }
+  )
+
+  object_names <- character(0)
+  if (is.data.frame(object_listing) && "name" %in% names(object_listing)) {
+    object_names <- object_listing$name
+  } else if (is.list(object_listing) && !is.null(object_listing$name)) {
+    object_names <- object_listing$name
+  } else if (is.list(object_listing) && !is.null(object_listing$items)) {
+    object_names <- vapply(
+      object_listing$items,
+      function(x) if (!is.null(x$name)) x$name else NA_character_,
+      character(1)
+    )
+  }
+  object_names <- object_names[!is.na(object_names)]
+
+  if (length(object_names) == 0) {
+    warning(
+      "No files found in bucket '", bucket_name, "' under prefix '", prefix, "'.",
+      call. = FALSE
+    )
+    return(data.frame(folder_name = character(), file_name = character(), bucket_uri = character()))
+  }
+
+  object_names <- object_names[!grepl("/$", object_names)]
+  keep <- tools::file_ext(object_names) != "" &
+    paste0(".", tolower(tools::file_ext(object_names))) %in% normalized_extensions
+  filtered_names <- object_names[keep]
+
+  if (length(filtered_names) == 0) {
+    warning(
+      "No files matched requested extensions under prefix '", prefix, "' in bucket '", bucket_name, "'.",
+      call. = FALSE
+    )
+    return(data.frame(folder_name = character(), file_name = character(), bucket_uri = character()))
+  }
+
+  relative_paths <- ifelse(startsWith(filtered_names, prefix), substring(filtered_names, nchar(prefix) + 1L), filtered_names)
+  file_names <- basename(relative_paths)
+  parent_dirs <- dirname(relative_paths)
+  folder_names <- ifelse(parent_dirs == "." | parent_dirs == "", NA_character_, basename(parent_dirs))
+
+  data.frame(
+    folder_name = folder_names,
+    file_name = file_names,
+    bucket_uri = paste0("gs://", bucket_name, "/", filtered_names),
+    stringsAsFactors = FALSE
+  )
+}
+
 #' Convert Track Data to KWCOCO
 #'
 #' Converts track-style detections into a KWCOCO-compatible list, following the

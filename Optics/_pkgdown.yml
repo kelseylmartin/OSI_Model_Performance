@@ -38,6 +38,7 @@ reference:
       - read_kwcoco
       - read_viame_csv
       - read_wide_maxn
+      - scrape_gcp_uris
 
   - title: "Alignment & Transformation"
     desc:  "Functions for aligning model and ground truth data."
