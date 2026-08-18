@@ -88,10 +88,10 @@ setMethod("align_counts",
 
   # Ensure count columns exist, even if the data frame is empty
   if (!model_col_name %in% names(model_counts)) {
-    model_counts[[model_col_name]] <- numeric(0)
+    model_counts[[model_col_name]] <- rep(0, nrow(model_counts))
   }
   if (!truth_col_name %in% names(truth_counts)) {
-    truth_counts[[truth_col_name]] <- numeric(0)
+    truth_counts[[truth_col_name]] <- rep(0, nrow(truth_counts))
   }
 
   model_counts_renamed <- model_counts %>% dplyr::rename(model_count = !!model_col_quo)

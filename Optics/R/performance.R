@@ -432,19 +432,29 @@ setMethod("calculate_confusion_matrix", "data.frame", function(aligned_df, group
   # True Positives: present in both
   tps <- all_comparisons %>%
     dplyr::filter(.data$model_present & .data$truth_present) %>%
-    dplyr::select(Truth = {{ species_col }}, Prediction = {{ species_col }})
+    dplyr::select(Truth = {{ species_col }}, Prediction = {{ species_col }}) %>%
+    dplyr::mutate(
+      Truth = as.character(.data$Truth),
+      Prediction = as.character(.data$Prediction)
+    )
 
   # False Negatives: present in truth, not in model
   fns <- all_comparisons %>%
     dplyr::filter(.data$truth_present & !.data$model_present) %>%
     dplyr::select(Truth = {{ species_col }}) %>%
-    dplyr::mutate(Prediction = "FN (No Prediction)")
+    dplyr::mutate(
+      Truth = as.character(.data$Truth),
+      Prediction = "FN (No Prediction)"
+    )
 
   # False Positives: present in model, not in truth
   fps <- all_comparisons %>%
     dplyr::filter(.data$model_present & !.data$truth_present) %>%
     dplyr::select(Prediction = {{ species_col }}) %>%
-    dplyr::mutate(Truth = "FP (No Truth)")
+    dplyr::mutate(
+      Prediction = as.character(.data$Prediction),
+      Truth = "FP (No Truth)"
+    )
 
   dplyr::bind_rows(tps, fns, fps) %>%
     dplyr::group_by(.data$Truth, .data$Prediction) %>%
