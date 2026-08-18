@@ -32,8 +32,15 @@ test_that("truth-count uploads are converted into OpticsDetections rows", {
 test_that("packaged Shiny portal files are present", {
   #' @description Test that the packaged Shiny portal directory and app entrypoint exist.
   app_dir <- Optics:::.optics_portal_app_dir()
+  example_script <- testthat::test_path("..", "..", "inst", "examples", "run_optics_app.R")
 
   expect_true(nzchar(app_dir))
   expect_true(dir.exists(app_dir))
   expect_true(file.exists(file.path(app_dir, "app.R")))
+  expect_true(file.exists(example_script))
+  expect_match(
+    paste(readLines(example_script, warn = FALSE), collapse = "\n"),
+    "run_optics_app\\s*\\(",
+    perl = TRUE
+  )
 })
