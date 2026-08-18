@@ -13,12 +13,16 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
 Suggests:
+   bslib,
+   DT,
    googleCloudStorageR,
    ggpubr,
    knitr,
+   plotly,
    PRROC,
    pROC,
    rmarkdown,
+   shiny,
    testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Imports: 
@@ -40,6 +44,7 @@ Collate:
     'metrics.R'
     'performance.R'
     'theme.R'
-    'utils-pipe.R'
     'visualizations.R'
+    'shiny_portal.R'
+    'utils-pipe.R'
 Config/roxygen2/version: 8.1.0
