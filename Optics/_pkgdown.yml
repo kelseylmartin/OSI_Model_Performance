@@ -94,4 +94,5 @@ reference:
   - title: "Utilities"
     desc: "Other exported operators and utilities."
     contents:
+      - run_optics_app
       - '%>%'
