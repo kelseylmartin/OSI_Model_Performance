@@ -687,7 +687,23 @@ requires a specific set of columns.</p>
 <span id="cb2-49"><a href="#cb2-49" tabindex="-1"></a><span class="co">#&gt; 3 vid01    img01               11 Gadus morhua            20     1      0      0</span></span>
 <span id="cb2-50"><a href="#cb2-50" tabindex="-1"></a><span class="co">#&gt; 4 vid01    img01               12 Urophycis ten~          30     1      0      0</span></span>
 <span id="cb2-51"><a href="#cb2-51" tabindex="-1"></a><span class="co">#&gt; # i 2 more variables: bbox_width &lt;dbl&gt;, bbox_height &lt;dbl&gt;</span></span></code></pre></div>
-<h2 id="id_3-summarizing-performance-by-threshold">3. Summarizing
+<h2 id="id_3-optional-build-a-gcp-media-uri-index">3. Optional: Build a
+GCP Media URI Index</h2>
+<p>When your workflow inputs are stored in Google Cloud Storage,
+<code>scrape_gcp_uris()</code> can build a simple media index for
+downstream ingestion. This keeps bucket listing logic centralized and
+returns a consistent three-column lookup table
+(<code>folder_name</code>, <code>file_name</code>,
+<code>bucket_uri</code>).</p>
+<div class="sourceCode" id="cb2a"><pre
+class="sourceCode r"><code class="sourceCode r"><span id="cb2a-1"><a href="#cb2a-1" tabindex="-1"></a>gcp_media_index <span class="ot">&lt;-</span> <span class="fu">scrape_gcp_uris</span>(</span>
+<span id="cb2a-2"><a href="#cb2a-2" tabindex="-1"></a>  <span class="at">bucket_name =</span> <span class="st">&quot;nmfs-dev-uc1-sefsc&quot;</span>,</span>
+<span id="cb2a-3"><a href="#cb2a-3" tabindex="-1"></a>  <span class="at">prefix =</span> <span class="st">&quot;GFISHER/Video_data/&quot;</span>,</span>
+<span id="cb2a-4"><a href="#cb2a-4" tabindex="-1"></a>  <span class="at">extensions =</span> <span class="fu">c</span>(<span class="st">&quot;.mp4&quot;</span>, <span class="st">&quot;.avi&quot;</span>, <span class="st">&quot;.jpg&quot;</span>)</span>
+<span id="cb2a-5"><a href="#cb2a-5" tabindex="-1"></a>)</span>
+<span id="cb2a-6"><a href="#cb2a-6" tabindex="-1"></a></span>
+<span id="cb2a-7"><a href="#cb2a-7" tabindex="-1"></a><span class="fu">head</span>(gcp_media_index)</span></code></pre></div>
+<h2 id="id_4-summarizing-performance-by-threshold">4. Summarizing
 Performance by Threshold</h2>
 <p>A key task is to evaluate how a model performs at different
 confidence thresholds. The
@@ -747,7 +763,7 @@ this. It now operates on <code>OpticsDetections</code> S4 objects.</p>
 <span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a><span class="co">#&gt; 12     0     0     2    NA        0     NA        NA   NA      NA    NA  </span></span>
 <span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a><span class="co">#&gt; # i 7 more variables: false_positive_ratio &lt;dbl&gt;, false_negative_ratio &lt;dbl&gt;,</span></span>
 <span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a><span class="co">#&gt; #   mcc_num &lt;dbl&gt;, mcc_den &lt;dbl&gt;, mcc &lt;dbl&gt;, threshold &lt;dbl&gt;, model_name &lt;chr&gt;</span></span></code></pre></div>
-<h2 id="id_4-visualizing-performance">4. Visualizing Performance</h2>
+<h2 id="id_5-visualizing-performance">5. Visualizing Performance</h2>
 <p>With the summary data, we can now create plots to compare the models.
 The plotting functions are now S4 generics.</p>
 <h3 id="performance-by-threshold-plot">Performance by Threshold

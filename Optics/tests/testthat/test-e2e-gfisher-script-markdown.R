@@ -48,6 +48,7 @@ test_that("GFisher markdown example keeps the report structure and package pipel
   }
 
   for (call in c(
+    "scrape_gcp_uris(",
     "read_viame_csv(",
     "read_wide_maxn(",
     "calculate_maxn(",

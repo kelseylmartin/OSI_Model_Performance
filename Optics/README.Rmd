@@ -77,7 +77,21 @@ candidate_detections %>%
   head()
 ```
 
-## 3. Summarizing Performance by Threshold
+## 3. Optional: Build a GCP Media URI Index
+
+When your workflow inputs are stored in Google Cloud Storage, `scrape_gcp_uris()` can build a simple media index for downstream ingestion. This keeps bucket listing logic centralized and returns a consistent three-column lookup table (`folder_name`, `file_name`, `bucket_uri`).
+
+```{r scrape-gcp-uris-example, eval=FALSE}
+gcp_media_index <- scrape_gcp_uris(
+  bucket_name = "nmfs-dev-uc1-sefsc",
+  prefix = "GFISHER/Video_data/",
+  extensions = c(".mp4", ".avi", ".jpg")
+)
+
+head(gcp_media_index)
+```
+
+## 4. Summarizing Performance by Threshold
 
 A key task is to evaluate how a model performs at different confidence thresholds. For a compact homepage example, we'll create small in-memory detection tables, convert them to `OpticsDetections` objects, and summarize performance across thresholds with `summarize_performance_by_threshold()`.
 
@@ -144,7 +158,7 @@ performance_summary %>%
   arrange(model_name, threshold)
 ```
 
-## 4. Visualizing Performance
+## 5. Visualizing Performance
 
 With the summary data, we can now create plots to compare the model views. The plotting functions are now S4 generics and work directly with the current threshold-summary output.
 

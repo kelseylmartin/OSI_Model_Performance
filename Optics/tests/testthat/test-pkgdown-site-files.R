@@ -19,6 +19,7 @@ test_that("homepage walkthrough highlights the current bundled workflow", {
 
   for (text in c(
     "system.file(\"extdata/AKFSC\", package = \"Optics\")",
+    "scrape_gcp_uris(",
     "ingest_ice_seals_csv(",
     "calculate_ice_seals_totals(",
     "select_ice_seals_candidates(",
