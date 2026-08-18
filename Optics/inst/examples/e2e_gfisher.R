@@ -13,6 +13,16 @@ truth_path <- file.path(sefsc_dir, "maxn3LABS_93to24.csv")
 
 track_files <- list.files(sefsc_dir, pattern = "_tracks.*\\.csv$", full.names = TRUE)
 
+# Optional: if GCS env vars are set, preview bucket URIs with scrape_gcp_uris().
+if (nzchar(Sys.getenv("GCS_BUCKET")) && nzchar(Sys.getenv("GCS_PREFIX"))) {
+  gcp_media_index <- scrape_gcp_uris(
+    bucket_name = Sys.getenv("GCS_BUCKET"),
+    prefix = Sys.getenv("GCS_PREFIX"),
+    extensions = c(".mp4", ".avi", ".jpg")
+  )
+  print(utils::head(gcp_media_index))
+}
+
 if (length(track_files) == 0) {
   stop("No SEFSC track files found in extdata/SEFSC.")
 }
