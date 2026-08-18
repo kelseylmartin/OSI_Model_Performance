@@ -100,5 +100,16 @@ setMethod("align_counts",
   aligned_df <- dplyr::full_join(model_counts_renamed, truth_counts_renamed, by = by) %>%
     dplyr::mutate(dplyr::across(c("model_count", "truth_count"), ~ifelse(is.na(.), 0, .)))
 
+  if (all(c("score.x", "score.y") %in% names(aligned_df))) {
+    aligned_df <- aligned_df %>%
+      dplyr::mutate(score = dplyr::coalesce(.data$score.x, .data$score.y)) %>%
+      dplyr::select(-dplyr::any_of(c("score.x", "score.y")))
+  }
+
+  if ("score" %in% names(aligned_df)) {
+    aligned_df <- aligned_df %>%
+      dplyr::select(dplyr::any_of(c(by, "score")), dplyr::everything())
+  }
+
   return(aligned_df)
 })

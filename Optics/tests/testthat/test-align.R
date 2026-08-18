@@ -69,6 +69,23 @@ test_that("align_counts() returns correct outputs for edge cases", {
   )
 })
 
+test_that("align_counts() keeps a plain score column when score is not a join key", {
+  #' @description Test that align_counts() coalesces score columns after joining.
+  truth_with_score <- truth_df %>%
+    dplyr::mutate(score = c(0.95, 0.85, 0.75))
+
+  result <- align_counts(
+    model_counts = model_df,
+    truth_counts = truth_with_score,
+    by = c("video_id", "category_name"),
+    model_col = model_maxn,
+    truth_col = truth_maxn
+  )
+
+  expect_true("score" %in% names(result))
+  expect_false(any(c("score.x", "score.y") %in% names(result)))
+})
+
 ## Error handling ----
 # No specific errors are built into align_counts beyond what dplyr::full_join provides.
 # Therefore, this section is intentionally left blank.
