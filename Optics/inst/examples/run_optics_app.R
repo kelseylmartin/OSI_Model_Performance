@@ -4,5 +4,5 @@
 
 library(Optics)
 
-# Run the packaged Shiny app with bundled examples or custom CSV uploads.
+# Run the packaged Shiny app with bundled example datasets.
 run_optics_app()

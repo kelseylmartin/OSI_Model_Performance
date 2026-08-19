@@ -1,7 +1,7 @@
 #' Launch the Optics Shiny Portal
 #'
 #' Starts the packaged Optics Shiny application for exploring bundled example
-#' datasets or uploading custom model and ground-truth CSV files.
+#' datasets.
 #'
 #' @param ... Additional arguments passed to [shiny::runApp()].
 #' @return The result of [shiny::runApp()].
@@ -36,6 +36,10 @@ run_optics_app <- function(...) {
 .normalize_optics_portal_reference_id <- function(x) {
   x <- toupper(as.character(x))
   sub("^([0-9]{4})-(N(?:CD|CO)-[0-9]{3})$", "\\1_\\2", x, perl = TRUE)
+}
+
+.normalize_optics_portal_compact_id <- function(x) {
+  gsub("_|-", "", .normalize_optics_portal_reference_id(x))
 }
 
 .discover_optics_portal_examples <- function(extdata_dir = system.file("extdata", package = "Optics")) {
@@ -301,13 +305,53 @@ run_optics_app <- function(...) {
     ext_dir <- file.path(extdata_dir, "AKFSC")
     model_files <- list.files(ext_dir, pattern = "_ir_detections\\.csv$", full.names = TRUE)
     truth_files <- list.files(ext_dir, pattern = "_validated\\.csv$", full.names = TRUE)
+    extract_camera <- function(path) {
+      camera <- stringr::str_match(basename(path), "_([LCR])_")[, 2]
+      ifelse(is.na(camera), "", camera)
+    }
 
-    model_detections <- ingest_ice_seals_csv(model_files)
-    truth_detections <- ingest_ice_seals_csv(truth_files)
+    model_index <- dplyr::tibble(model_file = model_files, camera = extract_camera(model_files))
+    truth_index <- dplyr::tibble(truth_file = truth_files, camera = extract_camera(truth_files))
 
-    matched_images <- intersect(model_detections@data$image_id, truth_detections@data$image_id)
-    model_data <- model_detections@data[model_detections@data$image_id %in% matched_images, , drop = FALSE]
-    truth_data <- truth_detections@data[truth_detections@data$image_id %in% matched_images, , drop = FALSE]
+    if (any(model_index$camera == "") || any(truth_index$camera == "")) {
+      stop("Could not extract camera position (L/R/C) from one or more ice-seal files.", call. = FALSE)
+    }
+    if (anyDuplicated(model_index$camera) || anyDuplicated(truth_index$camera)) {
+      stop("Expected one model and one validated ice-seal file per camera (L/R/C).", call. = FALSE)
+    }
+
+    camera_file_map <- dplyr::inner_join(model_index, truth_index, by = "camera")
+    if (nrow(camera_file_map) == 0) {
+      stop("No paired ice-seal model and validated files were found.", call. = FALSE)
+    }
+
+    model_detections <- ingest_ice_seals_csv(camera_file_map$model_file)
+    truth_detections <- ingest_ice_seals_csv(camera_file_map$truth_file)
+
+    extract_camera_from_image <- function(image_id) {
+      image_name <- sub("^.*[\\\\/]", "", image_id)
+      stringr::str_match(image_name, "_([LCR])_")[, 2]
+    }
+
+    model_data <- model_detections@data %>%
+      dplyr::mutate(
+        camera = extract_camera_from_image(.data$image_id),
+        image_key = sub("^.*[\\\\/]", "", .data$image_id)
+      )
+    truth_data <- truth_detections@data %>%
+      dplyr::mutate(
+        camera = extract_camera_from_image(.data$image_id),
+        image_key = sub("^.*[\\\\/]", "", .data$image_id)
+      )
+
+    truth_image_index <- truth_data %>% dplyr::distinct(.data$camera, .data$image_key)
+    model_data <- model_data %>%
+      dplyr::semi_join(truth_image_index, by = c("camera", "image_key"))
+    model_image_index <- model_data %>% dplyr::distinct(.data$camera, .data$image_key)
+    truth_data <- truth_data %>%
+      dplyr::semi_join(model_image_index, by = c("camera", "image_key")) %>%
+      dplyr::select(-.data$camera, -.data$image_key)
+    model_data <- model_data %>% dplyr::select(-.data$camera, -.data$image_key)
 
     return(list(
       label = "Aerial Ice Seals",
@@ -322,17 +366,22 @@ run_optics_app <- function(...) {
     ext_dir <- file.path(extdata_dir, "SEFSC")
     truth_path <- file.path(ext_dir, "maxn3LABS_93to24.csv")
     species_path <- file.path(ext_dir, "Species List.csv")
+    deployment_path <- file.path(ext_dir, "env3LABS_93to24.csv")
     track_files <- list.files(ext_dir, pattern = "_tracks.*\\.csv$", full.names = TRUE)
 
     species_lookup <- utils::read.csv(species_path, stringsAsFactors = FALSE)
     species_lookup$Spec_Viame_Dash <- trimws(as.character(species_lookup$Spec_Viame_Dash))
     species_lookup$Species <- toupper(trimws(as.character(species_lookup$Species)))
 
+    deployment_lookup <- utils::read.csv(deployment_path, stringsAsFactors = FALSE)
+    deployment_lookup$reference_compact <- .normalize_optics_portal_compact_id(deployment_lookup$REFERENCE)
+    deployment_lookup$site_compact <- .normalize_optics_portal_compact_id(deployment_lookup$SITE_ID)
+
     model_parts <- lapply(track_files, function(track_file) {
       deployment_id <- sub("_tracks.*$", "", basename(track_file))
       detections <- read_viame_csv(track_file, video_id = deployment_id)
       model_df <- detections@data
-      model_df$video_id <- .normalize_optics_portal_reference_id(model_df$video_id)
+      model_df$video_id <- .normalize_optics_portal_compact_id(model_df$video_id)
       mapped_species <- species_lookup$Species[match(trimws(model_df$category_name), species_lookup$Spec_Viame_Dash)]
       model_df$category_name <- ifelse(is.na(mapped_species) | mapped_species == "", model_df$category_name, mapped_species)
       model_df$category_name <- toupper(trimws(model_df$category_name))
@@ -341,9 +390,14 @@ run_optics_app <- function(...) {
 
     model_df <- dplyr::bind_rows(model_parts)
     truth_counts <- read_wide_maxn(truth_path, video_id_col = REFERENCE)
-    truth_counts$video_id <- .normalize_optics_portal_reference_id(truth_counts$video_id)
+    truth_counts$video_id <- .normalize_optics_portal_compact_id(truth_counts$video_id)
     truth_counts$category_name <- toupper(trimws(truth_counts$category_name))
-    truth_counts <- truth_counts[truth_counts$video_id %in% unique(model_df$video_id), , drop = FALSE]
+    model_deployments <- unique(model_df$video_id)
+    truth_reference_match <- match(truth_counts$video_id, deployment_lookup$reference_compact)
+    truth_site_match <- deployment_lookup$site_compact[truth_reference_match]
+    use_site_match <- !is.na(truth_site_match) & truth_site_match %in% model_deployments
+    truth_counts$video_id[use_site_match] <- truth_site_match[use_site_match]
+    truth_counts <- truth_counts[truth_counts$video_id %in% model_deployments, , drop = FALSE]
 
     return(list(
       label = "Stationary Benthic MaxN",
@@ -448,13 +502,7 @@ optics_portal_data_ui <- function(id) {
   ns <- shiny::NS(id)
 
   shiny::tagList(
-    shiny::radioButtons(
-      ns("data_source"),
-      "Data source",
-      choices = c("Use Example Data" = "example", "Upload My Own Data" = "upload"),
-      selected = "example"
-    ),
-    shiny::uiOutput(ns("data_source_inputs")),
+    shiny::uiOutput(ns("example_picker")),
     shiny::uiOutput(ns("data_status"))
   )
 }
@@ -463,26 +511,7 @@ optics_portal_data_server <- function(id) {
   shiny::moduleServer(id, function(input, output, session) {
     example_catalog <- .discover_optics_portal_examples()
 
-    output$data_source_inputs <- shiny::renderUI({
-      if (identical(input$data_source, "upload")) {
-        return(shiny::tagList(
-          shiny::fileInput(
-            session$ns("model_file"),
-            "Model predictions CSV",
-            accept = c(".csv", "text/csv")
-          ),
-          shiny::fileInput(
-            session$ns("truth_file"),
-            "Ground-truth CSV",
-            accept = c(".csv", "text/csv")
-          ),
-          shiny::helpText(
-            "Uploads should include image_id plus class_label/category_name. ",
-            "Model files also need Confidence/score; ground-truth files can use true_count."
-          )
-        ))
-      }
-
+    output$example_picker <- shiny::renderUI({
       example_choices <- stats::setNames(example_catalog$key, example_catalog$label)
       if (length(example_choices) == 0) {
         return(shiny::helpText("No bundled example datasets were found in inst/extdata."))
@@ -497,41 +526,14 @@ optics_portal_data_server <- function(id) {
     })
 
     loaded_data <- shiny::reactive({
-      if (identical(input$data_source, "upload")) {
-        shiny::req(input$model_file$datapath, input$truth_file$datapath)
-        tryCatch(
-          {
-            list(
-              label = "Uploaded data",
-              model_detections = .optics_portal_read_upload_file(
-                file_path = input$model_file$datapath,
-                display_name = input$model_file$name,
-                role = "model"
-              ),
-              truth_detections = .optics_portal_read_upload_file(
-                file_path = input$truth_file$datapath,
-                display_name = input$truth_file$name,
-                role = "truth"
-              ),
-              allowed_count_metrics = c("Frame Abundance", "MaxN"),
-              default_count_metric = "Frame Abundance"
-            )
-          },
-          error = function(e) {
-            shiny::showNotification(conditionMessage(e), type = "error")
-            NULL
-          }
-        )
-      } else {
-        shiny::req(input$example_key)
-        tryCatch(
-          .optics_portal_load_example(input$example_key),
-          error = function(e) {
-            shiny::showNotification(conditionMessage(e), type = "error")
-            NULL
-          }
-        )
-      }
+      shiny::req(input$example_key)
+      tryCatch(
+        .optics_portal_load_example(input$example_key),
+        error = function(e) {
+          shiny::showNotification(conditionMessage(e), type = "error")
+          NULL
+        }
+      )
     })
 
     output$data_status <- shiny::renderUI({
@@ -561,12 +563,25 @@ optics_portal_data_server <- function(id) {
 }
 
 optics_portal_ui <- function() {
-  shiny::page_sidebar(
+  bslib::page_sidebar(
     title = "Optics Portal",
     theme = bslib::bs_theme(version = 5, bootswatch = "flatly"),
     sidebar = bslib::sidebar(
       optics_portal_data_ui("data"),
       shiny::uiOutput("count_metric_ui"),
+      shiny::selectInput(
+        "view_selection",
+        "Figure view",
+        choices = c(
+          "Performance by confidence" = "performance",
+          "Precision-Recall curve" = "pr_curve",
+          "F1 by confidence" = "f1_curve",
+          "Binary confusion matrix" = "binary_confusion",
+          "Class-level confusion matrix" = "multiclass_confusion",
+          "Aligned model vs. ground truth" = "aligned_data"
+        ),
+        selected = "performance"
+      ),
       shiny::sliderInput(
         "confidence_threshold",
         "Confidence threshold",
@@ -582,33 +597,57 @@ optics_portal_ui <- function() {
         selected = c("precision", "recall", "f1_score")
       )
     ),
-    bslib::layout_column_wrap(
-      width = 1 / 2,
-      heights_equal = "row",
-      bslib::card(
-        bslib::card_header("Performance by confidence"),
-        plotly::plotlyOutput("performance_plot", height = "320px"),
-        DT::DTOutput("selected_metric_table")
+    shiny::tabsetPanel(
+      id = "main_view",
+      type = "hidden",
+      shiny::tabPanelBody(
+        "performance",
+        bslib::card(
+          full_screen = TRUE,
+          bslib::card_header("Performance by confidence"),
+          plotly::plotlyOutput("performance_plot", height = "420px"),
+          DT::DTOutput("selected_metric_table")
+        )
       ),
-      bslib::card(
-        bslib::card_header("Precision-Recall curve"),
-        plotly::plotlyOutput("pr_curve_plot", height = "320px")
+      shiny::tabPanelBody(
+        "pr_curve",
+        bslib::card(
+          full_screen = TRUE,
+          bslib::card_header("Precision-Recall curve"),
+          plotly::plotlyOutput("pr_curve_plot", height = "520px")
+        )
       ),
-      bslib::card(
-        bslib::card_header("F1 by confidence"),
-        plotly::plotlyOutput("f1_curve_plot", height = "320px")
+      shiny::tabPanelBody(
+        "f1_curve",
+        bslib::card(
+          full_screen = TRUE,
+          bslib::card_header("F1 by confidence"),
+          plotly::plotlyOutput("f1_curve_plot", height = "520px")
+        )
       ),
-      bslib::card(
-        bslib::card_header("Binary confusion matrix"),
-        plotly::plotlyOutput("binary_confusion_plot", height = "320px")
+      shiny::tabPanelBody(
+        "binary_confusion",
+        bslib::card(
+          full_screen = TRUE,
+          bslib::card_header("Binary confusion matrix"),
+          plotly::plotlyOutput("binary_confusion_plot", height = "520px")
+        )
       ),
-      bslib::card(
-        bslib::card_header("Class-level confusion matrix"),
-        plotly::plotlyOutput("multiclass_confusion_plot", height = "420px")
+      shiny::tabPanelBody(
+        "multiclass_confusion",
+        bslib::card(
+          full_screen = TRUE,
+          bslib::card_header("Class-level confusion matrix"),
+          plotly::plotlyOutput("multiclass_confusion_plot", height = "600px")
+        )
       ),
-      bslib::card(
-        bslib::card_header("Aligned model vs. ground truth"),
-        DT::DTOutput("aligned_data_table")
+      shiny::tabPanelBody(
+        "aligned_data",
+        bslib::card(
+          full_screen = TRUE,
+          bslib::card_header("Aligned model vs. ground truth"),
+          DT::DTOutput("aligned_data_table")
+        )
       )
     )
   )
@@ -616,6 +655,10 @@ optics_portal_ui <- function() {
 
 optics_portal_server <- function(input, output, session) {
   data_source <- optics_portal_data_server("data")
+
+  shiny::observeEvent(input$view_selection, {
+    shiny::updateTabsetPanel(session, "main_view", selected = input$view_selection)
+  }, ignoreNULL = FALSE)
 
   output$count_metric_ui <- shiny::renderUI({
     current_data <- data_source$dataset()

@@ -14,5 +14,5 @@ The result of \code{\link[shiny:runApp]{shiny::runApp()}}.
 }
 \description{
 Starts the packaged Optics Shiny application for exploring bundled example
-datasets or uploading custom model and ground-truth CSV files.
+datasets.
 }
