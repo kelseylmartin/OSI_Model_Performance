@@ -10,7 +10,9 @@ plot_pr_curve(detection_df, ...)
 \S4method{plot_pr_curve}{data.frame}(detection_df, model_col = NULL, title = "Precision-Recall Curve")
 }
 \arguments{
-\item{detection_df}{A data frame of classified detections.}
+\item{detection_df}{A data frame of classified detections with \code{score}/\code{status}
+columns, or a precomputed precision-recall summary with \code{recall}/\code{precision}
+columns.}
 
 \item{...}{Additional arguments.}
 
