@@ -93,34 +93,87 @@ setGeneric("plot_pr_curve", function(detection_df, ...) standardGeneric("plot_pr
 #' @export
 setMethod("plot_pr_curve", "data.frame",
           function(detection_df, model_col = NULL, title = "Precision-Recall Curve") {
-            # ... implementation from original function ...
-            if (!all(c("score", "status") %in% names(detection_df))) {
-              stop("Input data frame must contain 'score' and 'status' columns.")
-            }
-            if (!requireNamespace("PRROC", quietly = TRUE)) {
-              stop("Package 'PRROC' is required for plot_pr_curve(). Please install it.", call. = FALSE)
-            }
             model_col_quo <- rlang::enquo(model_col)
             if (rlang::quo_is_null(model_col_quo)) {
               model_col_name <- "model"
               detection_df[[model_col_name]] <- "Model"
               model_col_quo <- rlang::sym(model_col_name)
             }
-            all_curves_data <- detection_df %>%
-              dplyr::group_by(!!model_col_quo) %>%
-              dplyr::do({
-                df_group <- .
-                tp_scores <- df_group %>% dplyr::filter(.data$status == "TP") %>% dplyr::pull(.data$score)
-                fp_scores <- df_group %>% dplyr::filter(.data$status == "FP") %>% dplyr::pull(.data$score)
-                if (length(tp_scores) == 0 && length(fp_scores) == 0) return(NULL)
-                pr_obj <- PRROC::pr.curve(scores.class0 = fp_scores, scores.class1 = tp_scores, curve = TRUE)
-                curve_df <- as.data.frame(pr_obj$curve)
-                names(curve_df) <- c("recall", "precision", "threshold")
-                curve_df$auc <- pr_obj$auc.integral
-                curve_df
-              }) %>%
-              dplyr::ungroup() %>%
-              dplyr::mutate(legend_label = paste0(!!model_col_quo, " (AUC-PR = ", round(.data$auc, 3), ")"))
+            auc_pr <- function(recall, precision) {
+              if (length(recall) < 2 || length(precision) < 2) {
+                return(NA_real_)
+              }
+
+              ord <- order(recall, precision, na.last = NA)
+              recall <- pmin(pmax(recall[ord], 0), 1)
+              precision <- pmin(pmax(precision[ord], 0), 1)
+              sum(diff(recall) * (head(precision, -1) + tail(precision, -1)) / 2, na.rm = TRUE)
+            }
+
+            if (all(c("recall", "precision") %in% names(detection_df)) &&
+                !"status" %in% names(detection_df)) {
+              all_curves_data <- detection_df %>%
+                dplyr::filter(is.finite(.data$recall), is.finite(.data$precision)) %>%
+                dplyr::group_by(!!model_col_quo) %>%
+                dplyr::arrange(.data$recall, .data$precision, .by_group = TRUE) %>%
+                dplyr::mutate(
+                  model_label = as.character(!!model_col_quo),
+                  auc = auc_pr(.data$recall, .data$precision),
+                  legend_label = ifelse(
+                    is.finite(.data$auc),
+                    paste0(.data$model_label, " (AUC-PR = ", round(.data$auc, 3), ")"),
+                    .data$model_label
+                  )
+                ) %>%
+                dplyr::ungroup()
+            } else {
+              if (!all(c("score", "status") %in% names(detection_df))) {
+                stop(
+                  "Input data frame must contain either 'score' and 'status' columns or 'recall' and 'precision' columns."
+                )
+              }
+
+              all_curves_data <- detection_df %>%
+                dplyr::filter(.data$status %in% c("TP", "FP"), is.finite(.data$score)) %>%
+                dplyr::group_by(!!model_col_quo) %>%
+                dplyr::group_modify(function(.x, .y) {
+                  total_tp <- sum(.x$status == "TP", na.rm = TRUE)
+                  thresholds <- sort(unique(.x$score), decreasing = TRUE)
+
+                  if (length(thresholds) == 0) {
+                    return(dplyr::tibble())
+                  }
+
+                  curve_df <- purrr::map_dfr(thresholds, function(threshold) {
+                    predicted_positive <- .x$score >= threshold
+                    tp <- sum(predicted_positive & .x$status == "TP", na.rm = TRUE)
+                    fp <- sum(predicted_positive & .x$status == "FP", na.rm = TRUE)
+                    precision <- ifelse((tp + fp) == 0, 0, tp / (tp + fp))
+                    recall <- ifelse(total_tp == 0, 0, tp / total_tp)
+
+                    dplyr::tibble(
+                      threshold = threshold,
+                      recall = recall,
+                      precision = precision
+                    )
+                  })
+
+                  curve_df <- curve_df %>%
+                    dplyr::arrange(.data$recall, .data$precision) %>%
+                    dplyr::mutate(auc = auc_pr(.data$recall, .data$precision))
+
+                  curve_df
+                }) %>%
+                dplyr::ungroup() %>%
+                dplyr::mutate(
+                  model_label = as.character(!!model_col_quo),
+                  legend_label = ifelse(
+                    is.finite(.data$auc),
+                    paste0(.data$model_label, " (AUC-PR = ", round(.data$auc, 3), ")"),
+                    .data$model_label
+                  )
+                )
+            }
             p <- ggplot2::ggplot(all_curves_data, ggplot2::aes(x = .data$recall, y = .data$precision, color = .data$legend_label)) +
               ggplot2::geom_line(linewidth = 1.2) +
               ggplot2::labs(title = title, x = "Recall", y = "Precision") +

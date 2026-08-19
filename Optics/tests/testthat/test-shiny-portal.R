@@ -38,6 +38,21 @@ test_that("bundled Shiny portal examples produce populated analysis outputs", {
 
     expect_s3_class(analysis$multiclass_confusion, "data.frame")
     expect_gt(nrow(analysis$multiclass_confusion), 0)
+
+    class_label <- sort(unique(example_data$truth_detections@data$category_name))[[1]]
+    class_metrics <- Optics:::.optics_portal_class_threshold_metrics(
+      model_detections = example_data$model_detections,
+      truth_detections = example_data$truth_detections,
+      count_metric = example_data$default_count_metric,
+      class_label = class_label
+    )
+
+    expect_s3_class(class_metrics, "data.frame")
+    expect_gt(nrow(class_metrics), 0)
+    expect_true(all(c(
+      "threshold", "Model", "Groundtruth", "Difference",
+      "tp", "fp", "fn", "precision", "recall", "f1_score"
+    ) %in% names(class_metrics)))
   }
 })
 
@@ -68,8 +83,10 @@ test_that("Shiny portal UI exposes bundled-example navigation only", {
 
   expect_match(ui_html, "Figure view")
   expect_match(ui_html, "main_view")
+  expect_match(ui_html, "class_selector_ui")
   expect_false(grepl("Upload My Own Data", ui_html, fixed = TRUE))
   expect_false(grepl("Model predictions CSV", ui_html, fixed = TRUE))
+  expect_false(grepl("Binary confusion matrix", ui_html, fixed = TRUE))
 })
 
 test_that("packaged Shiny portal files are present", {

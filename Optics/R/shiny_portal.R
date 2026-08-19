@@ -42,6 +42,10 @@ run_optics_app <- function(...) {
   gsub("_|-", "", .normalize_optics_portal_reference_id(x))
 }
 
+.optics_portal_thresholds <- function(selected_threshold = NULL) {
+  sort(unique(c(seq(0.1, 0.9, by = 0.1), 0.95, selected_threshold)))
+}
+
 .discover_optics_portal_examples <- function(extdata_dir = system.file("extdata", package = "Optics")) {
   examples <- list()
 
@@ -431,12 +435,92 @@ run_optics_app <- function(...) {
   )
 }
 
+.optics_portal_subset_detections <- function(detections, class_label = NULL) {
+  if (is.null(class_label) || !nzchar(class_label)) {
+    return(detections)
+  }
+
+  filtered_data <- detections@data[detections@data$category_name == class_label, , drop = FALSE]
+  OpticsDetections(filtered_data, detections@source_file, detections@ingest_format)
+}
+
+.optics_portal_class_threshold_metrics <- function(model_detections,
+                                                   truth_detections,
+                                                   count_metric = "Frame Abundance",
+                                                   class_label = NULL,
+                                                   thresholds = .optics_portal_thresholds()) {
+  metric_details <- .optics_portal_metric_details(count_metric)
+  model_subset <- .optics_portal_subset_detections(model_detections, class_label)
+  truth_subset <- .optics_portal_subset_detections(truth_detections, class_label)
+
+  if (nrow(model_subset@data) == 0 && nrow(truth_subset@data) == 0) {
+    return(dplyr::tibble(
+      threshold = numeric(),
+      Model = numeric(),
+      Groundtruth = numeric(),
+      Difference = numeric(),
+      tp = numeric(),
+      fp = numeric(),
+      fn = numeric(),
+      precision = numeric(),
+      recall = numeric(),
+      f1_score = numeric()
+    ))
+  }
+
+  truth_counts_base <- metric_details$metric_function(truth_subset)
+
+  purrr::map_dfr(thresholds, function(threshold) {
+    model_filtered_df <- model_subset@data[model_subset@data$score >= threshold, , drop = FALSE]
+    if (nrow(model_filtered_df) > 0) {
+      model_filtered_df$score <- threshold
+    }
+
+    filtered_model <- OpticsDetections(
+      model_filtered_df,
+      model_subset@source_file,
+      paste0(model_subset@ingest_format, "_filtered")
+    )
+
+    model_counts <- metric_details$metric_function(filtered_model)
+    truth_counts <- truth_counts_base
+
+    model_counts$score <- threshold
+    truth_counts$score <- threshold
+    model_counts$count_value <- model_counts[[metric_details$count_col]]
+    truth_counts$count_value <- truth_counts[[metric_details$count_col]]
+
+    aligned_counts <- align_counts(
+      model_counts = model_counts,
+      truth_counts = truth_counts,
+      by = unique(c(metric_details$join_by, "score")),
+      model_col = count_value,
+      truth_col = count_value
+    )
+
+    tp <- sum(aligned_counts$model_count > 0 & aligned_counts$truth_count > 0, na.rm = TRUE)
+    fp <- sum(aligned_counts$model_count > 0 & aligned_counts$truth_count == 0, na.rm = TRUE)
+    fn <- sum(aligned_counts$model_count == 0 & aligned_counts$truth_count > 0, na.rm = TRUE)
+    metrics <- .scalpred_prf_from_counts(tp = tp, fp = fp, fn = fn)
+
+    dplyr::bind_cols(
+      dplyr::tibble(
+        threshold = threshold,
+        Model = sum(aligned_counts$model_count, na.rm = TRUE),
+        Groundtruth = sum(aligned_counts$truth_count, na.rm = TRUE),
+        Difference = sum(aligned_counts$truth_count, na.rm = TRUE) - sum(aligned_counts$model_count, na.rm = TRUE)
+      ),
+      metrics
+    )
+  })
+}
+
 .optics_portal_analyze <- function(model_detections,
                                    truth_detections,
                                    count_metric = "Frame Abundance",
                                    threshold = 0.5) {
   metric_details <- .optics_portal_metric_details(count_metric)
-  thresholds <- sort(unique(c(seq(0.1, 0.9, by = 0.1), 0.95, threshold)))
+  thresholds <- .optics_portal_thresholds(threshold)
 
   performance_summary <- summarize_performance_by_threshold(
     model_detections = model_detections,
@@ -569,14 +653,14 @@ optics_portal_ui <- function() {
     sidebar = bslib::sidebar(
       optics_portal_data_ui("data"),
       shiny::uiOutput("count_metric_ui"),
+      shiny::uiOutput("class_selector_ui"),
       shiny::selectInput(
         "view_selection",
         "Figure view",
         choices = c(
-          "Performance by confidence" = "performance",
+          "Performance summary" = "performance",
           "Precision-Recall curve" = "pr_curve",
-          "F1 by confidence" = "f1_curve",
-          "Binary confusion matrix" = "binary_confusion",
+          "F1 score" = "f1_curve",
           "Class-level confusion matrix" = "multiclass_confusion",
           "Aligned model vs. ground truth" = "aligned_data"
         ),
@@ -604,7 +688,7 @@ optics_portal_ui <- function() {
         "performance",
         bslib::card(
           full_screen = TRUE,
-          bslib::card_header("Performance by confidence"),
+          bslib::card_header("Performance summary"),
           plotly::plotlyOutput("performance_plot", height = "420px"),
           DT::DTOutput("selected_metric_table")
         )
@@ -621,16 +705,8 @@ optics_portal_ui <- function() {
         "f1_curve",
         bslib::card(
           full_screen = TRUE,
-          bslib::card_header("F1 by confidence"),
+          bslib::card_header("F1 score"),
           plotly::plotlyOutput("f1_curve_plot", height = "520px")
-        )
-      ),
-      shiny::tabPanelBody(
-        "binary_confusion",
-        bslib::card(
-          full_screen = TRUE,
-          bslib::card_header("Binary confusion matrix"),
-          plotly::plotlyOutput("binary_confusion_plot", height = "520px")
         )
       ),
       shiny::tabPanelBody(
@@ -681,6 +757,24 @@ optics_portal_server <- function(input, output, session) {
     )
   })
 
+  output$class_selector_ui <- shiny::renderUI({
+    current_data <- data_source$dataset()
+    shiny::req(current_data)
+
+    class_choices <- sort(unique(c(
+      as.character(current_data$model_detections@data$category_name),
+      as.character(current_data$truth_detections@data$category_name)
+    )))
+    class_choices <- class_choices[nzchar(class_choices)]
+
+    shiny::selectInput(
+      "class_label",
+      "Classification",
+      choices = class_choices,
+      selected = class_choices[[1]]
+    )
+  })
+
   analysis_results <- shiny::reactive({
     current_data <- data_source$dataset()
     shiny::req(current_data, input$count_metric)
@@ -699,46 +793,96 @@ optics_portal_server <- function(input, output, session) {
     )
   })
 
+  class_threshold_results <- shiny::reactive({
+    current_data <- data_source$dataset()
+    shiny::req(current_data, input$count_metric, input$class_label)
+
+    tryCatch(
+      .optics_portal_class_threshold_metrics(
+        model_detections = current_data$model_detections,
+        truth_detections = current_data$truth_detections,
+        count_metric = input$count_metric,
+        class_label = input$class_label,
+        thresholds = .optics_portal_thresholds(input$confidence_threshold)
+      ),
+      error = function(e) {
+        shiny::showNotification(conditionMessage(e), type = "error")
+        NULL
+      }
+    )
+  })
+
+  selected_class_metrics <- shiny::reactive({
+    results <- class_threshold_results()
+    shiny::req(results, nrow(results) > 0)
+    results[which.min(abs(results$threshold - input$confidence_threshold)), , drop = FALSE]
+  })
+
   output$performance_plot <- plotly::renderPlotly({
-    results <- analysis_results()
-    shiny::req(results)
+    results <- selected_class_metrics()
+    shiny::req(results, length(input$performance_metrics) > 0)
+
+    plot_data <- results %>%
+      dplyr::select(dplyr::all_of(input$performance_metrics)) %>%
+      dplyr::mutate(row_id = 1L) %>%
+      tidyr::pivot_longer(-.data$row_id, names_to = "metric", values_to = "value")
 
     plotly::ggplotly(
-      plot_performance_by_threshold(results$performance_summary),
-      tooltip = c("x", "y", "colour")
+      ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$metric, y = .data$value, fill = .data$metric)) +
+        ggplot2::geom_col(width = 0.6, show.legend = FALSE) +
+        ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
+        ggplot2::labs(
+          title = paste0(input$class_label, " performance"),
+          subtitle = paste0("Confidence threshold: ", format(input$confidence_threshold, trim = TRUE)),
+          x = NULL,
+          y = "Metric value"
+        ) +
+        theme_optics(),
+      tooltip = c("x", "y")
     )
   })
 
   output$selected_metric_table <- DT::renderDT({
-    results <- analysis_results()
+    results <- selected_class_metrics()
     shiny::req(results)
 
-    metric_columns <- c("threshold", input$performance_metrics)
-    metric_columns <- metric_columns[metric_columns %in% names(results$performance_summary)]
+    metric_columns <- c("threshold", "Model", "Groundtruth", "Difference", input$performance_metrics)
+    metric_columns <- metric_columns[metric_columns %in% names(results)]
 
     DT::datatable(
-      results$performance_summary[, metric_columns, drop = FALSE],
-      options = list(pageLength = 6, dom = "tip", scrollX = TRUE),
+      results[, metric_columns, drop = FALSE],
+      options = list(pageLength = 1, dom = "tip", scrollX = TRUE),
       rownames = FALSE
     )
   })
 
   output$pr_curve_plot <- plotly::renderPlotly({
-    results <- analysis_results()
+    results <- class_threshold_results()
     shiny::req(results)
-    plotly::ggplotly(plot_scalpred_pr_curve(results$scalpred_summary))
+
+    plotly::ggplotly(
+      plot_pr_curve(results, title = paste0(input$class_label, " precision-recall curve")),
+      tooltip = c("x", "y")
+    )
   })
 
   output$f1_curve_plot <- plotly::renderPlotly({
-    results <- analysis_results()
+    results <- selected_class_metrics()
     shiny::req(results)
-    plotly::ggplotly(plot_scalpred_f1_curve(results$scalpred_summary))
-  })
 
-  output$binary_confusion_plot <- plotly::renderPlotly({
-    results <- analysis_results()
-    shiny::req(results)
-    plotly::ggplotly(plot_confusion_matrix(results$selected_metrics))
+    plotly::ggplotly(
+      ggplot2::ggplot(results, ggplot2::aes(x = "F1 Score", y = .data$f1_score)) +
+        ggplot2::geom_col(width = 0.45, fill = "#4E79A7") +
+        ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
+        ggplot2::labs(
+          title = paste0(input$class_label, " F1 score"),
+          subtitle = paste0("Confidence threshold: ", format(input$confidence_threshold, trim = TRUE)),
+          x = NULL,
+          y = "F1 score"
+        ) +
+        theme_optics(),
+      tooltip = c("x", "y")
+    )
   })
 
   output$multiclass_confusion_plot <- plotly::renderPlotly({
@@ -748,11 +892,11 @@ optics_portal_server <- function(input, output, session) {
   })
 
   output$aligned_data_table <- DT::renderDT({
-    results <- analysis_results()
+    results <- class_threshold_results()
     shiny::req(results)
 
     DT::datatable(
-      results$aligned_counts,
+      results,
       options = list(pageLength = 10, scrollX = TRUE),
       rownames = FALSE
     )

@@ -49,7 +49,6 @@ pr_data_multi <- dplyr::tibble(
 ## IO correctness ----
 test_that("plot_pr_curve() works with correct inputs", {
   #' @description Test that plot_pr_curve() returns a ggplot object for a single model.
-  skip_if_not_installed("PRROC")
   p <- plot_pr_curve(pr_data)
   expect_s3_class(p, "ggplot")
   expect_equal(p$labels$title, "Precision-Recall Curve")
@@ -58,6 +57,19 @@ test_that("plot_pr_curve() works with correct inputs", {
   p_multi <- plot_pr_curve(pr_data_multi, model_col = model_identifier)
   expect_s3_class(p_multi, "ggplot")
   expect_equal(length(unique(p_multi$data$legend_label)), 2)
+})
+
+test_that("plot_pr_curve() accepts summary precision-recall inputs", {
+  #' @description Test that plot_pr_curve() can render precomputed recall and precision values without detection statuses.
+  pr_summary <- dplyr::tibble(
+    threshold = c(0.1, 0.5, 0.9),
+    recall = c(1, 0.75, 0.5),
+    precision = c(0.4, 0.65, 0.9)
+  )
+
+  p <- plot_pr_curve(pr_summary)
+  expect_s3_class(p, "ggplot")
+  expect_true(all(c("recall", "precision") %in% names(p$data)))
 })
 
 # {{{ plot_bland_altman }}} ----
