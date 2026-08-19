@@ -93,14 +93,28 @@ setGeneric("plot_pr_curve", function(detection_df, ...) standardGeneric("plot_pr
 #' @export
 setMethod("plot_pr_curve", "data.frame",
           function(detection_df, model_col = NULL, title = "Precision-Recall Curve") {
-            # ... implementation from original function ...
+            model_col_quo <- rlang::enquo(model_col)
+            
+            if (all(c("precision", "recall") %in% names(detection_df)) && !"status" %in% names(detection_df)) {
+              plot_df <- detection_df %>% dplyr::arrange(.data$recall, .data$precision)
+              p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$recall, y = .data$precision)) +
+                ggplot2::geom_path(linewidth = 1.1, color = "#59A14F") +
+                ggplot2::geom_point(size = 2, color = "#59A14F") +
+                ggplot2::coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
+                ggplot2::labs(title = title, x = "Recall", y = "Precision") +
+                theme_optics()
+              if (!rlang::quo_is_null(model_col_quo)) {
+                p <- p + ggplot2::facet_wrap(rlang::quo_get_expr(model_col_quo))
+              }
+              return(p)
+            }
+            
             if (!all(c("score", "status") %in% names(detection_df))) {
-              stop("Input data frame must contain 'score' and 'status' columns.")
+              stop("Input data frame must contain either 'score' and 'status' columns, or 'precision' and 'recall' columns.")
             }
             if (!requireNamespace("PRROC", quietly = TRUE)) {
-              stop("Package 'PRROC' is required for plot_pr_curve(). Please install it.", call. = FALSE)
+              stop("Package 'PRROC' is required for plot_pr_curve() when using raw scores. Please install it.", call. = FALSE)
             }
-            model_col_quo <- rlang::enquo(model_col)
             if (rlang::quo_is_null(model_col_quo)) {
               model_col_name <- "model"
               detection_df[[model_col_name]] <- "Model"

@@ -180,3 +180,14 @@ test_that("plot_scalpred_pr_curve() returns a ggplot object", {
   expect_equal(p$labels$x, "Recall")
   expect_equal(p$labels$y, "Precision")
 })
+
+## New feature test
+test_that("plot_pr_curve() works with summarized data (precision/recall)", {
+  #' @description Test that plot_pr_curve() returns a ggplot object for summarized data.
+  summary_pr_data <- dplyr::tibble(
+    recall = c(0.1, 0.5, 0.9),
+    precision = c(0.9, 0.8, 0.4)
+  )
+  p <- plot_pr_curve(summary_pr_data)
+  expect_s3_class(p, "ggplot")
+})

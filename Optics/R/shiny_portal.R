@@ -436,7 +436,7 @@ run_optics_app <- function(...) {
                                    count_metric = "Frame Abundance",
                                    threshold = 0.5) {
   metric_details <- .optics_portal_metric_details(count_metric)
-  thresholds <- sort(unique(c(seq(0.1, 0.9, by = 0.1), 0.95, threshold)))
+  thresholds <- sort(unique(c(seq(0.1, 0.9, by = 0.1), 0.95)))
 
   performance_summary <- summarize_performance_by_threshold(
     model_detections = model_detections,
@@ -454,6 +454,7 @@ run_optics_app <- function(...) {
     metric_function = metric_details$metric_function
   )
 
+  # For multiclass confusion matrix, we still need a specific threshold
   model_filtered_df <- model_detections@data[model_detections@data$score >= threshold, , drop = FALSE]
   if (nrow(model_filtered_df) > 0) {
     model_filtered_df$score <- threshold
@@ -470,6 +471,11 @@ run_optics_app <- function(...) {
 
   model_counts$score <- threshold
   truth_counts$score <- threshold
+  
+  # Ensure we only keep the standard columns to prevent abundance.x / abundance.y issue
+  model_counts <- model_counts[, c(metric_details$join_by, "score", metric_details$count_col)]
+  truth_counts <- truth_counts[, c(metric_details$join_by, "score", metric_details$count_col)]
+  
   model_counts$count_value <- model_counts[[metric_details$count_col]]
   truth_counts$count_value <- truth_counts[[metric_details$count_col]]
 
@@ -481,20 +487,20 @@ run_optics_app <- function(...) {
     truth_col = count_value
   )
 
-  threshold_index <- which.min(abs(performance_summary$threshold - threshold))
-  selected_metrics <- performance_summary[threshold_index, , drop = FALSE]
   confusion_groups <- setdiff(metric_details$join_by, "category_name")
 
   list(
     performance_summary = performance_summary,
     scalpred_summary = scalpred_summary,
-    aligned_counts = aligned_counts,
-    selected_metrics = selected_metrics,
     multiclass_confusion = calculate_confusion_matrix(
       aligned_counts,
       group_vars = confusion_groups,
       species_col = category_name
-    )
+    ),
+    model_df = model_detections@data,
+    truth_counts_full = metric_details$metric_function(truth_detections),
+    metric_details = metric_details,
+    thresholds = thresholds
   )
 }
 
@@ -569,15 +575,17 @@ optics_portal_ui <- function() {
     sidebar = bslib::sidebar(
       optics_portal_data_ui("data"),
       shiny::uiOutput("count_metric_ui"),
+      shiny::uiOutput("class_selection_ui"),
       shiny::selectInput(
         "view_selection",
         "Figure view",
         choices = c(
-          "Performance by confidence" = "performance",
-          "Precision-Recall curve" = "pr_curve",
-          "F1 by confidence" = "f1_curve",
-          "Binary confusion matrix" = "binary_confusion",
+          "Performance (Overall)" = "performance",
+          "Precision-Recall (Overall)" = "pr_curve",
+          "F1 Score (Overall)" = "f1_curve",
           "Class-level confusion matrix" = "multiclass_confusion",
+          "Model vs. Truth Scatterplot" = "counts_scatterplot",
+          "Bland-Altman Agreement" = "bland_altman",
           "Aligned model vs. ground truth" = "aligned_data"
         ),
         selected = "performance"
@@ -605,8 +613,7 @@ optics_portal_ui <- function() {
         bslib::card(
           full_screen = TRUE,
           bslib::card_header("Performance by confidence"),
-          plotly::plotlyOutput("performance_plot", height = "420px"),
-          DT::DTOutput("selected_metric_table")
+          plotly::plotlyOutput("performance_plot", height = "420px")
         )
       ),
       shiny::tabPanelBody(
@@ -626,19 +633,27 @@ optics_portal_ui <- function() {
         )
       ),
       shiny::tabPanelBody(
-        "binary_confusion",
-        bslib::card(
-          full_screen = TRUE,
-          bslib::card_header("Binary confusion matrix"),
-          plotly::plotlyOutput("binary_confusion_plot", height = "520px")
-        )
-      ),
-      shiny::tabPanelBody(
         "multiclass_confusion",
         bslib::card(
           full_screen = TRUE,
           bslib::card_header("Class-level confusion matrix"),
           plotly::plotlyOutput("multiclass_confusion_plot", height = "600px")
+        )
+      ),
+      shiny::tabPanelBody(
+        "counts_scatterplot",
+        bslib::card(
+          full_screen = TRUE,
+          bslib::card_header("Model vs. Truth Scatterplot"),
+          plotly::plotlyOutput("counts_scatterplot_plot", height = "520px")
+        )
+      ),
+      shiny::tabPanelBody(
+        "bland_altman",
+        bslib::card(
+          full_screen = TRUE,
+          bslib::card_header("Bland-Altman Agreement"),
+          plotly::plotlyOutput("bland_altman_plot", height = "520px")
         )
       ),
       shiny::tabPanelBody(
@@ -698,47 +713,126 @@ optics_portal_server <- function(input, output, session) {
       }
     )
   })
+  
+  output$class_selection_ui <- shiny::renderUI({
+    current_data <- data_source$dataset()
+    shiny::req(current_data)
+    # Extract unique categories from truth data
+    categories <- sort(unique(current_data$truth_detections@data$category_name))
+    
+    shiny::selectInput(
+      "class_selection",
+      "Class / Species",
+      choices = categories,
+      selected = categories[[1]]
+    )
+  })
+  
+  # Reactive containing class-specific results across all thresholds
+  class_specific_results <- shiny::reactive({
+    results <- analysis_results()
+    shiny::req(results, input$class_selection)
+    
+    selected_class <- input$class_selection
+    metric_details <- results$metric_details
+    join_by_no_frame <- setdiff(metric_details$join_by, "frame_index")
+    
+    # Filter data to the selected class
+    model_df <- results$model_df %>% dplyr::filter(category_name == selected_class)
+    truth_counts_full <- results$truth_counts_full %>% dplyr::filter(category_name == selected_class)
+    
+    # For ground truth abundance, summarize over frame_index
+    truth_abundance_per_video <- truth_counts_full %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(join_by_no_frame))) %>%
+      dplyr::summarise(truth_count = sum(.data[[metric_details$count_col]], na.rm = TRUE), .groups = "drop")
+    
+    # Pre-calculate base truth abundance sum for the class
+    total_truth_abundance <- sum(truth_abundance_per_video$truth_count, na.rm = TRUE)
+    
+    # Calculate metrics for all thresholds
+    thresholds <- results$thresholds
+    
+    class_metrics <- lapply(thresholds, function(thresh) {
+      # Filter model detections
+      model_filtered <- model_df %>% dplyr::filter(score >= thresh)
+      if (nrow(model_filtered) == 0) {
+        return(dplyr::tibble(
+          Threshold = thresh,
+          `Model Abundance` = 0,
+          `Groundtruth Abundance` = total_truth_abundance,
+          TP = 0, FP = 0, FN = sum(truth_abundance_per_video$truth_count > 0, na.rm = TRUE),
+          Precision = 0, Recall = 0, `F1 Score` = 0
+        ))
+      }
+      
+      # Ensure filtered model detections are wrapped correctly to calculate metrics
+      temp_model_det <- OpticsDetections(model_filtered, "temp", "temp")
+      model_counts_full <- metric_details$metric_function(temp_model_det)
+      
+      model_abundance_per_video <- model_counts_full %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(join_by_no_frame))) %>%
+        dplyr::summarise(model_count = sum(.data[[metric_details$count_col]], na.rm = TRUE), .groups = "drop")
+      
+      total_model_abundance <- sum(model_abundance_per_video$model_count, na.rm = TRUE)
+      
+      # Align to calculate TP, FP, FN at the video level (ignoring frames)
+      aligned <- dplyr::full_join(model_abundance_per_video, truth_abundance_per_video, by = join_by_no_frame) %>%
+        dplyr::mutate(dplyr::across(c("model_count", "truth_count"), ~ifelse(is.na(.), 0, .)))
+      
+      tp <- sum(aligned$model_count > 0 & aligned$truth_count > 0, na.rm = TRUE)
+      fp <- sum(aligned$model_count > 0 & aligned$truth_count == 0, na.rm = TRUE)
+      fn <- sum(aligned$model_count == 0 & aligned$truth_count > 0, na.rm = TRUE)
+      
+      precision <- ifelse((tp + fp) == 0, 0, tp / (tp + fp))
+      recall <- ifelse((tp + fn) == 0, 0, tp / (tp + fn))
+      f1_score <- ifelse((precision + recall) == 0, 0, 2 * precision * recall / (precision + recall))
+      
+      dplyr::tibble(
+        Threshold = thresh,
+        `Model Abundance` = total_model_abundance,
+        `Groundtruth Abundance` = total_truth_abundance,
+        TP = tp, FP = fp, FN = fn,
+        Precision = precision, Recall = recall, `F1 Score` = f1_score
+      )
+    })
+    
+    list(
+      table_data = dplyr::bind_rows(class_metrics),
+      model_abundance_per_video = function(thresh) {
+        model_filtered <- model_df %>% dplyr::filter(score >= thresh)
+        if (nrow(model_filtered) == 0) return(dplyr::tibble(model_count = numeric(), truth_count = numeric()))
+        temp_model_det <- OpticsDetections(model_filtered, "temp", "temp")
+        model_counts_full <- metric_details$metric_function(temp_model_det)
+        model_ab <- model_counts_full %>%
+          dplyr::group_by(dplyr::across(dplyr::all_of(join_by_no_frame))) %>%
+          dplyr::summarise(model_count = sum(.data[[metric_details$count_col]], na.rm = TRUE), .groups = "drop")
+        dplyr::full_join(model_ab, truth_abundance_per_video, by = join_by_no_frame) %>%
+          dplyr::mutate(dplyr::across(c("model_count", "truth_count"), ~ifelse(is.na(.), 0, .)))
+      }
+    )
+  })
 
   output$performance_plot <- plotly::renderPlotly({
     results <- analysis_results()
     shiny::req(results)
 
     plotly::ggplotly(
-      plot_performance_by_threshold(results$performance_summary),
+      plot_performance_by_threshold(results$performance_summary, title = "Overall Performance by Threshold"),
       tooltip = c("x", "y", "colour")
-    )
-  })
-
-  output$selected_metric_table <- DT::renderDT({
-    results <- analysis_results()
-    shiny::req(results)
-
-    metric_columns <- c("threshold", input$performance_metrics)
-    metric_columns <- metric_columns[metric_columns %in% names(results$performance_summary)]
-
-    DT::datatable(
-      results$performance_summary[, metric_columns, drop = FALSE],
-      options = list(pageLength = 6, dom = "tip", scrollX = TRUE),
-      rownames = FALSE
     )
   })
 
   output$pr_curve_plot <- plotly::renderPlotly({
     results <- analysis_results()
     shiny::req(results)
-    plotly::ggplotly(plot_scalpred_pr_curve(results$scalpred_summary))
+    # Note: Use the modified plot_pr_curve which supports the summarized format
+    plotly::ggplotly(plot_pr_curve(results$scalpred_summary, title = "Overall Precision-Recall Curve"))
   })
 
   output$f1_curve_plot <- plotly::renderPlotly({
     results <- analysis_results()
     shiny::req(results)
-    plotly::ggplotly(plot_scalpred_f1_curve(results$scalpred_summary))
-  })
-
-  output$binary_confusion_plot <- plotly::renderPlotly({
-    results <- analysis_results()
-    shiny::req(results)
-    plotly::ggplotly(plot_confusion_matrix(results$selected_metrics))
+    plotly::ggplotly(plot_scalpred_f1_curve(results$scalpred_summary, title = "Overall F1 by Threshold"))
   })
 
   output$multiclass_confusion_plot <- plotly::renderPlotly({
@@ -746,14 +840,39 @@ optics_portal_server <- function(input, output, session) {
     shiny::req(results)
     plotly::ggplotly(plot_multiclass_confusion_matrix(results$multiclass_confusion))
   })
+  
+  output$counts_scatterplot_plot <- plotly::renderPlotly({
+    class_results <- class_specific_results()
+    shiny::req(class_results)
+    aligned_data <- class_results$model_abundance_per_video(input$confidence_threshold)
+    if (nrow(aligned_data) == 0) return(plotly::plot_ly())
+    plotly::ggplotly(plot_counts_scatterplot(aligned_data, title = paste("Model vs. Truth:", input$class_selection)))
+  })
+  
+  output$bland_altman_plot <- plotly::renderPlotly({
+    class_results <- class_specific_results()
+    shiny::req(class_results)
+    aligned_data <- class_results$model_abundance_per_video(input$confidence_threshold)
+    if (nrow(aligned_data) == 0) return(plotly::plot_ly())
+    plotly::ggplotly(plot_bland_altman(aligned_data, title = paste("Bland-Altman:", input$class_selection)))
+  })
 
   output$aligned_data_table <- DT::renderDT({
-    results <- analysis_results()
-    shiny::req(results)
+    class_results <- class_specific_results()
+    shiny::req(class_results)
+
+    table_df <- class_results$table_data
+    # Format the numeric columns
+    table_df <- table_df %>%
+      dplyr::mutate(
+        Precision = round(Precision, 3),
+        Recall = round(Recall, 3),
+        `F1 Score` = round(`F1 Score`, 3)
+      )
 
     DT::datatable(
-      results$aligned_counts,
-      options = list(pageLength = 10, scrollX = TRUE),
+      table_df,
+      options = list(pageLength = 15, dom = "t", scrollX = TRUE),
       rownames = FALSE
     )
   })
