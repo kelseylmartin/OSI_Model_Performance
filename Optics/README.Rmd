@@ -249,20 +249,22 @@ utils::browseURL(normalizePath(report_path))
 
 ### Complete GFISHER example
 
-The installed [`gfisher_class_report.R`](inst/examples/gfisher_class_report.R) script runs every prerequisite using bundled GFISHER data: ingest the original `2024-NCO-155_tracks.csv`, match species names, restrict frames to the manual reading window, calculate model MaxN at each threshold, align against manual deployment MaxN, calculate all 17 modular metrics on an `OpticsPerformance` object, and generate the class report.
+The installed [`gfisher_class_report.R`](inst/examples/gfisher_class_report.R) script runs every prerequisite using bundled GFISHER data: ingest the original `2024-NCO-155_tracks.csv`, match species names, restrict frames to the manual reading window, calculate model MaxN at each threshold, align against manual deployment MaxN, calculate all 17 modular metrics on an `OpticsPerformance` object, and generate an individual report for every species included in the example.
 
 ```{r gfisher-class-report, eval=FALSE}
 source(system.file("examples", "gfisher_class_report.R", package = "Optics"))
 result <- run_gfisher_class_report(
-  class_label = "LUTJANUS_CAMPECHANUS",
   confidence_thresholds = c(0.5, 0.9),
   output_dir = "reports", remove_large_schools = FALSE
 )
 result$performance@metrics
-utils::browseURL(normalizePath(result$report_path))
+result$report_paths
+invisible(lapply(result$report_paths, function(path) {
+  utils::browseURL(normalizePath(path))
+}))
 ```
 
-Alternatively, run `Rscript /path/to/gfisher_class_report.R reports`. The default output is `reports/lutjanus_campechanus-performance.html`. You can also select `BALISTES_CAPRISCUS` or `RHOMBOPLITES_AURORUBENS`. To report fewer metrics, omit their individual calculator calls in the script.
+Alternatively, run `Rscript /path/to/gfisher_class_report.R reports`. Both commands generate all three files in one run: `reports/balistes_capriscus-performance.html`, `reports/lutjanus_campechanus-performance.html`, and `reports/rhomboplites_aurorubens-performance.html`. `result$report_paths` contains their paths named by species. For just one species, pass `class_label = "LUTJANUS_CAMPECHANUS"` (or either other included species); `result$report_path` remains available for single-species calls. To report fewer metrics, omit their individual calculator calls in the script.
 
 This is a small walkthrough, not a survey-wide performance estimate: it uses one deployment and three unambiguously matched species, not duplicate `_ST`/`_SUBSET` track variants. Manual truth is already MaxN, so it is aligned as a count table and then wrapped in S4 rather than fabricated into frame detections. Recorded zero counts are retained; undefined rates (such as FPR when no actual negatives exist) remain `NA`. For other deployments, update the file, identifier, reading window, and species crosswalk together.
 

@@ -3,7 +3,7 @@
 # result <- run_gfisher_class_report(output_dir = "reports")
 # Alternatively: Rscript gfisher_class_report.R reports
 
-run_gfisher_class_report <- function(class_label = "LUTJANUS_CAMPECHANUS",
+run_gfisher_class_report <- function(class_label = NULL,
                                     output_dir = "reports",
                                     confidence_thresholds = c(0.5, 0.9),
                                     remove_large_schools = FALSE) {
@@ -13,7 +13,9 @@ run_gfisher_class_report <- function(class_label = "LUTJANUS_CAMPECHANUS",
   deployment <- "2024NCO155"
   classes <- c("BALISTES_CAPRISCUS", "LUTJANUS_CAMPECHANUS",
                "RHOMBOPLITES_AURORUBENS")
-  if (length(class_label) != 1L || is.na(class_label) || !class_label %in% classes) {
+  if (!is.null(class_label) &&
+      (!is.character(class_label) || length(class_label) != 1L ||
+       is.na(class_label) || !class_label %in% classes)) {
     stop("class_label must be one of: ", paste(classes, collapse = ", "))
   }
   if (!is.numeric(confidence_thresholds) || !length(confidence_thresholds) ||
@@ -107,15 +109,24 @@ run_gfisher_class_report <- function(class_label = "LUTJANUS_CAMPECHANUS",
   performance <- Optics::calculate_difference(performance)
   performance <- Optics::calculate_relaxed(performance)
 
-  # 5. Render the chosen class. Remove metric calls above for a smaller report.
-  report_path <- Optics::generate_class_report(
-    performance, class_label = class_label,
-    output_file = paste0(tolower(class_label), "-performance.html"),
-    output_dir = output_dir, grouping_level = "video",
-    remove_large_schools = remove_large_schools
-  )
-  message("Analysis report: ", report_path)
-  invisible(list(performance = performance, report_path = report_path,
+  # 5. Render every included class unless a single class was requested.
+  # Remove metric calls above for smaller reports.
+  report_classes <- if (is.null(class_label)) {
+    sort(unique(performance@data$category_name))
+  } else class_label
+  report_paths <- vapply(report_classes, function(label) {
+    path <- Optics::generate_class_report(
+      performance, class_label = label,
+      output_file = paste0(tolower(label), "-performance.html"),
+      output_dir = output_dir, grouping_level = "video",
+      remove_large_schools = remove_large_schools
+    )
+    message("Analysis report: ", path)
+    path
+  }, character(1))
+  names(report_paths) <- report_classes
+  invisible(list(performance = performance, report_paths = report_paths,
+                 report_path = if (length(report_paths) == 1L) unname(report_paths) else NULL,
                  frame_bounds = frame_bounds))
 }
 
