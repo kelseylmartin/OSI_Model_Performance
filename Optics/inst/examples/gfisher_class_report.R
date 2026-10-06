@@ -11,13 +11,6 @@ run_gfisher_class_report <- function(class_label = NULL,
   data_dir <- system.file("extdata", "SEFSC", package = "Optics")
   if (!nzchar(data_dir)) stop("Install Optics with its bundled SEFSC data.")
   deployment <- "2024NCO155"
-  classes <- c("BALISTES_CAPRISCUS", "LUTJANUS_CAMPECHANUS",
-               "RHOMBOPLITES_AURORUBENS")
-  if (!is.null(class_label) &&
-      (!is.character(class_label) || length(class_label) != 1L ||
-       is.na(class_label) || !class_label %in% classes)) {
-    stop("class_label must be one of: ", paste(classes, collapse = ", "))
-  }
   if (!is.numeric(confidence_thresholds) || !length(confidence_thresholds) ||
       any(!is.finite(confidence_thresholds)) ||
       any(confidence_thresholds < 0 | confidence_thresholds > 1)) {
@@ -46,30 +39,45 @@ run_gfisher_class_report <- function(class_label = NULL,
   model <- Optics::read_viame_csv(
     file.path(data_dir, "2024-NCO-155_tracks.csv"), video_id = deployment
   )
-  model@data$category_name <- toupper(trimws(species$Species[
-    match(trimws(model@data$category_name), trimws(species$Spec_Viame_Dash))
+  raw_labels <- toupper(trimws(model@data$category_name))
+  mapped_labels <- toupper(trimws(species$Species[
+    match(raw_labels, toupper(trimws(species$Spec_Viame_Dash)))
   ]))
+  model@data$category_name <- ifelse(
+    is.na(mapped_labels) | !nzchar(mapped_labels), raw_labels, mapped_labels
+  )
   model@data <- dplyr::filter(
-    model@data, category_name %in% classes,
+    model@data, !is.na(category_name), nzchar(category_name),
     frame_index >= frame_bounds[1], frame_index <= frame_bounds[2]
   )
   methods::validObject(model)
 
   # Manual GFISHER truth is already deployment MaxN, not frame annotations.
-  # Read explicit species columns so recorded zeros remain valid comparisons.
+  # Discover manual species columns and retain zeros for model-observed classes.
   wide_truth <- utils::read.csv(
     file.path(data_dir, "maxn3LABS_93to24.csv"), check.names = FALSE
   )
   truth_row <- wide_truth[compact_id(wide_truth$REFERENCE) == deployment, , drop = FALSE]
   if (nrow(truth_row) != 1L) stop("Expected one manual MaxN row.")
-  truth_columns <- c("Balistes_capriscus", "Lutjanus_campechanus",
-                     "Rhomboplites_aurorubens")
+  truth_columns <- setdiff(names(truth_row), c("LAB", "REFERENCE"))
   truth_counts <- tidyr::pivot_longer(
     truth_row[, truth_columns, drop = FALSE],
     cols = dplyr::everything(), names_to = "category_name", values_to = "truth_count"
   )
   truth_counts$category_name <- toupper(truth_counts$category_name)
+  truth_counts$category_name <- trimws(truth_counts$category_name)
+  truth_counts <- dplyr::filter(
+    truth_counts, !is.na(truth_count),
+    truth_count > 0 | category_name %in% model@data$category_name
+  )
   truth_counts$video_id <- deployment
+  classes <- sort(unique(c(model@data$category_name, truth_counts$category_name)))
+  if (!length(classes)) stop("No observed classes in the model or manual data.")
+  if (!is.null(class_label) &&
+      (!is.character(class_label) || length(class_label) != 1L ||
+       is.na(class_label) || !class_label %in% classes)) {
+    stop("class_label must be one of: ", paste(classes, collapse = ", "))
+  }
 
   # 3. Calculate MaxN and align count tables at each confidence threshold.
   aligned_runs <- lapply(confidence_thresholds, function(threshold) {
@@ -78,11 +86,22 @@ run_gfisher_class_report <- function(class_label = NULL,
     # calculate_maxn groups by score; use one evaluated score per threshold.
     threshold_model@data$score <- rep(threshold, nrow(threshold_model@data))
     model_counts <- Optics::calculate_maxn(threshold_model)
+    model_counts$video_id <- as.character(model_counts$video_id)
+    model_counts$category_name <- as.character(model_counts$category_name)
+    model_counts$score <- as.numeric(model_counts$score)
+    model_counts$maxn <- as.numeric(model_counts$maxn)
     aligned <- Optics::align_counts(
       model_counts, truth_counts,
       by = c("video_id", "category_name"),
       model_col = maxn, truth_col = truth_count
     )
+    # Keep every observed class even if a threshold removes all its predictions.
+    aligned <- dplyr::right_join(
+      aligned, data.frame(video_id = deployment, category_name = classes),
+      by = c("video_id", "category_name")
+    )
+    aligned$model_count <- tidyr::replace_na(aligned$model_count, 0)
+    aligned$truth_count <- tidyr::replace_na(aligned$truth_count, 0)
     aligned$threshold <- threshold
     aligned
   })
@@ -114,10 +133,14 @@ run_gfisher_class_report <- function(class_label = NULL,
   report_classes <- if (is.null(class_label)) {
     sort(unique(performance@data$category_name))
   } else class_label
+  filenames <- make.unique(
+    gsub("[^a-z0-9_-]", "_", tolower(report_classes)), sep = "-"
+  )
+  names(filenames) <- report_classes
   report_paths <- vapply(report_classes, function(label) {
     path <- Optics::generate_class_report(
       performance, class_label = label,
-      output_file = paste0(tolower(label), "-performance.html"),
+      output_file = paste0(filenames[[label]], "-performance.html"),
       output_dir = output_dir, grouping_level = "video",
       remove_large_schools = remove_large_schools
     )
