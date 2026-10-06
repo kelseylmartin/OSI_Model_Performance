@@ -62,7 +62,7 @@ evaluation.
 The S4 comparison universe is the union of groups observed in model
 and truth detections. Groups absent from both inputs cannot be inferred;
 use \code{OpticsPerformance()} with explicit zero counts to include known empty
-comparisons. Missing frame indices use image identifiers in frame mode;
+comparisons. Missing video IDs or frame indices use image identifiers in frame mode;
 video mode requires frame indices to calculate MaxN.
 }
 \examples{

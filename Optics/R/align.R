@@ -126,7 +126,7 @@ setMethod("align_counts",
 #' @details The S4 comparison universe is the union of groups observed in model
 #'   and truth detections. Groups absent from both inputs cannot be inferred;
 #'   use `OpticsPerformance()` with explicit zero counts to include known empty
-#'   comparisons. Missing frame indices use image identifiers in frame mode;
+#'   comparisons. Missing video IDs or frame indices use image identifiers in frame mode;
 #'   video mode requires frame indices to calculate MaxN.
 #' @return With two `OpticsDetections` inputs, an `OpticsPerformance` S4 object.
 #' @rdname align_counts
@@ -156,7 +156,10 @@ setMethod("align_counts",
     }
     if (nrow(data) && anyNA(data$video_id)) {
       if (grouping_level == "video") stop("Video aggregation requires video_id.")
-      data$video_id[is.na(data$video_id)] <- "__images__"
+      missing_video <- is.na(data$video_id)
+      data$frame_index <- as.character(data$frame_index)
+      data$frame_index[missing_video] <- paste0("image:", data$image_id[missing_video])
+      data$video_id[missing_video] <- "__images__"
     }
     data
   }

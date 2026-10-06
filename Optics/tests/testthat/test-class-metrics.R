@@ -97,6 +97,19 @@ test_that("S4 image grouping does not merge frames without video metadata", {
   expect_error(align_counts(model, truth, grouping_level = "video"), "requires")
 })
 
+test_that("standalone image identities override repeated frame indices", {
+  model <- class_detection_fixture(0, .9)
+  model@data$video_id <- NA_character_
+  model@data$image_id <- "a.jpg"
+  truth <- model
+  truth@data$image_id <- "b.jpg"
+  object <- align_counts(model, truth, grouping_level = "frame")
+  expect_equal(nrow(object@data), 2)
+  expect_equal(calculate_tp(object)@metrics$tp, 0)
+  expect_equal(calculate_fp(object)@metrics$fp, 1)
+  expect_equal(calculate_fn(object)@metrics$fn, 1)
+})
+
 test_that("standalone KWCOCO images pass through strict S4 alignment", {
   path <- tempfile(fileext = ".json")
   on.exit(unlink(path))
