@@ -120,6 +120,12 @@ test_that("automatic discovery retains unmapped and confidence-filtered model cl
   expect_true(all(grepl("^[a-z0-9_-]+-performance[.]html$", result$report_paths)))
   expect_identical(sort(names(captured)),
                    sort(unique(result$performance@data$category_name)))
+  for (label in c("NEW/CLASS", "NEW_CLASS")) {
+    single <- suppressMessages(gfisher_report_example()(
+      class_label = label, confidence_thresholds = 1
+    ))
+    expect_identical(single$report_path, unname(result$report_paths[[label]]))
+  }
 })
 
 test_that("GFISHER example produces a complete HTML analysis report", {

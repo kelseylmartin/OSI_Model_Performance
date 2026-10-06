@@ -134,9 +134,9 @@ run_gfisher_class_report <- function(class_label = NULL,
     sort(unique(performance@data$category_name))
   } else class_label
   filenames <- make.unique(
-    gsub("[^a-z0-9_-]", "_", tolower(report_classes)), sep = "-"
+    gsub("[^a-z0-9_-]", "_", tolower(classes)), sep = "-"
   )
-  names(filenames) <- report_classes
+  names(filenames) <- classes
   report_paths <- vapply(report_classes, function(label) {
     path <- Optics::generate_class_report(
       performance, class_label = label,
