@@ -1,0 +1,175 @@
+---
+title: "Optics Model Performance Report"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: readable
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    fig_caption: true
+params:
+  object: null
+  class_label: null
+  remove_large_schools: false
+  grouping_level: null
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                     fig.width = 8, fig.height = 6)
+counts <- params$object@data
+metrics <- params$object@metrics
+group_vars <- params$object@group_vars
+extra_groups <- setdiff(group_vars, c("category_name", "threshold"))
+table_groups <- setdiff(group_vars, "category_name")
+chosen <- setdiff(names(metrics), group_vars)
+escape_html <- function(x) {
+  x <- gsub("&", "&amp;", x, fixed = TRUE)
+  x <- gsub("<", "&lt;", x, fixed = TRUE)
+  x <- gsub(">", "&gt;", x, fixed = TRUE)
+  x <- gsub('"', "&quot;", x, fixed = TRUE)
+  x <- gsub("'", "&#39;", x, fixed = TRUE)
+  for (symbol in c("[", "]", "(", ")", "*", "_", "`", "\\", "#", "!", "|", "~")) {
+    x <- gsub(symbol, paste0("&#", utf8ToInt(symbol), ";"), x, fixed = TRUE)
+  }
+  x
+}
+metric_labels <- c(
+  tp = "True positives", fp = "False positives", fn = "False negatives",
+  tn = "True negatives", precision = "Precision", recall = "Recall",
+  f1 = "F1", fpr = "False positive rate", fnr = "False negative rate",
+  accuracy = "Accuracy", false_positive_ratio = "False positive ratio",
+  false_negative_ratio = "False negative ratio",
+  total_actual_positives = "Total actual positives",
+  total_actual_negatives = "Total actual negatives",
+  agree = "Exact agreement", difference = "Count difference",
+  relaxed = "Relaxed agreement"
+)
+goals <- c(precision = "max", recall = "max", f1 = "max", accuracy = "max",
+           agree = "max", relaxed = "max", fpr = "min", fnr = "min",
+           false_positive_ratio = "min", false_negative_ratio = "min",
+           fp = "min", fn = "min")
+optimal_metrics <- intersect(chosen, names(goals))
+count_metrics <- intersect(chosen, c("agree", "difference", "relaxed"))
+false_metrics <- c("tp", "fp", "fn", "tn")
+show_table <- function(x) {
+  cat(knitr::kable(x, format = "html", row.names = FALSE, escape = TRUE), sep = "\n")
+  cat("\n\n")
+}
+metric_plot <- function(metric) {
+  plot_data <- metrics
+  if (length(extra_groups)) {
+    plot_data$.report_group <- do.call(
+      interaction, c(lapply(plot_data[extra_groups], factor, exclude = NULL),
+                     list(drop = TRUE, sep = " / "))
+    )
+  }
+  plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = threshold, y = .data[[metric]]))
+  if (length(extra_groups)) {
+    plot <- plot + ggplot2::aes(colour = .data[[".report_group"]],
+                               group = .data[[".report_group"]]) +
+      ggplot2::labs(colour = paste(extra_groups, collapse = " / "))
+  }
+  plot +
+    ggplot2::geom_point() + ggplot2::geom_line() +
+    ggplot2::labs(x = "Confidence threshold", y = metric_labels[[metric]]) +
+    ggplot2::theme_minimal()
+}
+```
+
+```{css, echo=FALSE}
+h1 { color: #0085CA; font-size: 30px; }
+h2 { color: #0072BB; }
+h3 { color: #003087; }
+h4 { color: #002467; }
+h5 { color: #0072BB; font-size: 20px; }
+.nav-tabs > li > a, .nav-pills > li > a { color: #5A5F63; }
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus { color: #de425b !important; font-weight: bold; }
+.nav-pills > li.active > a,
+.nav-pills > li.active > a:hover,
+.nav-pills > li.active > a:focus {
+  color: #FFFFFF !important; background-color: #027779 !important; font-weight: bold;
+}
+```
+
+```{r introduction, results='asis'}
+cat("\n# Introduction\n\n")
+cat("<p>This report describes model performance against aligned reference counts for <strong>",
+    escape_html(params$class_label), "</strong>, using <strong>",
+    escape_html(params$grouping_level), "</strong>-level comparisons.</p>\n", sep = "")
+cat("<p>Only explicitly calculated metrics are presented. Confidence thresholds refer ",
+    "to the thresholds already aligned in the supplied object.</p>\n", sep = "")
+if (length(extra_groups)) {
+  cat("<p>Existing metadata groups are preserved: ",
+      escape_html(paste(extra_groups, collapse = ", ")), ".</p>\n", sep = "")
+}
+cat("<p>", nrow(counts), " aligned count observations; ",
+    length(unique(counts$threshold)), " thresholds represented in retained counts.</p>\n", sep = "")
+if (params$remove_large_schools) {
+  cat("<p>Large-school filtering is enabled: reference codes 299, 399, and 999 ",
+      "were excluded. Only previously selected metrics were recalculated.</p>\n", sep = "")
+} else {
+  cat("<p>Large-school filtering is disabled. All reference and model counts ",
+      "are retained unchanged, including codes 299, 399, and 999.</p>\n", sep = "")
+}
+if (!length(chosen)) cat("<p>No performance metrics have been calculated.</p>\n")
+```
+
+```{r optimal-confidence, eval=length(optimal_metrics) > 0, results='asis'}
+cat("\n# Optimal Confidence\n\n")
+cat("Best observed thresholds are shown separately for each selected metric and existing metadata group; ",
+    "ties favor the highest confidence threshold. No weighted optimum is inferred.\n\n")
+metric_groups <- if (length(extra_groups) && nrow(metrics)) {
+  dplyr::group_split(dplyr::group_by(metrics, !!!rlang::syms(extra_groups)))
+} else list(metrics)
+best <- unlist(lapply(metric_groups, function(group) {
+  lapply(optimal_metrics, function(metric) {
+    values <- group[[metric]]
+    usable <- is.finite(values)
+    if (!any(usable)) return(NULL)
+    optimum <- if (goals[[metric]] == "max") max(values[usable]) else min(values[usable])
+    row <- data.frame(Metric = metric_labels[[metric]], Goal = goals[[metric]],
+                      Threshold = max(group$threshold[usable & values == optimum]),
+                      Value = optimum)
+    if (length(extra_groups)) row <- cbind(group[1, extra_groups, drop = FALSE], row)
+    row
+  })
+}), recursive = FALSE)
+best <- Filter(Negate(is.null), best)
+if (length(best)) show_table(do.call(rbind, best)) else cat("No finite metric values are available.\n\n")
+```
+
+```{r count-distribution, eval=length(count_metrics) > 0, results='asis'}
+cat("\n# Count Distribution\n\n")
+cat("Aligned model and reference counts are shown without recoding or capping.\n\n")
+if (nrow(counts)) {
+  distributions <- rbind(
+    cbind(counts[, table_groups, drop = FALSE], count = counts$model_count, source = "Model"),
+    cbind(counts[, table_groups, drop = FALSE], count = counts$truth_count, source = "Reference")
+  )
+  print(ggplot2::ggplot(distributions, ggplot2::aes(x = count, fill = source)) +
+          ggplot2::geom_histogram(position = "identity", alpha = 0.5, bins = 30) +
+          ggplot2::facet_wrap(ggplot2::vars(!!!rlang::syms(table_groups)), scales = "free_y") +
+          ggplot2::labs(x = "Count", y = "Observations", fill = "Count source") +
+          ggplot2::theme_minimal())
+}
+show_table(metrics[, c(table_groups, count_metrics), drop = FALSE])
+```
+
+```{r false-table, eval=all(false_metrics %in% chosen), results='asis'}
+cat("\n# False Classification Table\n\n")
+show_table(metrics[, c(table_groups, false_metrics), drop = FALSE])
+```
+
+```{r analysis, eval=length(chosen) > 0, results='asis'}
+cat("\n# Analysis {.tabset .tabset-pills}\n\n")
+for (metric in chosen) {
+  cat("\n## ", metric_labels[[metric]], "\n\n", sep = "")
+  show_table(metrics[, c(table_groups, metric), drop = FALSE])
+  if (nrow(metrics) && any(is.finite(metrics[[metric]]))) print(metric_plot(metric))
+  cat("\n\n")
+}
+```

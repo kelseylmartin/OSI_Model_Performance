@@ -206,4 +206,33 @@ plot_counts_scatterplot(
 )
 ```
 
-This vignette provides a basic overview of the current package workflow. The `Optics` package also includes helpers for Ice Seal review preparation (`ingest_ice_seals_csv()`, `calculate_ice_seals_totals()`, `select_ice_seals_candidates()`), legacy GFISHER reporting (`calculate_legacy_metrics()`, `calculate_percent_metric()`), and more in-depth analyses such as ROC curves, confusion matrices, and reviewer-effort summaries.
+## 6. Strict S4 Class Reports
+
+Use `OpticsDetections` objects from `read_viame_csv()` or `read_kwcoco()` for the strict S4 workflow. Alignment returns an `OpticsPerformance` object with an initially empty `@metrics` slot.
+
+```{r class-report, eval=FALSE}
+model <- read_viame_csv("model_tracks.csv", video_id = "survey01")
+truth <- read_kwcoco("truth.kwcoco.json")
+performance <- align_counts(
+  model, truth,
+  grouping_level = "frame",
+  confidence_thresholds = c(0.5, 0.9)
+)
+performance <- calculate_precision(performance)
+performance <- calculate_f1(performance)
+generate_class_report(
+  performance, class_label = "Gadus morhua",
+  output_dir = "reports",
+  remove_large_schools = FALSE
+)
+```
+
+Model and truth must use matching video IDs and category names. Choose `grouping_level = "frame"` for frame abundance or `"video"` for MaxN when aligning. You cannot regroup after alignment: realign the original detections to change grouping level.
+
+Each individual `calculate_*()` function adds only its named lower-case metric column to `performance@metrics`, aggregated by `@group_vars`; intermediate dependencies are not added. Optional `confidence_thresholds` select already aligned thresholds, not new detection-score cutoffs. `generate_class_report()` reports only chosen metrics (here, `precision` and `f1`).
+
+The report's `remove_large_schools` toggle defaults to `FALSE`. Opting in with `TRUE` excludes whole aligned observations with truth codes 299, 399, or 999 and recalculates only the chosen metrics on a copy. It does not recode truth or cap model counts.
+
+For existing count tables, construct `OpticsPerformance(data, grouping_level = "video", group_vars = c("category_name", "threshold"))` directly. `data` must contain `category_name`, `threshold`, `model_count`, and `truth_count`; extra grouping columns such as `year` and `Version` can be included in `group_vars` if present in `data`. Construction starts with no calculated metrics. The GFISHER rewrite scripts use this approach and rename selected lower-case metrics to the existing report table names before calling `calculate_percent_metric()`.
+
+This vignette provides a basic overview of the current package workflow. The `Optics` package also includes helpers for Ice Seal review preparation (`ingest_ice_seals_csv()`, `calculate_ice_seals_totals()`, `select_ice_seals_candidates()`), GFISHER percentage summaries (`calculate_percent_metric()`), and more in-depth analyses such as ROC curves, confusion matrices, and reviewer-effort summaries.

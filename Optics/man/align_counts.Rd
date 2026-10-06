@@ -3,6 +3,7 @@
 \name{align_counts}
 \alias{align_counts}
 \alias{align_counts,data.frame,data.frame-method}
+\alias{align_counts,OpticsDetections,OpticsDetections-method}
 \title{Align Model-derived Counts with Ground Truth Counts}
 \usage{
 align_counts(model_counts, truth_counts, ...)
@@ -13,6 +14,13 @@ align_counts(model_counts, truth_counts, ...)
   by,
   model_col = maxn,
   truth_col = maxn
+)
+
+\S4method{align_counts}{OpticsDetections,OpticsDetections}(
+  model_counts,
+  truth_counts,
+  grouping_level = c("frame", "video"),
+  confidence_thresholds = 0
 )
 }
 \arguments{
@@ -31,14 +39,31 @@ contains the count/metric data. Defaults to \code{maxn}.}
 
 \item{truth_col}{The unquoted name of the column in \code{truth_counts} that
 contains the count/metric data. Defaults to \code{maxn}.}
+
+\item{grouping_level}{For S4 inputs, \code{"frame"} counts individuals per image;
+\code{"video"} uses the maximum frame abundance within each video.}
+
+\item{confidence_thresholds}{For S4 inputs, numeric thresholds in \code{[0, 1]}.
+Predictions at or above each threshold are retained. Missing scores are
+excluded; truth is never thresholded.
+Comparisons from the unfiltered data remain when all predictions are removed.}
 }
 \value{
 A \code{tibble} containing the aligned data.
+
+With two \code{OpticsDetections} inputs, an \code{OpticsPerformance} S4 object.
 }
 \description{
 This S4 generic performs a full join on model-derived and ground-truth
 count data frames to create a single, aligned data frame for performance
 evaluation.
+}
+\details{
+The S4 comparison universe is the union of groups observed in model
+and truth detections. Groups absent from both inputs cannot be inferred;
+use \code{OpticsPerformance()} with explicit zero counts to include known empty
+comparisons. Missing frame indices use image identifiers in frame mode;
+video mode requires frame indices to calculate MaxN.
 }
 \examples{
 # Example using Erin's ice seal data to align model and truth counts.

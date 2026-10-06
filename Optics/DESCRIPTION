@@ -38,11 +38,13 @@ Imports:
    tidyr,
    tools
 Collate: 
+    'ingest.R'
+    'class_metrics.R'
     'align.R'
     'ice_seals.R'
-    'ingest.R'
     'metrics.R'
     'performance.R'
+    'report.R'
     'theme.R'
     'visualizations.R'
     'shiny_portal.R'

@@ -155,6 +155,20 @@ read_kwcoco <- function(file_path) {
   images_df <- dplyr::bind_rows(kwcoco_data$images)
   categories_df <- dplyr::bind_rows(kwcoco_data$categories)
   videos_df <- dplyr::bind_rows(kwcoco_data$videos)
+  if (!"video_id" %in% names(images_df)) {
+    images_df$video_id <- NA_character_
+  }
+  standalone <- is.na(images_df$video_id)
+  if (any(standalone)) {
+    images_df$video_id <- as.character(images_df$video_id)
+    images_df$video_id[standalone] <- paste0("image:", images_df$id[standalone])
+    if (nrow(videos_df)) videos_df$id <- as.character(videos_df$id)
+    videos_df <- dplyr::bind_rows(
+      videos_df,
+      dplyr::tibble(id = images_df$video_id[standalone],
+                    name = images_df$file_name[standalone])
+    )
+  }
 
   # --- 3. Process Annotations ---
   annotations_df <- dplyr::bind_rows(lapply(kwcoco_data$annotations, function(x) x[names(x) != "bbox"]))
@@ -168,6 +182,7 @@ read_kwcoco <- function(file_path) {
   if (!"frame_index" %in% names(images_df)) {
     images_df$frame_index <- NA_integer_
   }
+  images_df$frame_index[standalone & is.na(images_df$frame_index)] <- 0L
 
   flat_df <- suppressMessages({
     annotations_df %>%
