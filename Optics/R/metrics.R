@@ -96,27 +96,7 @@ setGeneric("calculate_maxn", function(object, ...) {
 #' }
 setMethod("calculate_maxn", "OpticsDetections",
           function(object, group_cols = NULL) {
-            
-            detections_df <- object@data
-            detections_df <- .ensure_score_column(detections_df)
-            # --- 1. Input Validation ---
-            required_cols <- c("video_id", "frame_index", "category_name", "score")
-            if (!all(required_cols %in% names(detections_df))) {
-              stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
-            }
-            
-            all_groups <- unique(c("video_id", "category_name", "score", group_cols))
-            
-            if (nrow(detections_df) == 0) {
-              return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "maxn"), function(x) logical(0)), c(all_groups, "maxn"))))
-            }
-            
-            # --- 2. Calculate MaxN ---
-            detections_df %>%
-              dplyr::group_by(!!!rlang::syms(unique(c(all_groups, "frame_index")))) %>%
-              dplyr::summarise(n_in_frame = dplyr::n(), .groups = "drop") %>%
-              dplyr::group_by(!!!rlang::syms(all_groups)) %>%
-              dplyr::summarise(maxn = max(c(0, .data$n_in_frame)), .groups = "drop")
+            calculate_maxn(object@data, group_cols = group_cols)
           })
 
 #' @rdname calculate_maxn
@@ -193,25 +173,7 @@ setGeneric("calculate_frame_abundance", function(object, ...) {
 #' unlink(temp_csv_path)
 setMethod("calculate_frame_abundance", "OpticsDetections",
           function(object, group_cols = NULL) {
-            
-            detections_df <- object@data
-            detections_df <- .ensure_score_column(detections_df)
-            # --- 1. Input Validation ---
-            required_cols <- c("video_id", "frame_index", "category_name", "score")
-            if (!all(required_cols %in% names(detections_df))) {
-              stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
-            }
-            
-            all_groups <- unique(c("video_id", "frame_index", "category_name", "score", group_cols))
-            
-            if (nrow(detections_df) == 0) {
-              return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "abundance"), function(x) logical(0)), c(all_groups, "abundance"))))
-            }
-            
-            # --- 2. Calculate Abundance ---
-            detections_df %>%
-              dplyr::group_by(!!!rlang::syms(all_groups)) %>%
-              dplyr::summarise(abundance = dplyr::n(), .groups = "drop")
+            calculate_frame_abundance(object@data, group_cols = group_cols)
           })
 
 #' @rdname calculate_frame_abundance
@@ -308,75 +270,6 @@ setMethod("calculate_density", "data.frame",
               return(dplyr::mutate(object, density = !!count_col_quo / !!area_col_quo))
             }
           })
-
-#' Calculate Legacy GFisher Summary Metrics
-#'
-#' Produces the legacy-style summary table used by the GFisher workflow while
-#' relying on package metric calculations for binary-count performance terms.
-#'
-#' @param df A data frame containing at least `Manual`, `VIAME_MaxN`, `year`,
-#'   `Version`, `Confidence`, and `Species`.
-#' @param species Character filter mode: `"none"`, `"all"`, or a single species
-#'   name.
-#'
-#' @return A `tibble` containing legacy metric columns.
-#' @export
-calculate_legacy_metrics <- function(df, species = "none") {
-  required_cols <- c("Manual", "VIAME_MaxN", "year", "Version", "Confidence", "Species")
-  if (!all(required_cols %in% names(df))) {
-    stop("Input data frame must contain columns: ", paste(required_cols, collapse = ", "))
-  }
-
-  if (species == "none") {
-    group_vars <- c("year", "Version", "Confidence")
-    df_in <- df
-  } else if (species == "all") {
-    group_vars <- c("year", "Version", "Confidence", "Species")
-    df_in <- df
-  } else if (any(species %in% df$Species) == TRUE) {
-    group_vars <- c("year", "Version", "Confidence", "Species")
-    df_in <- dplyr::filter(df, .data$Species == species)
-  } else {
-    print("No species detected with that name. Check spelling and try again.")
-    return(NULL)
-  }
-
-  df_in %>%
-    dplyr::mutate(
-      Agree = ifelse(.data$Manual == .data$VIAME_MaxN, 1, 0),
-      Difference = .data$Manual - .data$VIAME_MaxN,
-      Relaxed = ifelse(.data$Difference %in% c(-1, 0, 1), 1, 0)
-    ) %>%
-    dplyr::group_by(!!!rlang::syms(group_vars)) %>%
-    dplyr::group_modify(~ {
-      binary <- calculate_binary_metrics(
-        .x %>% dplyr::transmute(model_count = .data$VIAME_MaxN, truth_count = .data$Manual),
-        total_comparisons = nrow(.x)
-      )
-
-      dplyr::tibble(
-        Agree = mean(.x$Agree, na.rm = TRUE),
-        Difference = mean(.x$Difference, na.rm = TRUE),
-        Relaxed = mean(.x$Relaxed, na.rm = TRUE),
-        TP = binary$tp,
-        FP = binary$fp,
-        FN = binary$fn,
-        TN = binary$tn,
-        Precision = binary$precision,
-        Recall_TPR = binary$recall,
-        FPR = binary$fpr,
-        FNR = binary$fnr,
-        Accuracy = binary$accuracy,
-        False_P_Ratio = binary$false_positive_ratio,
-        False_N_Ratio = binary$false_negative_ratio,
-        Total_Actual_Positives = binary$tp + binary$fn,
-        Total_Actual_Negatives = binary$fp + binary$tn
-      )
-    }) %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(across(where(is.numeric), ~ ifelse(is.nan(.x), NA, .x))) %>%
-    dplyr::mutate(across(where(is.numeric), ~ ifelse(is.infinite(.x), NA, .x)))
-}
 
 #' Summarize Binary Metric Percentages
 #'

@@ -255,4 +255,68 @@ plot_counts_scatterplot(
 
 ![Model vs. truth MaxN counts at a 0.8 confidence threshold.](figure/plot-scatterplot-1.png)
 
-This vignette provides a basic overview of the current package workflow. The `Optics` package also includes helpers for Ice Seal review preparation (`ingest_ice_seals_csv()`, `calculate_ice_seals_totals()`, `select_ice_seals_candidates()`), legacy GFISHER reporting (`calculate_legacy_metrics()`, `calculate_percent_metric()`), and more in-depth analyses such as ROC curves, confusion matrices, and reviewer-effort summaries.
+## 6. Strict S4 Class Reports
+
+Use `OpticsDetections` objects from `read_viame_csv()` or `read_kwcoco()` for the strict S4 workflow. Alignment returns an `OpticsPerformance` object with an initially empty `@metrics` slot.
+
+```r
+model <- read_viame_csv("model_tracks.csv", video_id = "survey01")
+truth <- read_kwcoco("truth.kwcoco.json")
+performance <- align_counts(
+  model, truth,
+  grouping_level = "frame",
+  confidence_thresholds = c(0.5, 0.9)
+)
+performance <- calculate_precision(performance)
+performance <- calculate_f1(performance)
+generate_class_report(
+  performance, class_label = "Gadus morhua",
+  output_dir = "reports",
+  remove_large_schools = FALSE
+)
+```
+
+Model and truth must use matching video IDs and category names. Choose `grouping_level = "frame"` for frame abundance or `"video"` for MaxN when aligning. You cannot regroup after alignment: realign the original detections to change grouping level.
+
+Each individual `calculate_*()` function adds only its named lower-case metric column to `performance@metrics`, aggregated by `@group_vars`; intermediate dependencies are not added. Optional `confidence_thresholds` select already aligned thresholds, not new detection-score cutoffs. `generate_class_report()` reports only chosen metrics (here, `precision` and `f1`).
+
+The report's `remove_large_schools` toggle defaults to `FALSE`. Opting in with `TRUE` excludes whole aligned observations with truth codes 299, 399, or 999 and recalculates only the chosen metrics on a copy. It does not recode truth or cap model counts.
+
+### Generate and open the analysis report
+
+Install Optics first, then install the report's suggested packages with `install.packages(c("rmarkdown", "knitr"))`. Pandoc must be available (`rmarkdown::pandoc_available()` should return `TRUE`); RStudio normally bundles it. No cloud credentials are needed for the bundled example.
+
+`class_label` must exactly match a category in `performance@data`. Calculate the desired metrics before calling `generate_class_report()`: only those metrics receive tables and plots. Set `output_file = "my-class-report.html"` to choose the filename; `output_dir` is created if needed. The function invisibly returns the HTML path, which you can open in a browser:
+
+```r
+report_path <- generate_class_report(
+  performance, class_label = "Gadus morhua",
+  output_file = "cod-performance.html", output_dir = "reports"
+)
+utils::browseURL(normalizePath(report_path))
+```
+
+### Complete GFISHER example
+
+The installed [`gfisher_class_report.R`](inst/examples/gfisher_class_report.R) script runs every prerequisite using bundled GFISHER data: ingest the original `2024-NCO-155_tracks.csv`, match species names, restrict frames to the manual reading window, calculate model MaxN at each threshold, align against manual deployment MaxN, calculate all 17 modular metrics on an `OpticsPerformance` object, and automatically generate an individual report for every observed class. No class list is required.
+
+```r
+source(system.file("examples", "gfisher_class_report.R", package = "Optics"))
+result <- run_gfisher_class_report(
+  confidence_thresholds = c(0.5, 0.9),
+  output_dir = "reports", remove_large_schools = FALSE
+)
+result$performance@metrics
+result$report_paths
+invisible(lapply(result$report_paths, function(path) {
+  utils::browseURL(normalizePath(path))
+}))
+```
+
+Alternatively, run `Rscript /path/to/gfisher_class_report.R reports`. Both commands discover classes and write one HTML file per class, such as `reports/lutjanus_campechanus-performance.html`. `result$report_paths` contains their paths named by class; filenames are sanitized and made unique. For just one observed class, pass `class_label = "LUTJANUS_CAMPECHANUS"`; `result$report_path` remains available for single-species calls. To report fewer metrics, omit their individual calculator calls in the script.
+
+This is a single-deployment walkthrough, not a survey-wide performance estimate; it does not combine duplicate `_ST`/`_SUBSET` track variants. Classes are discovered from model detections within the manual reading window (before confidence filtering) and positive manual MaxN counts. Classes absent from both are skipped; recorded manual zeros for model-observed classes are retained. Unmapped model labels are preserved without guessing a species match. Missing model or reference counts are treated as zero during alignment, so check the species crosswalk before interpreting model-only classes. Manual truth is already MaxN, so it is aligned as a count table and then wrapped in S4 rather than fabricated into frame detections. Undefined rates remain `NA`. For other deployments, update the file, identifier, reading window, and species crosswalk together.
+
+For existing count tables, construct `OpticsPerformance(data, grouping_level = "video", group_vars = c("category_name", "threshold"))` directly. `data` must contain `category_name`, `threshold`, `model_count`, and `truth_count`; extra grouping columns such as `year` and `Version` can be included in `group_vars` if present in `data`. Construction starts with no calculated metrics. The GFISHER rewrite scripts use this approach and rename selected lower-case metrics to the existing report table names before calling `calculate_percent_metric()`.
+
+This vignette provides a basic overview of the current package workflow. The `Optics` package also includes helpers for Ice Seal review preparation (`ingest_ice_seals_csv()`, `calculate_ice_seals_totals()`, `select_ice_seals_candidates()`), GFISHER percentage summaries (`calculate_percent_metric()`), and more in-depth analyses such as ROC curves, confusion matrices, and reviewer-effort summaries.

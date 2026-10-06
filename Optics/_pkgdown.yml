@@ -56,7 +56,25 @@ reference:
   - title: "Performance Evaluation"
     desc:  "Functions for assessing model performance."
     contents:
-      - calculate_legacy_metrics
+      - OpticsPerformance
+      - calculate_agree
+      - calculate_difference
+      - calculate_relaxed
+      - calculate_tp
+      - calculate_fp
+      - calculate_fn
+      - calculate_tn
+      - calculate_precision
+      - calculate_recall
+      - calculate_f1
+      - calculate_fpr
+      - calculate_fnr
+      - calculate_accuracy
+      - calculate_false_positive_ratio
+      - calculate_false_negative_ratio
+      - calculate_total_actual_positives
+      - calculate_total_actual_negatives
+      - generate_class_report
       - calculate_scalpred_metrics
       - calculate_percent_metric
       - summarize_performance_by_threshold

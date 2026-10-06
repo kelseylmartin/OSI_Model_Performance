@@ -1,5 +1,6 @@
 example_report <- testthat::test_path("..", "..", "inst", "examples", "e2e_gfisher_script_markdown.Rmd")
 rewrite_script <- testthat::test_path("..", "..", "inst", "examples", "e2e_gfisher_script_rewrite.R")
+workstation_rewrite_script <- testthat::test_path("..", "..", "inst", "examples", "workstation_e2e_gfisher_script_rewrite.R")
 legacy_report <- testthat::test_path("..", "..", "..", "Optics Model Performance Report.Rmd")
 
 extract_report_scaffold <- function(path) {
@@ -112,10 +113,71 @@ test_that("GFisher rewrite script derives version from model folder and uses pac
   rewrite_text <- paste(readLines(rewrite_script, warn = FALSE), collapse = "\n")
 
   expect_match(rewrite_text, "extract_model_version <- function", fixed = TRUE)
-  expect_match(rewrite_text, "calculate_legacy_metrics(combined_master, species = \"all\")", fixed = TRUE)
+  expect_match(rewrite_text, "performance_data <- combined_master", fixed = TRUE)
+  expect_match(rewrite_text, "performance <- OpticsPerformance(", fixed = TRUE)
   expect_match(rewrite_text, "calculate_percent_metric(metrics, year, Species, Confidence, Agree)", fixed = TRUE)
   expect_false(grepl("percent_metric <- function", rewrite_text, fixed = TRUE))
   expect_match(rewrite_text, "rstudioapi::showPrompt(", fixed = TRUE)
   expect_false(grepl("remove_large_schools = \"n\"", rewrite_text, fixed = TRUE))
   expect_match(rewrite_text, "remove_large_schools = report_remove_large_schools", fixed = TRUE)
+})
+
+test_that("both GFisher rewrites preserve selected summary outputs with S4 metrics", {
+  for (script in c(rewrite_script, workstation_rewrite_script)) {
+    rewrite_text <- paste(readLines(script, warn = FALSE), collapse = "\n")
+    expect_false(grepl("calculate_legacy_metrics", rewrite_text, fixed = TRUE))
+    expressions <- parse(script)
+    assignments <- vapply(expressions, function(expression) {
+      if (is.call(expression) && identical(expression[[1]], as.name("<-")) &&
+          is.symbol(expression[[2]])) {
+        as.character(expression[[2]])
+      } else {
+        ""
+      }
+    }, character(1))
+    selected <- match(c("performance_data", "performance", "metrics",
+                        "percent_agreement", "relaxed_agreement"), assignments)
+    expect_false(anyNA(selected))
+    env <- new.env(parent = environment())
+    env$transmute <- dplyr::transmute
+    env$rename <- dplyr::rename
+    env$combined_master <- data.frame(
+      year = c(rep(2023, 4), 2024),
+      Version = c(rep("v1", 4), "v2"),
+      Confidence = 0.5,
+      Species = "FishA",
+      VIAME_MaxN = c(2, 1, 0, 0, 1),
+      Manual = c(1, 0, 1, 0, 1)
+    )
+    for (index in selected) eval(expressions[[index]], envir = env)
+
+    expect_s4_class(env$performance, "OpticsPerformance")
+    expect_identical(env$performance@grouping_level, "video")
+    expect_identical(env$performance@group_vars,
+                     c("year", "Version", "threshold", "category_name"))
+    expect_setequal(names(env$metrics), c(
+      "year", "Version", "Confidence", "Species",
+      "Agree", "Difference", "Relaxed", "TP", "FP", "FN", "TN",
+      "Precision", "Recall_TPR", "FPR", "FNR", "Accuracy",
+      "False_P_Ratio", "False_N_Ratio",
+      "Total_Actual_Positives", "Total_Actual_Negatives"
+    ))
+    row <- env$metrics[env$metrics$year == 2023, ]
+    expect_equal(nrow(env$metrics), 2L)
+    expect_equal(row$Agree, 0.25)
+    expect_equal(row$Difference, -0.25)
+    expect_equal(row$Relaxed, 1)
+    expect_equal(unlist(row[c("TP", "FP", "FN", "TN")], use.names = FALSE),
+                 rep(1, 4))
+    expect_equal(unlist(row[c("Precision", "Recall_TPR", "FPR", "FNR", "Accuracy")],
+                        use.names = FALSE), rep(0.5, 5))
+    expect_equal(row$False_P_Ratio, 1 / 3)
+    expect_equal(row$False_N_Ratio, 1 / 3)
+    expect_equal(row$Total_Actual_Positives, 2)
+    expect_equal(row$Total_Actual_Negatives, 2)
+    expect_equal(env$percent_agreement$percentage_1s,
+                 c(25, 100))
+    expect_equal(env$relaxed_agreement$percentage_1s,
+                 c(100, 100))
+  }
 })

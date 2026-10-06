@@ -363,7 +363,51 @@ if (nrow(combined_master) == 0) {
   stop("No deployment-level MaxN comparisons were generated from the stitched model tracks and REFERENCE data.")
 }
 
-metrics <- calculate_legacy_metrics(combined_master, species = "all")
+performance_data <- combined_master %>%
+  transmute(
+    category_name = Species,
+    threshold = Confidence,
+    model_count = VIAME_MaxN,
+    truth_count = Manual,
+    year = year,
+    Version = Version
+  )
+
+performance <- OpticsPerformance(
+  performance_data,
+  grouping_level = "video",
+  group_vars = c("year", "Version", "threshold", "category_name")
+) %>%
+  calculate_agree() %>%
+  calculate_difference() %>%
+  calculate_relaxed() %>%
+  calculate_tp() %>%
+  calculate_fp() %>%
+  calculate_fn() %>%
+  calculate_tn() %>%
+  calculate_precision() %>%
+  calculate_recall() %>%
+  calculate_fpr() %>%
+  calculate_fnr() %>%
+  calculate_accuracy() %>%
+  calculate_false_positive_ratio() %>%
+  calculate_false_negative_ratio() %>%
+  calculate_total_actual_positives() %>%
+  calculate_total_actual_negatives()
+
+# Keep the existing GFisher table names for downstream summaries.
+metrics <- performance@metrics %>%
+  rename(
+    Confidence = threshold, Species = category_name,
+    Agree = agree, Difference = difference, Relaxed = relaxed,
+    TP = tp, FP = fp, FN = fn, TN = tn,
+    Precision = precision, Recall_TPR = recall,
+    FPR = fpr, FNR = fnr, Accuracy = accuracy,
+    False_P_Ratio = false_positive_ratio,
+    False_N_Ratio = false_negative_ratio,
+    Total_Actual_Positives = total_actual_positives,
+    Total_Actual_Negatives = total_actual_negatives
+  )
 percent_agreement <- calculate_percent_metric(metrics, year, Species, Confidence, Agree)
 relaxed_agreement <- calculate_percent_metric(metrics, year, Species, Confidence, Relaxed)
 
