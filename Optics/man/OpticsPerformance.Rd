@@ -40,4 +40,3 @@ and \code{truth_count}, plus frame or video identifiers.}
 
 \item{\code{group_vars}}{Summary grouping columns, including category and threshold.}
 }}
-
