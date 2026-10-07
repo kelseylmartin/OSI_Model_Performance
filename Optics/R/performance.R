@@ -162,10 +162,12 @@ setMethod("summarize_performance_by_threshold",
             
             model_df <- model_detections@data
             truth_df <- truth_detections@data
+            truth_df$score <- rep(1, nrow(truth_df))
             
             truth_counts <- metric_function(truth_df)
             stopifnot("score" %in% colnames(truth_counts))
             truth_metric_col <- tail(setdiff(names(truth_counts), c(by, "score")), 1)
+            truth_counts$count_value <- truth_counts[[truth_metric_col]]
             
             all_groups <- dplyr::bind_rows(
               dplyr::distinct(model_df, !!!rlang::syms(by)),
@@ -193,7 +195,10 @@ setMethod("summarize_performance_by_threshold",
               } else {
                 model_counts <- metric_function(model_dets_filtered)
                 stopifnot("score" %in% colnames(model_counts))
-                aligned <- align_counts(model_counts, truth_counts_at_threshold, by = unique(c(by, "score")))
+                model_counts$count_value <- model_counts[[truth_metric_col]]
+                aligned <- align_counts(model_counts, truth_counts_at_threshold,
+                                        by = unique(c(by, "score")),
+                                        model_col = count_value, truth_col = count_value)
                 metrics <- calculate_binary_metrics(aligned, total_comparisons = total_comparisons)
                 metrics$score <- thresh
               }
@@ -286,9 +291,11 @@ setMethod("calculate_scalpred_metrics",
               warning("NAs introduced while coercing model_detections$score to numeric.")
             }
 
+            truth_detections$score <- rep(1, nrow(truth_detections))
             truth_counts <- metric_function(truth_detections)
             stopifnot("score" %in% colnames(truth_counts))
             truth_metric_col <- tail(setdiff(names(truth_counts), c(by, "score")), 1)
+            truth_counts$count_value <- truth_counts[[truth_metric_col]]
             all_groups <- dplyr::bind_rows(
               dplyr::distinct(model_detections, !!!rlang::syms(by)),
               dplyr::distinct(truth_detections, !!!rlang::syms(by))
@@ -307,7 +314,10 @@ setMethod("calculate_scalpred_metrics",
               } else {
                 model_counts <- metric_function(model_filtered)
                 stopifnot("score" %in% colnames(model_counts))
-                aligned <- align_counts(model_counts, truth_counts_at_threshold, by = unique(c(by, "score")))
+                model_counts$count_value <- model_counts[[truth_metric_col]]
+                aligned <- align_counts(model_counts, truth_counts_at_threshold,
+                                        by = unique(c(by, "score")),
+                                        model_col = count_value, truth_col = count_value)
                 tp <- sum(aligned$model_count > 0 & aligned$truth_count > 0, na.rm = TRUE)
                 fp <- sum(aligned$model_count > 0 & aligned$truth_count == 0, na.rm = TRUE)
                 fn <- sum(aligned$model_count == 0 & aligned$truth_count > 0, na.rm = TRUE)

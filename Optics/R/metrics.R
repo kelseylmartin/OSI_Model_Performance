@@ -116,10 +116,6 @@ setMethod("calculate_maxn", "data.frame",
             
             all_groups <- unique(c("video_id", "category_name", "score", group_cols))
             
-            if (nrow(detections_df) == 0) {
-              return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "maxn"), function(x) logical(0)), c(all_groups, "maxn"))))
-            }
-            
             # --- 2. Calculate MaxN ---
             detections_df %>%
               dplyr::group_by(!!!rlang::syms(unique(c(all_groups, "frame_index")))) %>%
@@ -192,10 +188,6 @@ setMethod("calculate_frame_abundance", "data.frame",
             }
             
             all_groups <- unique(c("video_id", "frame_index", "category_name", "score", group_cols))
-            
-            if (nrow(detections_df) == 0) {
-              return(dplyr::tibble(!!!stats::setNames(lapply(c(all_groups, "abundance"), function(x) logical(0)), c(all_groups, "abundance"))))
-            }
             
             # --- 2. Calculate Abundance ---
             detections_df %>%

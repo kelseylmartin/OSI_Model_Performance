@@ -455,7 +455,8 @@ run_optics_app <- function(...) {
   )
 
   # For multiclass confusion matrix, we still need a specific threshold
-  model_filtered_df <- model_detections@data[model_detections@data$score >= threshold, , drop = FALSE]
+  model_filtered_df <- model_detections@data %>%
+    dplyr::filter(.data$score >= threshold)
   if (nrow(model_filtered_df) > 0) {
     model_filtered_df$score <- threshold
   }
@@ -467,6 +468,7 @@ run_optics_app <- function(...) {
   )
 
   model_counts <- metric_details$metric_function(filtered_model)
+  truth_detections@data$score <- rep(threshold, nrow(truth_detections@data))
   truth_counts <- metric_details$metric_function(truth_detections)
 
   model_counts$score <- threshold
@@ -492,6 +494,7 @@ run_optics_app <- function(...) {
   list(
     performance_summary = performance_summary,
     scalpred_summary = scalpred_summary,
+    aligned_counts = aligned_counts,
     multiclass_confusion = calculate_confusion_matrix(
       aligned_counts,
       group_vars = confusion_groups,
@@ -754,7 +757,9 @@ optics_portal_server <- function(input, output, session) {
     
     class_metrics <- lapply(thresholds, function(thresh) {
       # Filter model detections
-      model_filtered <- model_df %>% dplyr::filter(score >= thresh)
+      model_filtered <- model_df %>%
+        dplyr::filter(score >= thresh) %>%
+        dplyr::mutate(score = thresh)
       if (nrow(model_filtered) == 0) {
         return(dplyr::tibble(
           Threshold = thresh,
@@ -799,8 +804,12 @@ optics_portal_server <- function(input, output, session) {
     list(
       table_data = dplyr::bind_rows(class_metrics),
       model_abundance_per_video = function(thresh) {
-        model_filtered <- model_df %>% dplyr::filter(score >= thresh)
-        if (nrow(model_filtered) == 0) return(dplyr::tibble(model_count = numeric(), truth_count = numeric()))
+        model_filtered <- model_df %>%
+          dplyr::filter(score >= thresh) %>%
+          dplyr::mutate(score = thresh)
+        if (nrow(model_filtered) == 0) {
+          return(dplyr::mutate(truth_abundance_per_video, model_count = 0))
+        }
         temp_model_det <- OpticsDetections(model_filtered, "temp", "temp")
         model_counts_full <- metric_details$metric_function(temp_model_det)
         model_ab <- model_counts_full %>%

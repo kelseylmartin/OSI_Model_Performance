@@ -78,6 +78,33 @@ test_that("summarize_performance_by_threshold() uses grouped confidence threshol
   expect_equal(summary_df$threshold, c(seq(0.1, 0.9, by = 0.1), 0.95))
 })
 
+test_that("threshold summaries use the selected counts without splitting truth scores", {
+  #' @description Test frame and MaxN summaries against known presence counts, including fully filtered predictions.
+  truth_df <- dplyr::bind_rows(truth_dets_df, truth_dets_df[1, ])
+  truth_df$score <- c(1, 1, 0.7)
+  truth <- OpticsDetections(truth_df, "truth.csv", "test")
+
+  for (metric_function in list(calculate_frame_abundance, calculate_maxn)) {
+    by <- c("video_id", "category_name")
+    if (identical(metric_function, calculate_frame_abundance)) {
+      by <- c(by, "frame_index")
+    }
+    for (summary_function in list(summarize_performance_by_threshold, calculate_scalpred_metrics)) {
+      summary <- summary_function(
+        model_detections_perf, truth, by = by,
+        metric_function = metric_function, thresholds = c(0.8, 1)
+      )
+      expect_equal(summary$tp, c(1, 0))
+      expect_equal(summary$fp, c(1, 0))
+      expect_equal(summary$fn, c(1, 2))
+      expect_equal(summary$recall, c(0.5, 0))
+      expect_equal(summary$precision[1], 0.5)
+      expect_equal(summary$f1_score[1], 0.5)
+    }
+  }
+  expect_equal(truth@data$score, c(1, 1, 0.7))
+})
+
 # {{{ calculate_scalpred_metrics }}} ----
 test_that("calculate_scalpred_metrics() computes threshold metrics for OpticsDetections", {
   #' @description Test that ScalPred metrics return expected TP/FP/FN and PR/F1 values.

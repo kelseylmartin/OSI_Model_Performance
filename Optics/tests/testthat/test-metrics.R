@@ -44,6 +44,24 @@ test_that("calculate_maxn() works with correct inputs", {
 })
 
 ## Edge handling ----
+test_that("empty count aggregations preserve grouping column types", {
+  #' @description Test that empty frame and MaxN counts can be joined to populated truth counts.
+  empty_df <- dplyr::tibble(
+    video_id = character(), frame_index = integer(),
+    category_name = character(), score = numeric()
+  )
+  for (metric_function in list(calculate_maxn, calculate_frame_abundance)) {
+    counts <- metric_function(empty_df)
+    expect_equal(nrow(counts), 0)
+    expect_type(counts$video_id, "character")
+    expect_type(counts$category_name, "character")
+    expect_type(counts$score, "double")
+    if ("frame_index" %in% names(counts)) {
+      expect_type(counts$frame_index, "integer")
+    }
+  }
+})
+
 test_that("calculate_maxn() handles edge cases correctly", {
   #' @description Test that calculate_maxn() handles empty data frames.
   empty_df <- dplyr::tibble(
