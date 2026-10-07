@@ -19,6 +19,8 @@ test_that("bundled Shiny portal examples produce populated analysis outputs", {
 
   for (example_key in example_keys) {
     example_data <- Optics:::.optics_portal_load_example(example_key)
+    expect_s4_class(example_data$model_detections, "OpticsDetections")
+    expect_s4_class(example_data$truth_detections, "OpticsDetections")
     analysis <- Optics:::.optics_portal_analyze(
       model_detections = example_data$model_detections,
       truth_detections = example_data$truth_detections,
@@ -35,10 +37,78 @@ test_that("bundled Shiny portal examples produce populated analysis outputs", {
 
     expect_s3_class(analysis$aligned_counts, "data.frame")
     expect_gt(nrow(analysis$aligned_counts), 0)
+    expect_true(all(c("model_count", "truth_count", "score") %in% names(analysis$aligned_counts)))
+    expect_true(all(analysis$aligned_counts$score == 0.5))
+    expect_true(all(analysis$aligned_counts$model_count >= 0))
+    expect_true(all(analysis$aligned_counts$truth_count >= 0))
 
     expect_s3_class(analysis$multiclass_confusion, "data.frame")
     expect_gt(nrow(analysis$multiclass_confusion), 0)
   }
+})
+
+portal_detection_fixture <- function(frame, score) {
+  OpticsDetections(data.frame(
+    video_id = "v1", image_id = paste0("img", frame), frame_index = frame,
+    annotation_id = seq_along(frame), category_name = "fish",
+    bbox_x = 0, bbox_y = 0, bbox_width = 1, bbox_height = 1, score = score
+  ), "fixture.csv", "test")
+}
+
+test_that("portal alignment retains truth when predictions are filtered out", {
+  #' @description Test that selected-threshold counts exclude missing scores and preserve truth-only comparisons.
+  model <- portal_detection_fixture(c(1, 2), c(0.9, NA_real_))
+  truth <- portal_detection_fixture(c(1, 1), c(1, 0.7))
+
+  for (count_metric in c("Frame Abundance", "MaxN")) {
+    for (threshold in c(0.5, 1)) {
+      expect_warning(
+        analysis <- Optics:::.optics_portal_analyze(model, truth, count_metric, threshold),
+        "NAs introduced while coercing"
+      )
+      expect_equal(analysis$aligned_counts$model_count, if (threshold == 1) 0 else 1)
+      expect_equal(analysis$aligned_counts$truth_count, 2)
+      expect_equal(analysis$aligned_counts$score, threshold)
+      expect_false(anyNA(analysis$aligned_counts[c("model_count", "truth_count", "score")]))
+      expect_gt(nrow(analysis$multiclass_confusion), 0)
+    }
+  }
+  expect_equal(model@data$score, c(0.9, NA_real_))
+  expect_equal(truth@data$score, c(1, 0.7))
+})
+
+test_that("portal class MaxN counts aggregate scores and retain truth-only videos", {
+  #' @description Test class-specific server counts with mixed scores and no surviving predictions.
+  skip_if_not_installed("shiny")
+  skip_if_not_installed("plotly")
+  skip_if_not_installed("DT")
+  dataset <- list(
+    model_detections = portal_detection_fixture(c(1, 2), c(0.9, 0.8)),
+    truth_detections = portal_detection_fixture(c(1, 1), c(1, 0.7)),
+    allowed_count_metrics = "MaxN", default_count_metric = "MaxN"
+  )
+  local_mocked_bindings(
+    .optics_portal_load_example = function(example_key) dataset,
+    .package = "Optics"
+  )
+  shiny::testServer(Optics:::optics_portal_server, {
+    session$setInputs(
+      `data-example_key` = "fixture", count_metric = "MaxN",
+      confidence_threshold = 0.5, class_selection = "fish"
+    )
+    results <- class_specific_results()
+    counts <- results$model_abundance_per_video(0.5)
+    expect_equal(counts$model_count, 1)
+    expect_equal(counts$truth_count, 2)
+    expect_equal(results$table_data$`Model Abundance`[1], 1)
+    expect_equal(results$table_data$`Groundtruth Abundance`[1], 2)
+
+    counts <- results$model_abundance_per_video(1)
+    expect_equal(counts$model_count, 0)
+    expect_equal(counts$truth_count, 2)
+    expect_equal(counts$video_id, "v1")
+    expect_equal(counts$category_name, "fish")
+  })
 })
 
 test_that("truth-count uploads are converted into OpticsDetections rows", {
