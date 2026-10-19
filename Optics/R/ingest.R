@@ -303,6 +303,9 @@ read_viame_csv <- function(file_path, video_id = NULL, id_schema = c("classic", 
     "DetLen_Conf", "Tar_Len", "SP", "CP"
   )
   names(raw_df)[1:min(ncol(raw_df), length(viame_names))] <- viame_names[1:min(ncol(raw_df), length(viame_names))]
+  if (!"VidIdent" %in% names(raw_df)) {
+    stop("Track CSV is missing the file name column 'VidIdent'.")
+  }
 
 
   if (id_schema == "classic") {
@@ -477,10 +480,11 @@ scrape_gcp_uris <- function(bucket_name, prefix = "", extensions = c(".mp4", ".a
 
 #' Convert Track Data to KWCOCO
 #'
-#' Converts track-style detections into a KWCOCO-compatible list, following the
-#' track CSV conversion flow used in this repository (track/frame sorting,
-#' duplicate track-frame removal, frame-level image creation, species-to-integer
-#' category mapping, and bounding box conversion).
+#' Converts track-style or image-level detections into a KWCOCO-compatible list.
+#' Video inputs retain frame-level image creation, while inputs with multiple
+#' filenames register one image per file. Both paths map annotations to images,
+#' remove duplicate detections, map species to integer categories, and convert
+#' bounding boxes.
 #'
 #' @param object A source object. Supported inputs are:
 #'   - a character path to a VIAME-style track CSV
@@ -501,7 +505,8 @@ setGeneric("convert_track_csv_to_kwcoco", function(object, ...) {
 #' @param video_id Integer video ID to include in KWCOCO videos.
 #' @param col_mapping Named list mapping canonical fields to column names.
 #'   Required mapping keys: `frame`, `track_id`, `tl_x`, `tl_y`, `br_x`,
-#'   `br_y`, `species_name`. Optional: `score`.
+#'   `br_y`, `species_name`. Optional: `score`, `file_name`. Multiple distinct
+#'   `file_name` values produce one KWCOCO image per filename.
 #' @param info Optional KWCOCO `info` object. If `NULL`, a default info list is
 #'   generated.
 #'
@@ -521,7 +526,8 @@ setMethod("convert_track_csv_to_kwcoco", "character",
                      br_x = "BR_X",
                      br_y = "BR_Y",
                      score = "DetLen_Conf",
-                     species_name = "SP"
+                     species_name = "SP",
+                     file_name = "VidIdent"
                    ),
                    info = NULL) {
             if (!file.exists(object)) {
@@ -533,7 +539,6 @@ setMethod("convert_track_csv_to_kwcoco", "character",
                 object,
                 skip = 2,
                 col_names = FALSE,
-                col_select = c(1:11),
                 show_col_types = FALSE
               ))
             }, error = function(e) {
@@ -544,12 +549,18 @@ setMethod("convert_track_csv_to_kwcoco", "character",
               stop("Track CSV is empty after reading: ", basename(object))
             }
 
+            raw_df <- raw_df[, seq_len(min(ncol(raw_df), 11L)), drop = FALSE]
             raw_df <- raw_df[rowSums(is.na(raw_df)) != ncol(raw_df), , drop = FALSE]
             viame_names <- c(
               "TrackID", "VidIdent", "UniqFrame", "TL_X", "TL_Y", "BR_X", "BR_Y",
               "DetLen_Conf", "Tar_Len", "SP", "CP"
             )
             names(raw_df)[1:min(ncol(raw_df), length(viame_names))] <- viame_names[1:min(ncol(raw_df), length(viame_names))]
+            if (!is.null(col_mapping$file_name) &&
+                !col_mapping$file_name %in% names(raw_df)) {
+              stop("Track CSV is missing the file name column '",
+                   col_mapping$file_name, "'.")
+            }
 
             if (is.null(video_name)) {
               video_name <- tools::file_path_sans_ext(basename(object))
@@ -574,13 +585,23 @@ setMethod("convert_track_csv_to_kwcoco", "OpticsDetections",
                    video_id = 1L,
                    info = NULL) {
             detections_df <- object@data
-            required_cols <- c("frame_index", "annotation_id", "category_name",
+            required_cols <- c("frame_index", "annotation_id", "image_id", "category_name",
                                "bbox_x", "bbox_y", "bbox_width", "bbox_height")
             missing_cols <- setdiff(required_cols, names(detections_df))
             if (length(missing_cols) > 0) {
               stop("OpticsDetections@data is missing required columns: ",
                    paste(missing_cols, collapse = ", "))
             }
+            file_names <- as.character(detections_df$image_id)
+            if (anyNA(file_names) || any(!nzchar(trimws(file_names)))) {
+              stop("OpticsDetections@data contains missing or empty file names in 'image_id'.")
+            }
+            legacy_video_ids <- "video_id" %in% names(detections_df) &&
+              !anyNA(detections_df$video_id) &&
+              all(startsWith(
+                file_names,
+                paste0(as.character(detections_df$video_id), "_frame_")
+              ))
 
             track_ids <- if ("track_id" %in% names(detections_df)) detections_df$track_id else detections_df$annotation_id
             score_vals <- if ("score" %in% names(detections_df)) detections_df$score else NA_real_
@@ -593,10 +614,24 @@ setMethod("convert_track_csv_to_kwcoco", "OpticsDetections",
               BR_X = detections_df$bbox_x + detections_df$bbox_width,
               BR_Y = detections_df$bbox_y + detections_df$bbox_height,
               SP = detections_df$category_name,
-              DetLen_Conf = score_vals
+              DetLen_Conf = score_vals,
+              file_name = file_names
             )
+            col_mapping <- list(
+              frame = "UniqFrame",
+              track_id = "TrackID",
+              tl_x = "TL_X",
+              tl_y = "TL_Y",
+              br_x = "BR_X",
+              br_y = "BR_Y",
+              score = "DetLen_Conf",
+              species_name = "SP"
+            )
+            if (!legacy_video_ids) col_mapping$file_name <- "file_name"
 
-            if (is.null(video_name) && "video_id" %in% names(detections_df) && nrow(detections_df) > 0) {
+            if (is.null(video_name) && "video_id" %in% names(detections_df) &&
+                nrow(detections_df) > 0 && !is.na(detections_df$video_id[[1]]) &&
+                nzchar(as.character(detections_df$video_id[[1]]))) {
               video_name <- as.character(detections_df$video_id[[1]])
             }
             if (is.null(video_name)) {
@@ -608,16 +643,7 @@ setMethod("convert_track_csv_to_kwcoco", "OpticsDetections",
               output_path = output_path,
               video_name = video_name,
               video_id = video_id,
-              col_mapping = list(
-                frame = "UniqFrame",
-                track_id = "TrackID",
-                tl_x = "TL_X",
-                tl_y = "TL_Y",
-                br_x = "BR_X",
-                br_y = "BR_Y",
-                score = "DetLen_Conf",
-                species_name = "SP"
-              ),
+              col_mapping = col_mapping,
               info = info
             )
           })
@@ -647,6 +673,9 @@ setMethod("convert_track_csv_to_kwcoco", "data.frame",
             }
 
             required_cols <- unname(unlist(col_mapping[required_mapping]))
+            if (!is.null(col_mapping$file_name)) {
+              required_cols <- c(required_cols, col_mapping$file_name)
+            }
             missing_cols <- setdiff(required_cols, names(object))
             if (length(missing_cols) > 0) {
               stop("Input data frame is missing required columns: ", paste(missing_cols, collapse = ", "))
@@ -654,6 +683,15 @@ setMethod("convert_track_csv_to_kwcoco", "data.frame",
 
             if (nrow(object) == 0) {
               stop("Input data frame is empty; no annotations to convert.")
+            }
+
+            file_name_vals <- NULL
+            if (!is.null(col_mapping$file_name)) {
+              file_name_vals <- as.character(object[[col_mapping$file_name]])
+              if (anyNA(file_name_vals) || any(!nzchar(trimws(file_name_vals)))) {
+                stop("Input data frame contains missing or empty file names in column '",
+                     col_mapping$file_name, "'.")
+              }
             }
 
             frame_vals <- suppressWarnings(as.integer(object[[col_mapping$frame]]))
@@ -668,6 +706,7 @@ setMethod("convert_track_csv_to_kwcoco", "data.frame",
             if (any(invalid_rows)) {
               warning(sum(invalid_rows), " rows dropped due to invalid frame/track/bounding box values.")
               object <- object[!invalid_rows, , drop = FALSE]
+              if (!is.null(file_name_vals)) file_name_vals <- file_name_vals[!invalid_rows]
               frame_vals <- frame_vals[!invalid_rows]
               track_vals <- track_vals[!invalid_rows]
               tl_x_vals <- tl_x_vals[!invalid_rows]
@@ -683,6 +722,7 @@ setMethod("convert_track_csv_to_kwcoco", "data.frame",
               warning(sum(invalid_bbox), " rows dropped due to non-positive bbox width/height.")
               keep_rows <- !invalid_bbox
               object <- object[keep_rows, , drop = FALSE]
+              if (!is.null(file_name_vals)) file_name_vals <- file_name_vals[keep_rows]
               frame_vals <- frame_vals[keep_rows]
               track_vals <- track_vals[keep_rows]
               tl_x_vals <- tl_x_vals[keep_rows]
@@ -697,8 +737,11 @@ setMethod("convert_track_csv_to_kwcoco", "data.frame",
               stop("No valid rows remain after validation.")
             }
 
+            image_mode <- !is.null(file_name_vals) &&
+              length(unique(file_name_vals)) > 1L
             order_idx <- order(track_vals, frame_vals)
             object <- object[order_idx, , drop = FALSE]
+            if (!is.null(file_name_vals)) file_name_vals <- file_name_vals[order_idx]
             frame_vals <- frame_vals[order_idx]
             track_vals <- track_vals[order_idx]
             tl_x_vals <- tl_x_vals[order_idx]
@@ -706,9 +749,12 @@ setMethod("convert_track_csv_to_kwcoco", "data.frame",
             br_x_vals <- br_x_vals[order_idx]
             br_y_vals <- br_y_vals[order_idx]
 
-            dedup_idx <- !duplicated(data.frame(track = track_vals, frame = frame_vals))
+            dedup_key <- data.frame(track = track_vals, frame = frame_vals)
+            if (image_mode) dedup_key$file_name <- file_name_vals
+            dedup_idx <- !duplicated(dedup_key)
             if (any(!dedup_idx)) {
               object <- object[dedup_idx, , drop = FALSE]
+              if (!is.null(file_name_vals)) file_name_vals <- file_name_vals[dedup_idx]
               frame_vals <- frame_vals[dedup_idx]
               track_vals <- track_vals[dedup_idx]
               tl_x_vals <- tl_x_vals[dedup_idx]
@@ -722,18 +768,25 @@ setMethod("convert_track_csv_to_kwcoco", "data.frame",
             unique_species <- unique(species_vals)
             species_to_int_map <- setNames(seq_along(unique_species), unique_species)
 
-            unique_frames <- unique(frame_vals)
-            image_ids <- seq.int(0L, length(unique_frames) - 1L)
-            frame_to_image <- stats::setNames(as.list(image_ids), as.character(unique_frames))
-
-            images <- lapply(seq_along(unique_frames), function(i) {
-              frame_i <- unique_frames[[i]]
-              list(
-                id = image_ids[[i]],
-                file_name = sprintf("frame_%06d.jpg", frame_i),
-                frame_index = frame_i
-              )
-            })
+            if (image_mode) {
+              unique_file_names <- unique(file_name_vals)
+              image_ids <- seq.int(0L, length(unique_file_names) - 1L)
+              images <- lapply(seq_along(unique_file_names), function(i) {
+                list(id = image_ids[[i]], file_name = unique_file_names[[i]])
+              })
+            } else {
+              unique_frames <- unique(frame_vals)
+              image_ids <- seq.int(0L, length(unique_frames) - 1L)
+              frame_to_image <- stats::setNames(as.list(image_ids), as.character(unique_frames))
+              images <- lapply(seq_along(unique_frames), function(i) {
+                frame_i <- unique_frames[[i]]
+                list(
+                  id = image_ids[[i]],
+                  file_name = sprintf("frame_%06d.jpg", frame_i),
+                  frame_index = frame_i
+                )
+              })
+            }
 
             score_values <- NULL
             if (!is.null(col_mapping$score) && col_mapping$score %in% names(object)) {
@@ -749,7 +802,11 @@ setMethod("convert_track_csv_to_kwcoco", "data.frame",
               ))
               ann <- list(
                 id = i,
-                image_id = frame_to_image[[as.character(frame_vals[[i]])]],
+                image_id = if (image_mode) {
+                  match(file_name_vals[[i]], unique_file_names) - 1L
+                } else {
+                  frame_to_image[[as.character(frame_vals[[i]])]]
+                },
                 category_id = species_to_int_map[[species_vals[[i]]]],
                 track_id = track_vals[[i]],
                 bbox = bbox,

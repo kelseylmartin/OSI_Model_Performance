@@ -207,11 +207,99 @@ test_that("convert_track_csv_to_kwcoco() converts track CSV flow correctly", {
   expect_true(all(c("cod", "Unknown") %in% category_names))
 })
 
+test_that("convert_track_csv_to_kwcoco() registers distinct image filenames", {
+  #' @description Test that distinct image filenames receive unique image IDs.
+  image_content <- c(
+    "# header 1",
+    "# header 2",
+    "1,image_a.jpg,0,10,20,40,60,0.90,1,cod,1",
+    "1,image_b.jpg,0,50,70,80,100,0.95,1,cod,1",
+    "2,image_a.jpg,0,20,30,40,50,0.85,1,cod,1"
+  )
+  image_csv_path <- tempfile(fileext = ".csv")
+  writeLines(image_content, image_csv_path)
+
+  kw <- convert_track_csv_to_kwcoco(image_csv_path)
+
+  expect_equal(vapply(kw$images, `[[`, character(1), "file_name"),
+               c("image_a.jpg", "image_b.jpg"))
+  expect_equal(vapply(kw$images, `[[`, integer(1), "id"), c(0L, 1L))
+  expect_equal(vapply(kw$annotations, `[[`, integer(1), "image_id"),
+               c(0L, 1L, 0L))
+  expect_equal(length(kw$annotations), 3)
+  unlink(image_csv_path)
+})
+
+test_that("convert_track_csv_to_kwcoco() rejects missing S4 filenames", {
+  #' @description Test that missing standardized image filenames are rejected.
+  detections <- data.frame(
+    video_id = "video_a",
+    image_id = NA_character_,
+    frame_index = 0,
+    annotation_id = 1,
+    category_name = "cod",
+    bbox_x = 10,
+    bbox_y = 20,
+    bbox_width = 30,
+    bbox_height = 40,
+    score = 0.9
+  )
+  object <- OpticsDetections(detections, "test.csv", "viame_csv")
+
+  expect_error(
+    convert_track_csv_to_kwcoco(object),
+    regexp = "missing or empty file names"
+  )
+})
+
+test_that("convert_track_csv_to_kwcoco() converts S4 image filenames", {
+  #' @description Test that standardized image identifiers populate KWCOCO images.
+  detections <- data.frame(
+    video_id = NA_character_,
+    image_id = c("image_a.jpg", "image_b.jpg"),
+    frame_index = c(0, 0),
+    annotation_id = c(1, 2),
+    category_name = c("cod", "cod"),
+    bbox_x = c(10, 50),
+    bbox_y = c(20, 70),
+    bbox_width = c(30, 30),
+    bbox_height = c(40, 30),
+    score = c(0.9, 0.95)
+  )
+  object <- OpticsDetections(detections, "test.csv", "viame_csv")
+
+  kw <- convert_track_csv_to_kwcoco(object)
+
+  expect_equal(vapply(kw$images, `[[`, character(1), "file_name"),
+               c("image_a.jpg", "image_b.jpg"))
+  expect_equal(vapply(kw$annotations, `[[`, integer(1), "image_id"),
+               c(0L, 1L))
+})
+
 test_that("convert_track_csv_to_kwcoco() validates required columns", {
   #' @description Test that missing mapped columns raise a descriptive error.
   bad_df <- data.frame(UniqFrame = 1, TL_X = 1, TL_Y = 1, BR_X = 2, BR_Y = 2, SP = "cod")
   expect_error(
     convert_track_csv_to_kwcoco(bad_df),
     regexp = "missing required columns"
+  )
+
+  filename_mapping <- list(
+    frame = "UniqFrame",
+    track_id = "TrackID",
+    tl_x = "TL_X",
+    tl_y = "TL_Y",
+    br_x = "BR_X",
+    br_y = "BR_Y",
+    species_name = "SP",
+    file_name = "VidIdent"
+  )
+  complete_df <- data.frame(
+    UniqFrame = 1, TrackID = 1, TL_X = 1, TL_Y = 1,
+    BR_X = 2, BR_Y = 2, SP = "cod"
+  )
+  expect_error(
+    convert_track_csv_to_kwcoco(complete_df, col_mapping = filename_mapping),
+    regexp = "missing required columns: VidIdent"
   )
 })
