@@ -55,7 +55,8 @@ convert_track_csv_to_kwcoco(object, ...)
 
 \item{col_mapping}{Named list mapping canonical fields to column names.
 Required mapping keys: \code{frame}, \code{track_id}, \code{tl_x}, \code{tl_y}, \code{br_x},
-\code{br_y}, \code{species_name}. Optional: \code{score}.}
+\code{br_y}, \code{species_name}. Optional: \code{score}, \code{file_name}. Multiple distinct
+\code{file_name} values produce one KWCOCO image per filename.}
 
 \item{info}{Optional KWCOCO \code{info} object. If \code{NULL}, a default info list is
 generated.}
@@ -66,8 +67,9 @@ A list with KWCOCO keys (\code{info}, \code{videos}, \code{images}, \code{annota
 JSON.
 }
 \description{
-Converts track-style detections into a KWCOCO-compatible list, following the
-track CSV conversion flow used in this repository (track/frame sorting,
-duplicate track-frame removal, frame-level image creation, species-to-integer
-category mapping, and bounding box conversion).
+Converts track-style or image-level detections into a KWCOCO-compatible list.
+Video inputs retain frame-level image creation, while inputs with multiple
+filenames register one image per file. Both paths map annotations to images,
+remove duplicate detections, map species to integer categories, and convert
+bounding boxes.
 }
